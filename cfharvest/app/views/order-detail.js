@@ -15,7 +15,7 @@ CFHViews.orderDetail=(vm,v,ui)=>{
   const empty=(de)=>`<p class="empty-state">${esc(de)}</p>`;
   let body='';
   if(tab==='order'){body=`<div class="detail-cols"><section><h4>${term('Stammdaten','Grunddata')}</h4><dl class="fields">
-    ${field('Vertrags-Nr.','Kontrakt nr.',code(o.contractId))}${field('Arbeitsauftrags-Nr.','Arbetsorder nr.',code(o.id))}${field('Name','Namn',esc(o.name))}${field('Kundengruppe','Kundgrupp',esc('Spielszenario'))}
+    ${field('Vertrags-Nr.','Kontrakt nr.',`<button type="button" class="link" data-action="admin-contract" data-contract="${esc(o.contractId)}" title="${esc('Vertrag in der Administration öffnen')}">${code(o.contractId)}</button>`)}${field('Arbeitsauftrags-Nr.','Arbetsorder nr.',code(o.id))}${field('Name','Namn',esc(o.name))}${field('Kundengruppe','Kundgrupp',esc('Spielszenario'))}
     ${field('Zertifizierung','Certifiering',term('Keine Zertifizierung','Ingen certifiering',{tip:true}))}${field('Förderformen des Auftrags','Arbetsorderns stödformer',dash)}${field('Projektname','Projektnamn',dash)}${field('Waldpflegevertrag','Skogsvårdsavtal',yn(false))}
     ${field('Geländeplanung erfolgt','Terrängplanering gjord',`${yn(o.surveyCoverage>=100)} · ${esc('Vorerkundung')} ${num(o.surveyCoverage,0)} %`)}${field('Flurstück','Fastighetsbeteckning',esc('fiktiv, keine Katasterangabe'))}${field('Gemeinde','Kommun',dash)}
     ${field('Fläche (ha)','Areal (ha)',ui.ha(o.areaHa))}${field('Menge (fm)','Kvantitet (m³)',ui.fm(o.estimatedVolume))}${field('Rückeentfernung','Skotningsavstånd (m)',esc(o.terrain))}${field('Maßnahmengruppen','Åtgärdsgrupper',term('Holzernte','Virkesdrivning',{tip:true}))}

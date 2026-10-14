@@ -26,7 +26,10 @@ CFHViews.kalender=(vm,v,ui)=>{
   for(let i=M.mondayOf(off);i<off+days;i+=7){const c=clip(i,i+7);if(c)weeks+=`<span class="band-cell" style="left:${c.l}%;width:${c.w}%" title="${esc('Kalenderwoche')}">${num(CFHViews.isoWeek(i),0)}</span>`;}
   for(let i=off;i<off+days;i++){const d=new Date(M.CALENDAR_START+i*864e5);dayCells+=`<span class="band-cell day ${i===today?'today':''} ${isWeekend(i)?'weekend':''}" style="left:${X(i)}%;width:${dayW}%" ${i===today?`title="${esc('Heute')}"`:''}>${days<=31?`<span data-no-translate>${d.getUTCDate()}</span>`:''}</span>`;}
   const row=r=>{
-    let bg='';for(let i=off;i<off+days;i++){if(M.hoursOn(r,i)===0)bg+=`<span class="cal-off" style="left:${X(i)}%;width:${dayW}%"></span>`;}
+    let bg='';const ms=r.memberResources?.length?r.memberResources:[r];
+    for(let i=off;i<off+days;i++){const h=M.hoursOn(r,i);if(h===0)bg+=`<span class="cal-off" style="left:${X(i)}%;width:${dayW}%"></span>`;
+      // Veckokalender override (yellow in Administration [M30]) on this row or a member: marked so the changed capacity is visible here too.
+      if(ms.some(m=>m.days&&m.days[i]!=null))bg+=`<span class="cal-ov" data-ov-day="${i}" style="left:${X(i)}%;width:${dayW}%" title="${esc('Wochenkalender: manuell geändert')} · ${num(h)} h"><span class="cal-ov-h" data-no-translate>${num(h)} h</span></span>`;}
     const t=clip(today,today+1);if(t)bg+=`<span class="cal-today" style="left:${t.l}%;width:${t.w}%"></span>`;
     let bars='';
     // Member bars of chain planning: greyed and hatched, no drag, resize or selection; hover says which chain planned them.

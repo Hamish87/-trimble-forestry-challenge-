@@ -14,7 +14,11 @@ CFHViews.MAP_LEVELS=[{name:'Übersicht',scale:'≈ 1:50 000',box:[-620,-350,1860
 CFHViews.M_PER_UNIT=1.331;
 CFHViews.MAP_SYMBOLS=[{key:'warning',de:'Hinweis/Warnung',icon:'!'},{key:'turn',de:'Wendeplatz',icon:'↻'},{key:'unload',de:'Abladepunkt',icon:'↓'},{key:'protect',de:'Schutzbereich',icon:'⊘'}];
 CFHViews.MAP_LAYERS=[{key:'photo',de:'Luftbild'},{key:'stands',de:'Bestände'},{key:'landings',de:'Polterplätze',sv:'Avlägg'},{key:'symbols',de:'Symbole'},{key:'protect',de:'Schutzbereiche',sv:'Hänsyn'},{key:'neighbours',de:'Nachbarflächen'},{key:'routes',de:'Routen'},{key:'machines',de:'Ernteketten-Position'}];
-CFHViews.mapLayerState=v=>({photo:true,stands:true,landings:true,symbols:true,protect:true,neighbours:true,routes:false,machines:true,...(v.mapLayers||{})});
+/** Visible layers = Kartskikt defaults (Administration, plan.admin.layers) overridden by the planner's switches in this session. */
+CFHViews.mapLayerState=(v,plan)=>({...(typeof CFHAdmin!=='undefined'?CFHAdmin.layers(plan).on:{photo:true,stands:true,landings:true,symbols:true,protect:true,neighbours:true,routes:false,machines:true}),...(v.mapLayers||{})});
+/** Layer keys in Kartskikt order (the switcher's order) and the accent colours as CSS custom properties. */
+CFHViews.mapLayerOrder=plan=>typeof CFHAdmin!=='undefined'?CFHAdmin.layers(plan).order:CFHViews.MAP_LAYERS.map(l=>l.key);
+CFHViews.mapLayerStyle=plan=>{if(typeof CFHAdmin==='undefined')return '';const c=CFHAdmin.layers(plan).colours;return Object.entries(c).filter(([,x])=>x).map(([k,x])=>`--lc-${k}:${x}`).join(';');};
 CFHViews.MAP_TOOL_HINTS={lasso:'Rechteck aufziehen: alle Aufträge darin werden ausgewählt (mit Umschalt hinzufügen).',measure:'Zwei Punkte anklicken: Entfernung in Metern.',landing:'In die Karte klicken, um den Polterplatz zu setzen.',symbol:'Symbol wählen und in die Karte klicken.',seq:'Aufträge in Fahrreihenfolge anklicken, um sie zu nummerieren. Erneut klicken entfernt die Nummer.',move:'Neue Position in die Karte klicken.'};
 CFHViews.clusters=(orders,radius)=>{
   const out=[];for(const o of orders){const [x,y]=o.centroid,c=out.find(c=>Math.hypot(c.x-x,c.y-y)<radius);if(c){c.items.push(o);c.x=(c.x*(c.items.length-1)+x)/c.items.length;c.y=(c.y*(c.items.length-1)+y)/c.items.length;}else out.push({x,y,items:[o]});}
@@ -61,7 +65,7 @@ CFHViews.scaleBar=(box,ui)=>{
   return `<g class="map-scalebar" aria-hidden="true" data-scale-m="${nice}"><rect x="${x-3*u}" y="${y-11*u}" width="${len+36*u}" height="${15*u}" rx="${2*u}"/><path d="M${x},${y-5*u} V${y} H${x+len} V${y-5*u}" stroke-width="${1.5*u}"/><text x="${x+len+4*u}" y="${y}" font-size="${8*u}" data-no-translate>${ui.num(nice,0)} m</text></g>`;
 };
 /** Map content for a set of orders. scope 'main' = planning map (stands select and drag), 'detail' = order detail. */
-CFHViews.mapBody=(vm,v,ui,{orders,box,L,level=2,scope='main',layers=CFHViews.mapLayerState(v)})=>{
+CFHViews.mapBody=(vm,v,ui,{orders,box,L,level=2,scope='main',layers=CFHViews.mapLayerState(v,vm.plan)})=>{
   const{esc,num}=ui,R=typeof WorksiteRoutes!=='undefined'?WorksiteRoutes:null,u=box[2]/620,main=scope==='main',route=vm.plan.routeOrder||[];
   const isSel=o=>main?(v.checked||[]).includes(o.id)||o.id===v.selected:false,img=R?`${ui.DIST}${R.imageUrl}`:'';
   let body=`<rect x="${box[0]-box[2]}" y="${box[1]-box[3]}" width="${box[2]*3}" height="${box[3]*3}" fill="#0b3a5a"/>${layers.photo&&R?`<image href="${esc(img)}" x="0" y="0" width="620" height="350" preserveAspectRatio="none"/><rect x="0" y="0" width="620" height="350" fill="#00253d" fill-opacity=".12"/>`:''}`;
@@ -76,7 +80,7 @@ CFHViews.mapBody=(vm,v,ui,{orders,box,L,level=2,scope='main',layers=CFHViews.map
       body+=one?`<g class="map-circle ${sel?'selected':''} ${one.id===v.selected?'active':''} pill-${esc(one.pill.cls)}" data-action="select-order" data-order="${esc(one.id)}" ${one.closed?'':'data-map-drag'} tabindex="0" role="button" aria-pressed="${sel}" aria-label="${esc(one.name)}"><circle cx="${c.x}" cy="${c.y}" r="${L.r}"/></g>${seq>=0?`<g class="map-seq" data-seq="${esc(one.id)}" aria-hidden="true"><circle cx="${c.x+L.r}" cy="${c.y-L.r}" r="9"/><text x="${c.x+L.r}" y="${c.y-L.r+4}" text-anchor="middle">${num(seq+1,0)}</text></g>`:''}`
         :`<g class="map-circle cluster ${sel?'selected':''}" data-action="map-zoom-in" tabindex="0" role="button" aria-label="${esc('Gruppe vergrößern')}: ${num(c.items.length,0)} ${esc('Aufträge')}"><circle cx="${c.x}" cy="${c.y}" r="${L.r*1.25}"/><text x="${c.x}" y="${c.y+L.r*.4}" text-anchor="middle" font-size="${L.r*1.1}">${num(c.items.length,0)}</text></g>`;
     }
-    return body;
+    return `<g class="map-layers" style="${CFHViews.mapLayerStyle(vm.plan)}">${body}</g>`;
   }
   let neigh='',stands='',protect='',routes='',landings='',symbols='',labels='',seq='',machines='';
   const obj=v.mapObj;
@@ -94,9 +98,10 @@ CFHViews.mapBody=(vm,v,ui,{orders,box,L,level=2,scope='main',layers=CFHViews.map
     if(layers.machines)for(const [key,cls,code,name] of [['harvester','h','H','Harvester H-01'],['forwarder','f','F','Forwarder F-01']]){const p=CFHViews.machinePos(o,key);if(!p)continue;const chain=o.row?.kind==='chain'?` · ${o.row.name} (${o.row.id})`:'';
       machines+=`<g class="map-machine ${cls}" data-machine="${key}" data-order="${esc(o.id)}"><title>${esc(name)}${esc(chain)} · ${esc('simulierte Position aus dem Spielstand, keine GPS-Meldung')}</title><rect x="${p[0]-7}" y="${p[1]-7}" width="14" height="14" rx="2"/><text x="${p[0]}" y="${p[1]+4}" text-anchor="middle" data-no-translate>${code}</text></g>`;}
   }
-  body+=neigh+stands+protect+routes+(main?seqLine(routed.map(o=>[o.centroid[0]-62,o.centroid[1]])):'')+landings+symbols+labels+seq+machines;
+  const g=(k,s)=>s?`<g data-layer="${k}">${s}</g>`:'';
+  body+=g('neighbours',neigh)+g('stands',stands)+g('protect',protect)+g('routes',routes)+(main?seqLine(routed.map(o=>[o.centroid[0]-62,o.centroid[1]])):'')+g('landings',landings)+g('symbols',symbols)+labels+seq+g('machines',machines);
   const m=v.measure;if(m&&m.scope===scope&&m.a){const r=4*u;body+=`<g class="map-measure" aria-hidden="true"><circle cx="${m.a[0]}" cy="${m.a[1]}" r="${r}"/>${m.b?`<line x1="${m.a[0]}" y1="${m.a[1]}" x2="${m.b[0]}" y2="${m.b[1]}" stroke-width="${2*u}"/><circle cx="${m.b[0]}" cy="${m.b[1]}" r="${r}"/><text x="${(m.a[0]+m.b[0])/2}" y="${(m.a[1]+m.b[1])/2-6*u}" text-anchor="middle" font-size="${11*u}" data-no-translate>${num(CFHViews.distanceM(m.a,m.b),0)} m</text>`:''}</g>`;}
-  return body+CFHViews.scaleBar(box,ui);
+  return `<g class="map-layers" style="${CFHViews.mapLayerStyle(vm.plan)}">${body}</g>`+CFHViews.scaleBar(box,ui);
 };
 /** Legend (💡): status colours as the pills, map objects, routes, simulated positions, image-space note, OSM attribution. */
 CFHViews.mapLegend=ui=>{
@@ -116,7 +121,7 @@ CFHViews.mapLegend=ui=>{
     <small>${esc('OpenStreetMap-Grundkarte nur mit ?basemap=osm und georeferenzierten Aufträgen')} · <span data-osm-attribution>© ${esc('OpenStreetMap-Mitwirkende')}</span> · ODbL</small></div>`;
 };
 /** Layer switcher (🗂). */
-CFHViews.mapLayerPop=(v,ui)=>{const L=CFHViews.mapLayerState(v);return `<div class="map-pop layer-pop" data-map-layers><b>${ui.esc('Kartenebenen')}</b>${CFHViews.MAP_LAYERS.map(l=>`<label><input type="checkbox" data-change="map-layer" value="${l.key}" ${L[l.key]?'checked':''}> ${ui.term(l.de,l.sv)}</label>`).join('')}</div>`;};
+CFHViews.mapLayerPop=(v,ui,plan)=>{const L=CFHViews.mapLayerState(v,plan),order=CFHViews.mapLayerOrder(plan);return `<div class="map-pop layer-pop" data-map-layers><b>${ui.esc('Kartenebenen')}</b>${[...CFHViews.MAP_LAYERS].sort((a,b)=>order.indexOf(a.key)-order.indexOf(b.key)).map(l=>`<label><input type="checkbox" data-change="map-layer" value="${l.key}" ${L[l.key]?'checked':''}> ${ui.term(l.de,l.sv)}</label>`).join('')}</div>`;};
 /** Tool bar above a map (tools, hint line with the symbol palette, editor line for a picked landing/symbol) and the
     overlay inside it (layers 🗂, legend 💡, status line with scale, coordinates and the measured distance).
     The tool bar sits outside the picture so it stays usable when the map pane is narrow. Returns {bar, overlay}. */
@@ -134,7 +139,7 @@ CFHViews.mapChrome=(vm,v,ui,{scope,L,level=2})=>{
   const corner=`<div class="map-ctrl corner">${ibtn('map-layers','🗂','Kartenebenen',null,{attrs:`aria-expanded="${!!v.mapLayerMenu}"`})}${ibtn('map-legend','💡','Legende',null,{attrs:`aria-expanded="${!!v.mapLegend}"`})}</div>`;
   const m=v.measure&&v.measure.scope===scope&&v.measure.b?`<span data-measure>${esc('Strecke')}: ${num(CFHViews.distanceM(v.measure.a,v.measure.b),0)} m</span>`:'';
   const status=`<div class="map-status"><span title="${esc('Näherung, das Luftbild ist nicht georeferenziert')}">${esc('Maßstab')} ${L?`${esc(L.scale)} · ${esc(L.name)}`:`1 ${esc('Bildpunkt')} ≈ ${num(CFHViews.M_PER_UNIT,2)} m`}</span><span data-map-coords>${esc('Bildkoordinaten')}: –</span>${m}</div>`;
-  return{bar:tools+hint+objPop,overlay:corner+(v.mapLayerMenu?CFHViews.mapLayerPop(v,ui):'')+(v.mapLegend?CFHViews.mapLegend(ui):'')+status};
+  return{bar:tools+hint+objPop,overlay:corner+(v.mapLayerMenu?CFHViews.mapLayerPop(v,ui,vm.plan):'')+(v.mapLegend?CFHViews.mapLegend(ui):'')+status};
 };
 /* ---------- OpenStreetMap basemap behind ?basemap=osm (Web Mercator raster tiles) ---------- */
 CFHViews.osmProject=(lat,lng,z)=>{const n=2**z*256,s=Math.sin(lat*Math.PI/180);return[(lng+180)/360*n,(.5-Math.log((1+s)/(1-s))/(4*Math.PI))*n];};

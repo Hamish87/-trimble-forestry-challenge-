@@ -16,7 +16,7 @@ function basemapFlag(){try{return new URLSearchParams(location.search).get('base
 function savedViews(){try{const x=JSON.parse(local.get('cfharvest-views-v1')||'null');if(Array.isArray(x)&&x.length&&x.every(k=>VIEW_KEYS.includes(k)))return x;}catch{}return ['list','calendar'];}
 const defaultView=()=>({nav:'planning',views:basemapFlag()==='osm'?VIEW_KEYS.filter(k=>k==='map'||savedViews().includes(k)):savedViews(),viewMenu:false,widths:{list:1.3,map:1,calendar:1.5,resources:1},opFilter:'drivning',pickRow:'',checked:[],selected:null,selItem:null,search:'',filtersOpen:false,filters:{},columns:{},colMenu:false,sort:{key:'seq',dir:1},page:0,pageSize:12,
   zoom:'week',calStart:null,rowChecked:[],rowsShown:null,resMenuOpen:false,resSearch:'',plannedOnly:false,insertMode:false,mapZoom:2,mapPan:[0,0],mapLayers:{},mapLegend:false,mapLayerMenu:false,mapTool:null,mapToolScope:null,symbolKind:'warning',mapObj:null,measure:null,seqStarted:false,basemap:basemapFlag(),dialog:null,
-  detail:{orderId:null,tab:'order',draft:{},showMap:true,funcOpen:false},menu:null,admin:{page:'resources',resource:'H-01',tab:'base',typeFilter:'',draft:{},weekSel:[],weekStart:null,weekSpan:7,chainDraft:{}},
+  detail:{orderId:null,tab:'order',draft:{},showMap:true,funcOpen:false},menu:null,admin:{page:'resources',resource:'H-01',tab:'base',typeFilter:'',draft:{},weekSel:[],weekStart:null,weekSpan:7,weekMulti:false,weekAnchor:null,chainDraft:{},sel:{},form:{},clientForm:{},layerDraft:null},
   book:{},bookDraft:{},bookMessage:'',msgTo:'K-01',msgText:'',canUndo:false});
 /* base = saved plan (sessionStorage, travels to the game); plan = working plan incl. staged calendar changes. */
 const S={game:null,base:M.emptyPlan(),plan:M.emptyPlan(),history:[],returnUrl:null,nonce:null,source:null,notices:[],view:defaultView(),vm:null,snap:null,drag:null,lastBar:null,suppressClick:false};
@@ -65,9 +65,9 @@ function returnToGame(){
 }
 
 /* ---------- Rendering ---------- */
-const FOCUS_KEYS=['input','draft','admin','adminBase','adminProd','adminWeek','dialog'];
+const FOCUS_KEYS=['input','draft','admin','adminBase','adminProd','adminWeek','af','cf','dialog'];
 function focusKey(el){if(!el||el===document.body)return null;const d=el.dataset||{};for(const k of FOCUS_KEYS)if(d[k])return k+':'+d[k]+':'+(d.key||'')+':'+(d.book||d.chain||'');return d.action?['a',d.action,d.order,d.item,d.tab,d.zoom,d.row,d.index,d.key,d.viewKey,d.page,d.size].join(':'):d.change?['c',d.change,el.value,d.key,d.order].join(':'):null;}
-function restoreFocus(key,sel){if(!key)return;for(const el of document.querySelectorAll('[data-input],[data-draft],[data-admin],[data-admin-base],[data-admin-prod],[data-admin-week],[data-dialog],[data-action],[data-change]'))if(focusKey(el)===key){el.focus();if(sel&&el.setSelectionRange){try{el.setSelectionRange(sel[0],sel[1]);}catch{}}return;}}
+function restoreFocus(key,sel){if(!key)return;for(const el of document.querySelectorAll('[data-input],[data-draft],[data-admin],[data-admin-base],[data-admin-prod],[data-admin-week],[data-af],[data-cf],[data-dialog],[data-action],[data-change]'))if(focusKey(el)===key){el.focus();if(sel&&el.setSelectionRange){try{el.setSelectionRange(sel[0],sel[1]);}catch{}}return;}}
 function banner(vm){
   const m=vm.meta,c=m.contract;
   return `${S.notices.map(n=>`<p class="notice ${n.kind}">${esc(n.text)}</p>`).join('')}<div class="context"><span><b>${esc('Spielstand')}</b> ${esc('Schicht')} ${UI.num(m.round,0)} ${esc('von 4')} · ${esc(PHASES[m.phase]||m.phase)}</span><span><b>${esc('Vertrag')}</b> ${UI.code(c.id)} · ${esc(c.name)}</span><span><b>${esc('Übergabe im Spiel')}</b> ${esc(m.handoverMode==='digital'?'digital':'manuell')}</span><span class="demo-tag">${esc('Demonstration · keine CFHarvest-Produktoberfläche')}</span></div>`;
@@ -77,7 +77,7 @@ function navHtml(){
   return NAV.map(([k,icon,de,svTerm,drop])=>{
     const btn=`<button type="button" ${drop?`data-action="nav-menu" data-key="${k}" aria-expanded="${v.menu===k}"`:`data-nav="${k}"`} aria-current="${cur===k}" title="${UI.tip(de,svTerm)}"><span class="ico" aria-hidden="true">${icon}</span><span class="nav-label">${esc(de)}</span>${drop?' ▾':''}</button>`;
     if(!drop)return btn;
-    const items=k==='admin'?V.ADMIN_MENU.map(([p,l,s,on])=>`<button type="button" role="menuitem" data-action="admin-page" data-key="${p}" ${on?'':'disabled'} title="${UI.tip(on?l:l+' · in dieser Demo nicht umgesetzt',s)}">${esc(l)}</button>`).join(''):`<button type="button" role="menuitem" data-action="help-page">${esc('Hilfe und Begriffe')}</button><button type="button" role="menuitem" data-action="help-page">${esc('Über diese Demo')}</button>`;
+    const items=k==='admin'?V.ADMIN_MENU.map(([p,l,s,on])=>`<button type="button" role="menuitem" data-action="admin-page" data-key="${p}" ${on?'':'disabled'} title="${UI.tip(on?l:l+' · '+V.ADMIN_OFF,s)}">${esc(l)}</button>`).join(''):`<button type="button" role="menuitem" data-action="help-page">${esc('Hilfe und Begriffe')}</button><button type="button" role="menuitem" data-action="help-page">${esc('Über diese Demo')}</button>`;
     return `<span class="nav-drop">${btn}${v.menu===k?`<div class="menu-list nav-menu" role="menu">${items}</div>`:''}</span>`;
   }).join('');
 }
@@ -214,7 +214,7 @@ function lassoEnd(cancel){
 const actions={
   nav:el=>{const v=S.view;clearMapTool();v.nav=el.dataset.nav;v.menu=null;v.dialog=null;render();},
   'nav-menu':el=>{S.view.menu=S.view.menu===el.dataset.key?null:el.dataset.key;render();},
-  'admin-page':el=>{const v=S.view;v.nav='admin';v.admin.page=el.dataset.key;v.admin.draft={};v.admin.weekSel=[];v.menu=null;render();},
+  'admin-page':el=>{const v=S.view;v.nav='admin';v.admin.page=el.dataset.key;v.admin.draft={};v.admin.form={};v.admin.clientForm={};v.admin.layerDraft=null;v.admin.weekSel=[];v.menu=null;render();},
   'help-page':()=>{S.view.nav='help';S.view.menu=null;render();},
   logout:()=>toast(tr('Abmelden ist in der Demo ohne Funktion.')),
   'view-menu':(el,e)=>{e?.preventDefault();S.view.viewMenu=!S.view.viewMenu;render();},
@@ -319,9 +319,17 @@ const actions={
   /* administration */
   'admin-res':el=>{const a=S.view.admin;a.resource=el.dataset.res;a.draft={};render();},
   'admin-res-tab':el=>{const a=S.view.admin;a.tab=el.dataset.tab;a.draft={};render();},
-  'admin-new':()=>{const n=S.base.extraResources.length+1,id='R-'+String(n).padStart(2,'0');S.view.admin.resource=id;S.view.admin.tab='base';mutate(p=>{p.extraResources.push({id,type:'crew',name:'Arbeitsgruppe '+id,model:'',stanford:'',operation:'Holzernte',rate:10,unit:'fm/h',production:{},weekly:{mon:8,tue:8,wed:8,thu:8,fri:8,sat:0,sun:0},active:true,plannable:true,subcontractor:false,followUp:null,base:{manufacturer:'',year:null,bearingClass:'',plateWeight:null,extinguisherChecked:'',aggregate:'',phone:'',email:'',servicePackages:[],woodforceStart:''}});},tr('Neue Ressource angelegt · nicht mit dem Spiel verbunden'));},
+  'res-new-open':()=>{const t=CFHViews.RESOURCE_TYPES[0],id=CFHAdmin.nextId('R-',S.vm.resourcesAll.map(r=>r.id));S.view.dialog={type:'res-new',rtype:t.key,name:`${tr(t.de)} ${id}`,stanford:'',nameTouched:false};render();},
+  'res-new-create':()=>{const v=S.view,d=v.dialog,name=String(dq('[data-dialog="rname"]')?.value??d.name??'').trim().slice(0,60),stanford=String(dq('[data-dialog="rstanford"]')?.value??d.stanford??'').trim().slice(0,20);
+    if(!name){d.error='Pflichtangabe';render();return;}
+    const id=CFHAdmin.nextId('R-',S.vm.resourcesAll.map(r=>r.id)),t=NEW_RESOURCE[d.rtype]||NEW_RESOURCE.other;v.dialog=null;Object.assign(v.admin,{resource:id,tab:'base',typeFilter:'',draft:{}});
+    mutate(p=>{p.extraResources.push({id,type:d.rtype,name,model:'',stanford,operation:t.operation,rate:t.rate,unit:t.unit,production:{...t.production},weekly:{mon:8,tue:8,wed:8,thu:8,fri:8,sat:0,sun:0},active:true,plannable:t.plannable,subcontractor:false,followUp:null,unitDataConsent:{granted:false,date:null},
+      base:{manufacturer:'',year:null,bearingClass:'',plateWeight:null,extinguisherChecked:'',aggregate:'',phone:'',email:'',servicePackages:[],woodforceStart:''}});},`${tr('Neue Ressource angelegt')} (${id}) · ${tr('nicht mit dem Spiel verbunden')}`);},
+  'licence-open':el=>{S.view.dialog={type:'licence',resId:el.dataset.res};render();},
+  'licence-confirm':()=>{const d=S.view.dialog,r=S.vm.resourcesAll.find(x=>x.id===d.resId);S.view.dialog=null;if(!r)return render();const on=r.active===false;
+    mutate(p=>{const extra=p.extraResources.find(x=>x.id===r.id);if(extra)extra.active=on;else p.resources[r.id]={...(p.resources[r.id]||{}),active:on};},`${r.name}: ${tr(on?'Lizenz aktiviert':'Lizenz pausiert')}`);},
   'admin-save':()=>{const a=S.view.admin,id=a.resource,d=a.draft,r=S.vm.resourcesAll.find(x=>x.id===id);if(!r)return;const patch={};
-    for(const k of ['name','model','stanford'])if(d[k]!==undefined)patch[k]=String(d[k]).slice(0,60);if(d.active!==undefined)patch.active=!!d.active;
+    for(const k of ['name','model','stanford'])if(d[k]!==undefined)patch[k]=String(d[k]).slice(0,60);if(patch.name!==undefined&&!patch.name.trim()){render();return toast(tr('Bitte die markierten Angaben prüfen.'));}
     if(d.base)patch.base={...(r.base||{}),...d.base};
     if(d.production){patch.production={...(r.production||{})};for(const [k,val] of Object.entries(d.production))if(Number(val)>0)patch.production[k]=Number(val);if(patch.production.Slutavverkning)patch.rate=patch.production.Slutavverkning;}
     if(d.week){const w={...r.weekly},h=k=>Math.max(0,Math.min(24,Number(d.week[k])||0));if(d.week.workday!==undefined)for(const k of ['mon','tue','wed','thu','fri'])w[k]=h('workday');if(d.week.sat!==undefined)w.sat=h('sat');if(d.week.sun!==undefined)w.sun=h('sun');patch.weekly=w;}
@@ -331,7 +339,16 @@ const actions={
   'week-next':()=>{const a=S.view.admin;a.weekStart=(a.weekStart??M.mondayOf(S.vm.calendar.currentDay))+(a.weekSpan||7);render();},
   'week-today':()=>{S.view.admin.weekStart=null;render();},
   'week-span':el=>{S.view.admin.weekSpan=Number(el.dataset.span);render();},
-  'week-cell':el=>{const a=S.view.admin,k=el.dataset.key;a.weekSel=a.weekSel.includes(k)?a.weekSel.filter(x=>x!==k):[...a.weekSel,k];render();},
+  /* Veckokalender selection [M30][MW]: click selects one day, Ctrl/Cmd (or the multi-select switch) adds/removes, Shift
+     selects a range on the same resource; the column head selects a day for every shown resource, the row head a resource's days. */
+  'week-cell':(el,e)=>{const a=S.view.admin,k=el.dataset.key,multi=a.weekMulti||e?.ctrlKey||e?.metaKey;
+    if(e?.shiftKey&&a.weekAnchor&&a.weekAnchor.split(':')[0]===k.split(':')[0]){const [id,d0]=a.weekAnchor.split(':'),d1=Number(k.split(':')[1]),keys=[];for(let d=Math.min(+d0,d1);d<=Math.max(+d0,d1);d++)keys.push(id+':'+d);a.weekSel=[...new Set([...a.weekSel,...keys])];}
+    else if(multi)a.weekSel=a.weekSel.includes(k)?a.weekSel.filter(x=>x!==k):[...a.weekSel,k];
+    else a.weekSel=a.weekSel.length===1&&a.weekSel[0]===k?[]:[k];
+    a.weekAnchor=k;render();},
+  'week-col':(el,e)=>{const a=S.view.admin,d=Number(el.dataset.day),keys=CFHViews.weekcalWindow(S.vm,S.view).shown.map(r=>r.id+':'+d);a.weekSel=a.weekMulti||e?.ctrlKey||e?.metaKey?[...new Set([...a.weekSel,...keys])]:keys;render();},
+  'week-row':(el,e)=>{const a=S.view.admin,id=el.dataset.res,keys=CFHViews.weekcalWindow(S.vm,S.view).days.map(d=>id+':'+d);a.weekSel=a.weekMulti||e?.ctrlKey||e?.metaKey?[...new Set([...a.weekSel,...keys])]:keys;render();},
+  'week-clear':()=>{S.view.admin.weekSel=[];render();},
   'week-apply':()=>{const a=S.view.admin,h=Math.max(0,Math.min(24,Number(a.draft.hours??8)||0)),sel=[...a.weekSel];a.weekSel=[];const before=S.plan;
     mutate(p=>{for(const key of sel){const [id,dayS]=key.split(':'),day=Number(dayS),r=S.vm.resourcesAll.find(x=>x.id===id);if(!r)continue;const extra=p.extraResources.find(x=>x.id===id),e=extra||(p.resources[id]??={});e.days={...(e.days||{})};if(h===Number(r.weekly[M.weekday(day)]))delete e.days[day];else e.days[day]=h;}},tr('Wochenkalender gespeichert'));
     reflowAfter(before,[...new Set(sel.map(k=>k.split(':')[0]))]);},
@@ -341,11 +358,52 @@ const actions={
     const changed=S.vm.chainsAll.filter(c=>lag[c.id]!==undefined&&String(lag[c.id]).trim()!==''&&M.chainLag({lag:lag[c.id]})!==c.lag).map(c=>c.id);
     mutate(p=>{p.chains=structuredClone(S.vm.chainsAll).map(c=>{const n={...c};if(dr[c.id]!==undefined&&String(dr[c.id]).trim())n.name=String(dr[c.id]).trim().slice(0,40);if(changed.includes(c.id))n.lag=M.chainLag({lag:lag[c.id]});return n;});},tr('Gespeichert'));
     const ids=S.vm.rows.filter(r=>changed.includes(r.id)).flatMap(r=>r.items.map(i=>i.id));if(ids.length){S.view.flash={ids,timer:null};render();}},
+  /* Administration: users, roles, contracts, company, transfers, layers, templates (PLAN_OVERNIGHT §4) */
+  'admin-sel':el=>{const a=S.view.admin;a.sel={...a.sel,[el.dataset.page]:el.dataset.id};a.form={};a.clientForm={};render();},
+  'admin-new-rec':()=>{const a=S.view.admin;a.sel={...a.sel,[a.page]:'__new'};a.form={};a.clientForm={};render();},
+  'admin-form-save':()=>adminSave(),
+  'admin-contract':el=>{const v=S.view;clearMapTool();v.nav='admin';v.menu=null;Object.assign(v.admin,{page:'contracts',sel:{...v.admin.sel,contracts:el.dataset.contract},form:{},clientForm:{}});render();try{window.scrollTo(0,0);}catch{}},
+  'user-active':el=>{const u=CFHAdmin.data(S.vm,S.plan).users.find(x=>x.id===el.dataset.id);if(!u)return;const on=u.active===false;mutate(p=>Object.assign(p,CFHAdmin.setUserActive(p,u.id,on)),tr(on?'Benutzer reaktiviert':'Benutzer deaktiviert'));},
+  'user-msg-open':el=>{S.view.dialog={type:'user-msg',userId:el.dataset.id,text:''};render();},
+  'user-msg-send':()=>{const d=S.view.dialog,text=String(dq('[data-dialog="umsg"]')?.value??d.text??'').trim();if(!text)return toast(tr('Bitte eine Nachricht eingeben.'));S.view.dialog=null;mutate(p=>{p.messages.push({to:'user:'+d.userId,text:text.slice(0,500),round:S.vm.meta.round});},tr('Nachricht gesendet'));},
+  'tpl-delete':el=>{const a=S.view.admin,id=el.dataset.id;a.sel={...a.sel,templates:undefined};a.form={};mutate(p=>Object.assign(p,CFHAdmin.removeTemplate(p,id)),tr('Vorlage gelöscht'));},
+  'layer-move':el=>{const a=S.view.admin,cfg=a.layerDraft=structuredClone(a.layerDraft||CFHAdmin.layers(S.plan)),i=cfg.order.indexOf(el.dataset.key),j=i+Number(el.dataset.dir);if(i<1||j<1||j>=cfg.order.length)return;[cfg.order[i],cfg.order[j]]=[cfg.order[j],cfg.order[i]];render();},
+  'layer-reset':()=>{S.view.admin.layerDraft=CFHAdmin.layers({admin:{}});render();},
+  'layer-save':()=>{const a=S.view.admin,cfg=a.layerDraft;if(!cfg)return;a.layerDraft=null;S.view.mapLayers={};mutate(p=>Object.assign(p,CFHAdmin.saveLayers(p,cfg)),tr('Kartenebenen gespeichert'));},
   /* messages */
   'msg-send':()=>{const v=S.view,text=String(v.msgText||'').trim();if(!text)return toast(tr('Bitte eine Nachricht eingeben.'));v.msgText='';mutate(p=>{p.messages.push({to:v.msgTo,text:text.slice(0,500),round:S.vm.meta.round});},tr('Nachricht gesendet'));},
   return:()=>{S.view.dialog={type:'return'};render();},
   'return-confirm':()=>{S.view.dialog=null;returnToGame();},
 };
+/* Starting values of a new resource per type (Ny with the type picker); the planner adjusts them in Produktionsdaten. */
+const NEW_RESOURCE={harvester:{operation:'Holzernte',rate:28,unit:'fm/h',plannable:true,production:{'Slutavverkning':28,'Första gallring':14,'Gallring':20}},forwarder:{operation:'Rücken',rate:32,unit:'fm/h',plannable:true,production:{'Slutavverkning':32,'Första gallring':18,'Gallring':24}},
+  person:{operation:'Holzernte',rate:3,unit:'fm/h',plannable:true,production:{'Slutavverkning':3,'Första gallring':2,'Gallring':2.5}},truck:{operation:'Abfuhr',rate:25,unit:'fm/Tour',plannable:false,production:{}},other:{operation:'Bodenbearbeitung',rate:10,unit:'fm/h',plannable:true,production:{}}};
+const numOrNull=x=>x===''||x==null||!Number.isFinite(Number(x))?null:Math.max(0,Number(x));
+/** Speichern / Aktualisieren on an admin form: validate (German messages under the fields), then save into plan.admin. */
+function adminSave(){
+  const v=S.view,a=v.admin,page=a.page,A=CFHAdmin,{ad,isNew,list,rec}=V.adminRecord(S.vm,v,page),f={...rec,...a.form},fail=()=>{render();toast(tr('Bitte die markierten Angaben prüfen.'));};
+  if(page==='company'){if(Object.keys(A.validateCompany(f)).length)return fail();a.form={};const{preCreated,...c}=f;mutate(p=>Object.assign(p,A.saveCompany(p,c)),tr('Gespeichert'));return;}
+  if(page==='users'){if(Object.keys(A.validateUser(f,list)).length)return fail();const u={id:isNew?A.nextId('user-',list.map(x=>x.id)):rec.id,displayName:f.displayName,email:f.email,phone:f.phone||'',language:f.language||'de',roles:f.roles,resourceId:f.resourceId||null,resourceAccess:f.resourceAccess,active:f.active!==false};
+    a.form={};a.sel={...a.sel,users:u.id};mutate(p=>Object.assign(p,A.saveUser(p,u)),tr(isNew?'Benutzer angelegt':'Aktualisiert'));return;}
+  if(page==='contracts'){const newClient=f.clientCode==='__new',cf={code:String(a.clientForm?.code||'').trim().toUpperCase(),name:String(a.clientForm?.name||'').trim()};
+    if(Object.keys(A.validateContract(f,list,isNew)).length||(newClient&&Object.keys(A.validateClient(cf,ad.clients)).length))return fail();
+    const c=rec.game&&!isNew?{contractNo:rec.contractNo,validFrom:f.validFrom,validTo:f.validTo,operationTypes:f.operationTypes}
+      :{contractNo:String(f.contractNo).trim(),name:f.name,clientCode:newClient?cf.code:f.clientCode,validFrom:f.validFrom,validTo:f.validTo,operationTypes:f.operationTypes,targetVolume:numOrNull(f.targetVolume),targetSaw:numOrNull(f.targetSaw),
+        prices:Object.fromEntries(['SAG','IND','ABW'].map(k=>[k,numOrNull(f['price-'+k]??f.prices?.[k])])),shortfall:numOrNull(f.shortfall)};
+    a.form={};a.clientForm={};a.sel={...a.sel,contracts:c.contractNo};mutate(p=>{let q=p;if(newClient)q=A.saveClient(q,cf);Object.assign(p,A.saveContract(q,c));},tr(isNew?'Vertrag angelegt':'Aktualisiert'));return;}
+  if(page==='templates'){if(Object.keys(A.validateTemplate(f)).length)return fail();const id=isNew?A.nextId('MT-',[...list.map(x=>x.id),...(S.plan.admin?.templates||[]).map(x=>x?.id)]):rec.id;
+    a.form={};a.sel={...a.sel,templates:id};mutate(p=>Object.assign(p,A.saveTemplate(p,{id,name:f.name,text:f.text,active:f.active!==false})),tr(isNew?'Vorlage angelegt':'Aktualisiert'));return;}
+  if(page==='transfers'){if(Object.keys(A.validateTransfer(f)).length)return fail();const r=S.vm.resourcesAll.find(x=>x.id===f.resourceId);a.form={};
+    mutate(p=>Object.assign(p,A.addTransfer(p,f)),`${tr('Übertragung gespeichert')}: ${r?.name||f.resourceId} ${tr(f.direction==='out'?'an Subunternehmer':'vom Subunternehmer zurück')}`);return;}
+}
+/** Fill a message template into the open message box (quick edit, user dialog or the Nachrichten page). */
+function applyTemplate(el){
+  const v=S.view,t=CFHAdmin.data(S.vm,S.plan).templates.find(x=>x.id===el.value);if(!t)return;const scope=el.dataset.scope,d=v.dialog;
+  if(scope==='edit'&&d?.type==='edit'){const it=itemById(d.itemId),o=it&&order(it.orderId),row=it&&rowById(it.rowId);d.message=CFHAdmin.fill(t.text,{Auftrag:o?UI.orderLabelText(o):'',Ressource:row?.name||'',Datum:it?.startTime?UI.dateText(it.startTime.iso):''});}
+  else if(scope==='user'&&d?.type==='user-msg'){const u=CFHAdmin.data(S.vm,S.plan).users.find(x=>x.id===d.userId),r=u?.resourceId&&S.vm.resourcesAll.find(x=>x.id===u.resourceId);d.text=CFHAdmin.fill(t.text,{Ressource:r?.name||''});}
+  else if(scope==='messages'){const row=rowById(v.msgTo),o=row&&S.vm.orders.find(x=>x.assignments.some(i=>i.rowId===row.id));v.msgText=CFHAdmin.fill(t.text,{Ressource:row?.name||'',Auftrag:o?UI.orderLabelText(o):'',Datum:o?.plannedStart?UI.dateText(o.plannedStart):''});}
+  render();
+}
 function movedConfirm(copy){const d=S.view.dialog,rowId=dq('[data-dialog="row"]')?.value||d.rowId,day=M.dayIndexOf(dq('[data-dialog="date"]')?.value),lock=!!dq('[data-dialog="lock"]')?.checked;S.view.dialog=null;
   const plan=M.moveItem(S.plan,S.snap,d.itemId,rowId,{day:day??undefined,lock,copy,stage:true});S.view.selItem=plan.lastItem||d.itemId;stage(plan,`${tr(copy?'Kopiert nach':'Verschoben nach')} ${rowById(rowId)?.name||rowId} · ${tr('Speichern nicht vergessen')}`);}
 
@@ -502,16 +560,26 @@ function onChange(e){
   else if(c==='filter'){v.filters={...v.filters,[el.dataset.key]:el.value};v.page=0;}
   else if(c==='view-toggle'){const set=new Set(v.views);if(el.checked)set.add(el.value);else set.delete(el.value);v.views=VIEW_KEYS.filter(k=>set.has(k));local.set('cfharvest-views-v1',JSON.stringify(v.views));}
   else if(c==='pick-row')v.pickRow=el.value;
+  else if(c==='msg-to')v.msgTo=el.value;
   else if(c==='moved-row'||c==='moved-lock'){const d=v.dialog;if(d?.type!=='moved')return;d.rowId=$('cfhDialog').querySelector('[data-dialog="row"]')?.value||d.rowId;d.lock=!!$('cfhDialog').querySelector('[data-dialog="lock"]')?.checked;d.dateISO=$('cfhDialog').querySelector('[data-dialog="date"]')?.value||d.dateISO;}
   else if(c==='row')v.rowChecked=el.checked?[...new Set([...v.rowChecked,el.value])]:v.rowChecked.filter(x=>x!==el.value);
   else if(c==='res-shown'){const all=S.vm.rows.map(r=>r.id),cur=v.rowsShown||all;const next=el.checked?[...new Set([...cur,el.value])]:cur.filter(x=>x!==el.value);v.rowsShown=next.length===all.length?null:all.filter(x=>next.includes(x));}
-  else if(c==='map-layer')v.mapLayers={...V.mapLayerState(v),[el.value]:el.checked};
+  else if(c==='map-layer')v.mapLayers={...V.mapLayerState(v,S.plan),[el.value]:el.checked};
   else if(c==='map-obj-kind'){const ob=el.dataset.obj?{orderId:el.dataset.order,id:el.dataset.obj}:v.mapObj;if(!ob)return;mutate(p=>Object.assign(p,M.updateMapObject(p,ob.orderId,'symbol',ob.id,{kind:el.value})),tr('Gespeichert'));return;}
   else if(c==='send-item'){const d=v.dialog;d.sel=el.checked?[...new Set([...d.sel,el.value])]:d.sel.filter(x=>x!==el.value);}
   else if(c==='send-row'){const d=v.dialog,ids=rowById(el.value)?.items.map(i=>i.id)||[];d.sel=el.checked?[...new Set([...d.sel,...ids])]:d.sel.filter(x=>!ids.includes(x));}
   else if(c==='send-filter'){const d=v.dialog;d.filter=el.checked;}
   else if(c==='send-notify'){const d=v.dialog;d.notify={...d.notify,[el.value]:el.checked};}
   else if(c==='admin-type')v.admin.typeFilter=el.value;
+  else if(c==='af'){v.admin.form={...v.admin.form,[el.dataset.af]:el.value};}
+  else if(c==='af-check'){v.admin.form={...v.admin.form,[el.dataset.af]:el.checked};}
+  else if(c==='af-list'){const k=el.dataset.af,{rec}=V.adminRecord(S.vm,v,v.admin.page),cur=v.admin.form[k]??rec[k]??[];v.admin.form={...v.admin.form,[k]:el.checked?[...new Set([...cur,el.value])]:cur.filter(x=>x!==el.value)};}
+  else if(c==='role-perm'){const role=el.dataset.role,cur=CFHAdmin.data(S.vm,S.plan).roles.find(r=>r.code===role)?.permissions||[],next=el.checked?[...new Set([...cur,el.value])]:cur.filter(x=>x!==el.value);mutate(p=>Object.assign(p,CFHAdmin.saveRoles(p,{[role]:next})),tr('Rollen gespeichert'));return;}
+  else if(c==='layer-on'||c==='layer-colour'){const a=v.admin,cfg=a.layerDraft=structuredClone(a.layerDraft||CFHAdmin.layers(S.plan));if(c==='layer-on')cfg.on[el.value]=el.checked;else if(/^#[0-9a-f]{6}$/i.test(el.value))cfg.colours[el.dataset.key]=el.value.toLowerCase();}
+  else if(c==='unit-consent'){const id=el.value,on=el.checked,date=M.dayISO(S.vm.calendar.currentDay);mutate(p=>{const extra=p.extraResources.find(x=>x.id===id),val={granted:on,date:on?date:null};if(extra)extra.unitDataConsent=val;else p.resources[id]={...(p.resources[id]||{}),unitDataConsent:val};},tr(on?'Einwilligung erteilt':'Einwilligung widerrufen'));return;}
+  else if(c==='msg-template'){applyTemplate(el);return;}
+  else if(c==='res-new-type'){const d=v.dialog;if(d?.type!=='res-new')return;d.rtype=el.value;if(!d.nameTouched){const t=CFHViews.RESOURCE_TYPES.find(x=>x.key===el.value);d.name=`${tr(t?.de||el.value)} ${CFHAdmin.nextId('R-',S.vm.resourcesAll.map(r=>r.id))}`;}}
+  else if(c==='week-multi')v.admin.weekMulti=el.checked;
   else if(c==='admin-package'){const a=v.admin,r=S.vm.resourcesAll.find(x=>x.id===a.resource),cur=a.draft.base?.servicePackages??r?.base?.servicePackages??[];a.draft.base={...(a.draft.base||{}),servicePackages:el.checked?[...new Set([...cur,el.value])]:cur.filter(x=>x!==el.value)};}
   else if(c==='chain-member'){const chains=structuredClone(S.vm.chainsAll),ch=chains.find(x=>x.id===el.dataset.chain);ch.members=el.checked?[...new Set([...ch.members,el.value])]:ch.members.filter(x=>x!==el.value);if(!ch.members.length){render();return toast(tr('Eine Erntekette braucht mindestens eine Ressource.'));}mutate(p=>{p.chains=chains;});return;}
   else if(c==='book'){v.book={...v.book,[el.dataset.key]:el.value};}
@@ -531,6 +599,10 @@ function onInput(e){
   else if(d.input==='msg-to')v.msgTo=el.value;
   else if(d.input==='msg-text')v.msgText=el.value;
   else if(d.draft){v.detail.draft[d.draft]=el.value;const cnt=document.querySelector(`[data-count="${d.draft}"]`);if(cnt)cnt.textContent=`${el.value.length}/1000 Zeichen`;}
+  else if(d.af){if(!['checkbox','radio','select-one','select-multiple'].includes(el.type))v.admin.form={...v.admin.form,[d.af]:el.value};}
+  else if(d.cf)v.admin.clientForm={...v.admin.clientForm,[d.cf]:el.value};
+  else if(d.dialog&&v.dialog?.type==='res-new'){if(d.dialog==='rname'){v.dialog.name=el.value;v.dialog.nameTouched=true;}else if(d.dialog==='rstanford')v.dialog.stanford=el.value;}
+  else if(d.dialog==='umsg'&&v.dialog?.type==='user-msg')v.dialog.text=el.value;
   else if(d.admin)v.admin.draft[d.admin]=el.type==='checkbox'?el.checked:el.value;
   else if(d.adminBase)v.admin.draft.base={...(v.admin.draft.base||{}),[d.adminBase]:el.type==='number'?(el.value===''?'':Number(el.value)):el.value};
   else if(d.adminProd)v.admin.draft.production={...(v.admin.draft.production||{}),[d.adminProd]:el.value};
