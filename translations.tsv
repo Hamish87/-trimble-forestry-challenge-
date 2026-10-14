@@ -170,39 +170,18 @@ Hiebsübergabe öffnen	Open worksite handover	Ouvrir la transmission du chantier
 Einsatzplanung	Operational planning	Planification des interventions
 Übergabe und Disposition	Handover and dispatch	Transmission et affectation
 Wie kommt der Auftrag zur Maschine?	How does the work order reach the machine?	Comment l’ordre arrive-t-il à la machine ?
-Manuell · Revierleitung fährt vor Ort	Manual · forester visits the site	Manuellement · visite du responsable forestier
-Digital · bestätigter Arbeitsauftrag	Digital · acknowledged work order	Numériquement · ordre confirmé
-Manuell: Vor-Ort-Termin und Wartezeit. Digital: Bericht für beide Einsatzbestände bestätigen.	Manual: site visit and waiting time. Digital: acknowledge the report for both assigned stands.	Manuel : visite et attente. Numérique : confirmer le rapport des deux peuplements affectés.
 Wann soll der Forwarder los?	When should the forwarder start?	Quand le porteur doit-il commencer ?
-Sofort · komplette Schicht buchen	Immediately · book the full shift	Immédiatement · réserver le poste complet
-Nach Holzbestandsmeldung disponieren	Dispatch after the timber stock report	Affecter après le relevé du stock
-Erst ab Stunde 4 buchen	Book from hour 4 only	Réserver à partir de la 4e heure
-Auch Warten ohne verfügbares Holz verursacht Maschinenkosten.	Waiting without available timber also incurs machine costs.	L’attente sans bois disponible entraîne aussi des coûts machine.
 Produktionsmeldungen	Production reporting	Déclarations de production
-Am Schichtende / telefonische Rückfrage	At shift end / by phone	En fin de poste / par téléphone
-Laufend · gemeinsamer Produktionsstand	Ongoing · shared production status	En continu · état de production partagé
-Aktuelle Mengen helfen, den Forwarder passend zum Arbeitsvorrat zu disponieren.	Up-to-date volumes help match forwarder dispatch to available timber.	Les volumes actualisés permettent d’adapter l’affectation du porteur au stock disponible.
 Sortiment und Maschinenarbeit	Assortments and machine work	Assortiments et travail des machines
 Aktuell:	Current:	Actuellement :
 Geladene Einstellung:	Loaded setting:	Réglage chargé :
 Auftrag wurde geändert	Order changed	Commande modifiée
 Auftrag nach Bestand	Stand-specific order	Commande par peuplement
 Längenvorgabe am Harvester	Harvester length specification	Consigne de longueur de l’abatteuse
-Geladene Einstellung weiterverwenden	Keep the loaded setting	Conserver le réglage chargé
-Aktuellen Sortimentsauftrag prüfen	Check the current assortment order	Vérifier la commande d’assortiments actuelle
-Prüfung: 0,25 h + 80 €. Falsche Längen mindern den Holzwert und verursachen Nachsortierung.	Check: 0.25 h + €80. Incorrect lengths reduce timber value and require re-sorting.	Vérification : 0,25 h + 80 €. Des longueurs incorrectes diminuent la valeur du bois et imposent un retri.
 Qualitätskontrolle	Quality control	Contrôle qualité
-Keine zusätzliche Kontrollmessung	No additional check measurement	Aucun contrôle de mesure supplémentaire
-Kontrollmessung zu Schichtbeginn	Check measurement at shift start	Contrôle de mesure au début du poste
-Kontrollmessung: 0,5 h + 60 €. Sie kann eine falsche Einstellung früh aufdecken.	Check measurement: 0.5 h + €60. It can detect an incorrect setting early.	Contrôle de mesure : 0,5 h + 60 €. Il peut détecter rapidement un réglage incorrect.
 Arbeitstempo	Work pace	Rythme de travail
-Hohes Tempo erhöht den Durchsatz und belastet den Schutzwert, besonders bei Nässe.	A higher pace increases output and reduces the protection score, especially in wet conditions.	Un rythme élevé augmente le débit et réduit le score de protection, surtout par temps humide.
 Grenzen und Naturschutz	Boundaries and conservation	Limites et protection de la nature
 Flurkarte / Hiebsgrenze an der Maschine	Cadastral map / harvest boundary on board	Plan cadastral / limite de coupe à bord
-Papierkarte + Grenzabgleich vor Ort	Paper map + on-site boundary check	Carte papier + vérification des limites sur place
-Geprüfte Hiebsgrenze digital integriert	Verified harvest boundary integrated digitally	Limite de coupe vérifiée et intégrée numériquement
-Alte Skizze · ohne Grenzprüfung	Old sketch · no boundary check	Ancien croquis · sans vérification des limites
-Nordhang: Ostgrenze im Gelände unklar. Vor-Ort-Abgleich kostet beim ersten Einsatz 1 h Revierzeit je Hieb. Die alte Skizze kann hier zum Einschlag auf der Nachbarfläche führen.	North Slope: eastern boundary unclear on the ground. The first on-site check takes 1 forester hour per block. The old sketch may lead to felling on neighbouring land.	Versant nord : limite est incertaine sur le terrain. La première vérification prend 1 h du responsable par coupe. L’ancien croquis peut conduire à abattre sur la parcelle voisine.
 Grenze bereits abgeglichen	Boundary already verified	Limite déjà vérifiée
 geprüfter digitaler Hiebsplan gewählt	verified digital harvest plan selected	plan de coupe numérique vérifié sélectionné
 Grenzabgleich eingeplant	boundary check planned	vérification des limites prévue
@@ -210,15 +189,8 @@ ungeprüft	unchecked	non vérifié
 Talgrund: 35 % der Fläche wurden aus Zeitmangel nicht begangen. Entscheide, wie du mit der Lücke umgehst.	Valley Floor: 35% of the area was not inspected due to limited time. Decide how to handle the gap.	Fond de vallée : 35 % de la surface n’a pas été inspectée faute de temps. Décidez comment traiter cette lacune.
 Für die gewählten Bestände ist die bekannte Erkundung vollständig. Markierte Schutzbereiche bleiben ausgeschlossen.	The known survey is complete for the selected stands. Marked protected areas remain excluded.	La reconnaissance connue est complète pour les peuplements sélectionnés. Les zones protégées marquées restent exclues.
 Umgang mit einer ungeprüften Teilfläche	Handling an unsurveyed section	Traitement d’une partie non reconnue
-Teilfläche aussparen · weniger Durchsatz	Exclude the section · lower output	Exclure cette partie · débit réduit
-Nacher­kundung · 2 h Revierzeit	Follow-up survey · 2 forester hours	Reconnaissance complémentaire · 2 h du responsable
-Trotz Informationslücke bearbeiten	Proceed despite the information gap	Exploiter malgré le manque d’informations
-Auslassen reduziert die Leistung im betroffenen Hieb um 20 %. Ignorieren kann im Spielszenario einen Schaden und eine Hiebsperrung auslösen.	Excluding the section reduces productivity in that block by 20%. Ignoring the gap can trigger damage and a shutdown in the game.	L’exclusion réduit la productivité de cette coupe de 20 %. Ignorer la lacune peut provoquer des dégâts et un arrêt dans le jeu.
 Zusätzliche Zusage	Additional commitment	Engagement supplémentaire
 Zusatzauftrag	Additional order	Commande supplémentaire
-Keine zusätzliche Mengen-Zusage	No additional volume commitment	Aucun engagement de volume supplémentaire
-180 fm diese Schicht zusagen	Commit to 180 m³ this shift	S’engager sur 180 m³ pour ce poste
-1.400 € Bonus bei Erfüllung; 450 € Zusatzkosten in jedem Fall.	€1,400 bonus if fulfilled; €450 additional costs regardless.	Bonus de 1 400 € si réalisé ; 450 € de frais supplémentaires dans tous les cas.
 Disposition vollständig. Starte deine Schicht.	Dispatch plan complete. Start your shift.	Affectation complète. Lancez votre poste.
 Fehlende Übergabe öffnen	Open the missing handover	Ouvrir la transmission manquante
 ausführen	run	exécuter
@@ -330,17 +302,9 @@ Dein Auftrag beginnt im Wald.	Your contract starts in the forest.	Votre contrat 
 Lege die Lieferzusage fest und entscheide, welche Informationen vor dem ersten Maschineneinsatz vorliegen.	Set your delivery commitment and decide what information is available before the machines start.	Fixez votre engagement de livraison et décidez des informations disponibles avant l’arrivée des machines.
 Was gibst du der Ernte mit?	What will the harvesting team need?	Que transmettre à l’équipe de récolte ?
 Welche Menge sagst du zu?	What volume will you commit to?	Sur quel volume vous engagez-vous ?
-Standard · 600 fm / 360 fm Sägeholz	Standard · 600 m³ / 360 m³ sawlogs	Standard · 600 m³ / 360 m³ de sciage
-Mehrmenge · 720 fm / 460 fm Sägeholz	Higher volume · 720 m³ / 460 m³ sawlogs	Volume majoré · 720 m³ / 460 m³ de sciage
-Die höhere Zusage bringt 6 €/fm mehr für Sägeholz, aber höhere Folgekosten bei Fehlmengen.	The larger commitment pays €6/m³ more for sawlogs, but carries higher shortfall costs.	L’engagement supérieur rapporte 6 €/m³ de plus pour le sciage, mais augmente les coûts en cas de manquants.
 Vorbereitung im Revier	District preparation	Préparation dans le secteur
-Aktenstand übernehmen · Lücken offen lassen	Use existing records · leave gaps open	Reprendre le dossier · laisser les lacunes ouvertes
-Vor Ort prüfen · Grenze und Erkundung	Check on site · boundary and survey	Vérifier sur place · limites et reconnaissance
-Vor-Ort-Paket: Nordhang-Grenze klären und fehlende Teilfläche im Talgrund erkunden. 3 h Revierzeit vor den Ernteschichten + Anfahrt: 405 €. Beim Aktenstand bleiben diese Aufgaben für die Ernte offen.	Site package: verify the North Slope boundary and survey the missed Valley Floor section. 3 forester hours before harvesting plus travel: €405. Using existing records leaves these tasks outstanding for the harvesting phase.	Forfait terrain : vérifier la limite du Versant nord et reconnaître la partie manquante du Fond de vallée. 3 h du responsable avant récolte et déplacement : 405 €. Avec le dossier existant, ces tâches restent à effectuer pendant la récolte.
 Arbeitsauftrag bereitstellen	Provide the work order	Fournir l’ordre de chantier
 Papier und Telefon	Paper and phone	Papier et téléphone
-Strukturierter digitaler Auftrag	Structured digital work order	Ordre numérique structuré
-Digital setzt aktuelle Schnittvorgaben und laufende Meldungen voraus. Das Maschinenteam muss die digitale Hiebsübergabe trotzdem bestätigen. Manuelle Übergabe bleibt möglich.	Digital planning uses current cutting specifications and ongoing reporting. The machine team must still acknowledge the digital handover. Manual handover remains possible.	La planification numérique utilise les consignes de coupe actuelles et les déclarations continues. L’équipe doit néanmoins confirmer la transmission numérique. La transmission manuelle reste possible.
 Planungskosten	planning costs	de coûts de planification
 Deine Entscheidungen bestimmen die Ausgangslage für die folgenden vier Ernteschichten.	Your decisions set the starting conditions for the next four harvesting shifts.	Vos décisions déterminent les conditions de départ des quatre postes de récolte suivants.
 Vertrag übernehmen und Ernte planen	Accept contract and plan harvesting	Accepter le contrat et planifier la récolte
@@ -378,17 +342,8 @@ bis 25 fm	up to 25 m³	jusqu’à 25 m³
 Sortiment und Polter bleiben getrennt	Assortments and stacks remain separate	Les assortiments et piles restent séparés
 Vereinfachte Volumenkapazität. Reale Nutzlast, Holzfeuchte, Fahr- und Lenkzeiten werden hier nicht berechnet.	Simplified volume capacity. Actual payload, timber moisture and travel and driving times are not calculated here.	Capacité volumique simplifiée. Charge utile réelle, humidité du bois, trajets et temps de conduite ne sont pas calculés ici.
 Wie viele Touren bestellst du?	How many trips will you book?	Combien de rotations réservez-vous ?
-Nach tatsächlichem Polterbestand	Based on actual roadside stock	Selon le stock réel en bord de route
-Pauschal nach Vertragsmenge	Based on contract volume only	Forfait selon le volume contractuel
-Bestandsorientiert: 85 € Disposition und passende Tourenzahl, maximal 30. Pauschal: Vertragsmenge / 25 fm, aufgerundet; auch leere Touren kosten 240 €. Teilladungen können zusätzliche Touren benötigen.	Stock-based: €85 dispatch cost and a matched trip count, maximum 30. Flat booking: contract volume / 25 m³, rounded up; empty trips also cost €240. Partial loads may require additional trips.	Selon stock : 85 € d’organisation et un nombre adapté de rotations, maximum 30. Forfait : volume contractuel / 25 m³, arrondi au supérieur ; les rotations à vide coûtent aussi 240 €. Les chargements partiels peuvent nécessiter des rotations supplémentaires.
 Zufahrt und Lkw-Wendepunkte	Access and truck turning points	Accès et aires de retournement
-Vor der Abfuhr prüfen	Check before haulage	Vérifier avant le transport
-Ungeprüfte Zufahrt verwenden	Use unchecked access	Utiliser un accès non vérifié
-Prüfung: 120 €. Bei unpassender Zufahrt im Talgrund geht im Szenario eine Tour verloren; 180 € Umplanung kommen hinzu.	Check: €120. In this scenario, unsuitable Valley Floor access wastes one trip, plus €180 for replanning.	Vérification : 120 €. Dans ce scénario, un accès inadapté au Fond de vallée fait perdre une rotation, avec 180 € de replanification.
 Lieferscheine und Herkunft	Delivery notes and origin	Bons de livraison et provenance
-Mit Auftrag und Polter verknüpfen	Link to work order and stack	Relier à l’ordre et à la pile
-Papierliste weitergeben	Pass on a paper list	Transmettre une liste papier
-Digitale Zuordnung: 90 €. Im Papier-Szenario fehlt auf einem Beleg der Auftragsbezug; dieser kann später nachgeprüft werden.	Digital allocation: €90. In the paper scenario, one document lacks the contract reference; it can be checked later.	Affectation numérique : 90 €. Dans le scénario papier, un document n’a pas de référence au contrat ; elle peut être vérifiée plus tard.
 geplante Logistikkosten	planned logistics costs	de coûts logistiques prévus
 Touren für alle verfügbaren Sortiments- und Polterpartien benötigt;	trips needed for all available assortment and stack lots;	rotations nécessaires pour tous les lots disponibles par assortiment et pile ;
 gebucht.	booked.	réservées.
@@ -419,13 +374,7 @@ Zusätzlich fehlt auf einem Papierlieferschein der Auftragsbezug.	One paper deli
 Dies ist ein Zuordnungsfall, kein automatischer Aufschlag bei echter Messdifferenz. Reale Abweichungen brauchen einen nachvollziehbaren Nachweis.	This is an allocation issue, not an automatic uplift for a genuine measurement difference. Real discrepancies require verifiable evidence.	Il s’agit d’un problème d’affectation, pas d’une majoration automatique pour un véritable écart de mesure. Les écarts réels nécessitent des justificatifs vérifiables.
 Lieferbelege ansehen	View delivery documents	Voir les documents de livraison
 Mengen und Belege abgleichen	Reconcile volumes and documents	Rapprocher les volumes et documents
-Lieferscheine und Werkbeleg prüfen	Check delivery notes and mill receipt	Vérifier les bons et la réception usine
-Vorläufige Werkzuordnung übernehmen	Accept provisional mill allocation	Accepter l’affectation usine provisoire
-Mit verknüpften Daten: 80 €. Papierbelege nachrecherchieren: 180 €. Ohne Prüfung bleibt die strittige Zuordnung offen und wird vorerst nicht abgerechnet.	With linked data: €80. Researching paper records: €180. Without a check, the disputed allocation stays open and is not yet invoiced.	Avec des données reliées : 80 €. Recherche des documents papier : 180 €. Sans vérification, l’affectation contestée reste ouverte et n’est pas encore facturée.
 Wie schließt du den Vertrag ab?	How will you close the contract?	Comment clôturez-vous le contrat ?
-Restmengen und offene Aufgaben dokumentieren	Document remaining volumes and tasks	Documenter les volumes et tâches restants
-Alles als vollständig erledigt melden	Report everything as fully complete	Déclarer tout entièrement terminé
-Dokumentierter Abschluss: 120 €. Unbelegte Vollerledigung bei Restmengen oder offenen Vorfällen führt zu 350 € Nachbearbeitung.	Documented closeout: €120. Claiming completion without evidence while volumes or incidents remain open incurs €350 rework.	Clôture documentée : 120 €. Une déclaration de fin non justifiée avec des volumes ou incidents ouverts entraîne 350 € de retraitement.
 Voraussichtlich abrechenbar	Expected billable value	Valeur facturable prévue
 bis zur Belegklärung offen ·	pending document reconciliation ·	en attente de vérification des documents ·
 vereinbarter Mengenausgleich.	agreed shortfall charge.	de compensation convenue.
@@ -742,3 +691,85 @@ Arbeitsszene auswählen	Select a work scene	Choisir une scène
 Bild vergrößern	Enlarge image	Agrandir l’image
 Bildansicht schließen	Close image view	Fermer l’image
 KI-generierte Beispielszene · keine reale Maschinen- oder Produktaufnahme	AI-generated example scene · not an actual machine or product photograph	Scène d’exemple générée par IA · pas une photographie réelle de machine ou de produit
+Geplante Kosten dieser Schicht	Planned cost of this shift	Coût prévu de ce poste
+Geplante Kosten dieser Etappe	Planned cost of this stage	Coût prévu de cette étape
+Risiko	Risk	Risque
+Grenze	boundary	limite
+Biotop	habitat	biotope
+Leerlauf	idle time	temps mort
+Abwertung	downgrade	déclassement
+je Leertour	per empty trip	par tournée vide
+Fehlfahrt	failed trip	trajet manqué
+Menge hängt in Abrechnung	volume held in settlement	volume bloqué au décompte
+bleibt offen	stays open	reste en suspens
+abrechenbar	billable	facturable
+Bonus	bonus	prime
+Leistung	output	rendement
+spart Übergabezeit in der Ernte	saves handover time in harvesting	gagne du temps de transmission à la récolte
+Manuell	Manual	Manuel
+Revierleitung fährt vor Ort	Forester visits the site	Visite du responsable forestier
+Bestätigter Auftrag an Bord	Acknowledged order on board	Ordre confirmé à bord
+Sofort	Immediately	Immédiatement
+Volle Schicht gebucht	Full shift booked	Poste complet réservé
+Nach Holzbestand	After stock report	Selon le stock
+Startet bei rückbarem Holz	Starts when timber is ready	Démarre quand le bois est prêt
+Ab Stunde 4	From hour 4	Dès la 4e heure
+Später Start, weniger Leerlauf	Later start, less idle time	Départ tardif, moins d’attente
+Am Schichtende	At end of shift	En fin de poste
+Disposition sieht Bestand spät	Dispatch sees stock late	Stock connu trop tard
+Laufend	Continuous	En continu
+Aktuelle Mengen für Disposition	Current volumes for dispatch	Volumes actuels pour la répartition
+Geladene Einstellung	Loaded setting	Réglage chargé
+Schnell, evtl. veraltet	Fast, possibly outdated	Rapide, peut-être obsolète
+Auftrag prüfen	Check the order	Vérifier l’ordre
+Verhindert falsche Längen	Prevents wrong lengths	Évite les mauvaises longueurs
+Keine Kontrollmessung	No quality measurement	Pas de contrôle de mesure
+Kein Zusatzaufwand	No extra effort	Aucun effort supplémentaire
+Deckt Fehleinstellung früh auf	Catches wrong settings early	Détecte tôt un mauvais réglage
+Schont den Boden	Protects the soil	Préserve le sol
+Referenztempo	Reference pace	Cadence de référence
+Belastet Boden bei Nässe	Strains wet soil	Charge le sol humide
+Papierkarte + Abgleich	Paper map + check	Carte papier + contrôle
+Digital integriert	Digitally integrated	Intégrée numériquement
+Geprüfter Hiebsplan an Bord	Verified harvest plan on board	Plan de coupe vérifié à bord
+Alte Skizze	Old sketch	Ancien croquis
+Ostgrenze unklar	East boundary unclear	Limite est incertaine
+Teilfläche aussparen	Exclude the sub-area	Exclure la zone
+Sicher, aber weniger Leistung	Safe, but lower output	Sûr, mais moins productif
+Nacherkundung	Follow-up survey	Reconnaissance complémentaire
+Lücke vor Ort schließen	Close the gap on site	Combler la lacune sur place
+Trotzdem bearbeiten	Harvest anyway	Exploiter quand même
+Schaden und Hiebsperre möglich	Damage and stoppage possible	Dommage et arrêt possibles
+Keine Zusage	No commitment	Aucun engagement
+Kein Zusatzauftrag	No extra order	Pas de commande supplémentaire
+180 fm zusagen	Commit 180 fm	Engager 180 fm
+Bonus nur bei Erfüllung	Bonus only if met	Prime seulement si atteint
+Standard	Standard	Standard
+Mehrmenge	Higher volume	Volume majoré
+Sichere Zusage, kleiner Ausgleich	Safe commitment, small penalty	Engagement sûr, faible pénalité
+Mehr Erlös, höheres Fehlmengenrisiko	More revenue, higher shortfall risk	Plus de recettes, risque de manque accru
+Aktenstand übernehmen	Use existing records	Reprendre le dossier existant
+Lücken bleiben offen	Gaps remain open	Les lacunes subsistent
+Grenze und Erkundung geklärt	Boundary and survey verified	Limite et reconnaissance vérifiées
+Übergabe bindet Revierzeit	Handover ties up forester time	La transmission mobilise le responsable
+Digitaler Auftrag	Digital order	Ordre numérique
+Live-Meldungen, Übergabe bestätigen	Live reports, acknowledge handover	Suivi en direct, transmission à confirmer
+Nach Polterbestand	By roadside stock	Selon le stock en bord de route
+Passende Tourenzahl	Matching number of trips	Nombre de tournées adapté
+Pauschal	Flat estimate	Forfaitaire
+Nach Vertragsmenge, evtl. Leertouren	By contract volume, maybe empty trips	Selon le contrat, tournées vides possibles
+Wendepunkte vorab frei	Turning points checked	Aires de retournement vérifiées
+Ungeprüft	Unchecked	Non vérifiée
+Talgrund-Zufahrt evtl. ungeeignet	Talgrund access may be unsuitable	Accès au Talgrund peut-être inadapté
+Verknüpfen	Link	Relier
+Herkunft lückenlos belegt	Origin fully documented	Origine entièrement tracée
+Papierliste	Paper list	Liste papier
+Herkunft nur auf Papier	Origin on paper only	Origine sur papier seulement
+Belege prüfen	Check documents	Vérifier les documents
+Strittige Menge wird abgerechnet	Disputed volume is billed	Le volume contesté est facturé
+Werkzuordnung übernehmen	Accept mill allocation	Accepter l’affectation usine
+Spart Prüfung, Erlös bleibt offen	No check, revenue stays open	Sans contrôle, recette en suspens
+Dokumentieren	Document	Documenter
+Restaufgaben nachvollziehbar übergeben	Hand over remaining tasks traceably	Transmettre les tâches restantes
+Als erledigt melden	Report as complete	Déclarer terminé
+Unbelegt bei offenen Restmengen	Unsupported with open volumes	Non justifié avec volumes restants
