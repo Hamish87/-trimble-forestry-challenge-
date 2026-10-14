@@ -34,6 +34,7 @@ const orderId=id=>'H-'+String(id).toUpperCase()+'01',landingId=id=>'P-'+String(i
 function standIdOf(ref){if(typeof ref!=='string')return null;const m=/^H-([A-Z])01$/.exec(ref);return m?m[1].toLowerCase():/^[a-z]$/.test(ref)?ref:null;}
 const requiredVersion=s=>s.round>=3?2:1; // same rule as dist/handover.js and ForestGame.validate
 const sum=a=>a.reduce((x,y)=>x+y,0);
+const clamp01=x=>Math.max(0,Math.min(1,Number(x)||0));
 const PHASES=['forest','plan','receipt','logistics','logisticsReceipt','settlement','result'];
 
 /** Minimal shape check before trusting a handed-over object as game state. */
@@ -98,6 +99,10 @@ function fromGameState(s){
       handover:{mode:s.handoverMode,accepted,version:s.handoverVersions?.[st.id]||0,required:req,round:s.handoverRound?.[st.id]||null},
       gameSent:s.handoverMode==='digital'&&accepted,
       dispatch:{harvester:s.harvester===st.id,forwarder:s.forwarder===st.id},
+      // Planned machine routes of the game map (dist/routes.js) and SIMULATED positions on them: share of the route done =
+      // harvested share (harvester) and forwarded share of the felled volume (forwarder). Not a GPS or machine report.
+      routes:{harvester:site.harvester.map(p=>world(anchor,p)),forwarder:site.forwarder.map(p=>world(anchor,p))},
+      simulated:{harvester:s.harvester===st.id?clamp01(st.volume>0?(st.volume-st.remaining)/st.volume:0):null,forwarder:s.forwarder===st.id?clamp01(felled>0?forwarded/felled:0):null},
       notes:s.history.filter(r=>r.harvestOrigin===st.id||r.forwardOrigin===st.id).flatMap(r=>(r.logs||[]).map(l=>({round:r.round,kind:l.kind,title:l.title}))),
       pin:{required:req,spec,v1,v2,loaded,machineVersion,cutting:s.cutting},
       stand:{felled,forwarded,forestStock:st.stock,roadside:st.roadside,delivered:st.delivered||0,byGrade}};

@@ -355,6 +355,103 @@ async function cycle(p){collect(p);const snapshot=p.js('JSON.stringify(CFHApp.st
  for(const z of ['day','week','month','quarter']){await click(lb,`[data-action="cal-zoom"][data-zoom="${z}"]`);const b=bar(lb,'H-01','H-C01');close(parseFloat(b.style.left),0,.01);close(parseFloat(b.style.left)+parseFloat(b.style.width),100,.01,'blocks the whole window at '+z);assert(!b.querySelector('[data-resize]'),'no handle on a clipped end');}
  results.calendarFidelity=['capacity tooltip + zooms','pointer resize (mouse, touch) + keyboard','move in time','cross-row recompute vs lock','greyed member bars','conflict warning','Kopiera onto member','chain lag','rate re-flow','1 h + 1 fm blocks the window'];
 
+ /* 8c. Map as a planning surface (PLAN_OVERNIGHT §3): click / shift-click / lasso selection shared with the list and the
+    "Auf Ressource verschieben (n)" count, drag of a selected stand onto a calendar row, landings and symbols (map, Avlägg
+    tab, OIN, sessionStorage), route sequence on the map, layers, legend, measure, OSM flag, dispatch-line dedupe. */
+ const mp=await replica({}),moveCount=p=>p.d.querySelector('[data-move-count]').textContent,checkedIds=p=>JSON.parse(p.js('JSON.stringify(CFHApp.state().view.checked)'));
+ // Layout stubs: the planning map is drawn 620 × 350 px at (0,0), so client px = image units at zoom level 2.
+ const stubMaps=p=>{for(const s of p.d.querySelectorAll('svg.cfh-map')){const vb=s.getAttribute('viewBox').split(/\s+/).map(Number),w=s.dataset.mapScope==='detail'?600:620;s.getBoundingClientRect=()=>({left:0,top:0,width:w,height:w*vb[3]/vb[2],right:w,bottom:w*vb[3]/vb[2],x:0,y:0});}};
+ const clickAt=async(p,el,x,y,extra={})=>{stubMaps(p);const t=typeof el==='string'?p.d.querySelector(el):el;assert(t,'missing '+el);t.dispatchEvent(new p.w.MouseEvent('click',{bubbles:true,clientX:x,clientY:y,...extra}));await tick();};
+ const stand=(p,id)=>p.d.querySelector(`svg[data-map-scope="main"] g.map-stand[data-order="${id}"]`);
+ await change(mp,'[data-change="view-toggle"][value="map"]',true);assert.equal(mp.d.querySelector('.cfh-map').dataset.mapLevel,'2');
+ // Stand polygons coloured by status (same classes as the pills).
+ assert(stand(mp,'H-A01').classList.contains('pill-available'));
+ // Click selects (list row orange, count 1); Shift+click adds (count 2) and removes again.
+ await click(mp,stand(mp,'H-A01'));assert.deepEqual(checkedIds(mp),['H-A01']);assert(mp.d.querySelector('tr[data-row-order="H-A01"]').classList.contains('sel'));assert.equal(moveCount(mp),'1');assert(stand(mp,'H-A01').classList.contains('selected'));
+ await clickAt(mp,stand(mp,'H-B01'),365,85,{shiftKey:true});assert.deepEqual(checkedIds(mp),['H-A01','H-B01']);assert.equal(moveCount(mp),'2');assert(mp.d.querySelector('tr[data-row-order="H-B01"]').classList.contains('sel'));assert(stand(mp,'H-B01').classList.contains('selected'));
+ await clickAt(mp,stand(mp,'H-A01'),120,140,{shiftKey:true});assert.deepEqual(checkedIds(mp),['H-B01']);assert.equal(moveCount(mp),'1');assert(!stand(mp,'H-A01').classList.contains('selected'));
+ // Lasso: rectangle around Talgrund and Südrevier selects both.
+ await click(mp,'[data-action="map-tool"][data-tool="lasso"]');assert.equal(mp.d.querySelector('[data-action="map-tool"][data-tool="lasso"]').getAttribute('aria-pressed'),'true');assert(mp.d.querySelector('[data-map-hint]'));await cycle(mp);
+ stubMaps(mp);let msvg=mp.d.querySelector('svg[data-map-scope="main"]');const mouseP={pointerType:'mouse',pointerId:4,button:0,isPrimary:true};
+ fire(mp,'pointerdown',msvg,{...mouseP,clientX:280,clientY:20});fire(mp,'pointermove',mp.d,{...mouseP,clientX:360,clientY:150});fire(mp,'pointermove',mp.d,{...mouseP,clientX:440,clientY:320});
+ const lassoRect=msvg.querySelector('[data-lasso]');assert(lassoRect,'lasso rectangle drawn');close(Number(lassoRect.getAttribute('width')),160,.01);
+ fire(mp,'pointerup',mp.d,{...mouseP,clientX:440,clientY:320});await tick();
+ assert.deepEqual(checkedIds(mp),['H-B01','H-C01'],'lasso selects the two stands inside');assert.equal(moveCount(mp),'2');assert(!mp.d.querySelector('[data-lasso]'));
+ assert(['H-B01','H-C01'].every(id=>mp.d.querySelector(`tr[data-row-order="${id}"]`).classList.contains('sel')));
+ await new Promise(res=>setTimeout(res,450));await click(mp,'[data-action="map-tool-off"]');assert(!mp.d.querySelector('[data-map-hint]'));
+ // Drag a selected stand onto the K-01 calendar row (mouse, Pointer Events): the whole map selection is planned (staged).
+ stubTracks(mp);stubMaps(mp);const ktrack=mp.d.querySelector('[data-drop-row="K-01"]'),kx=xForDay(mp,ktrack,0);mp.d.elementFromPoint=()=>ktrack;
+ fire(mp,'pointerdown',stand(mp,'H-B01').querySelector('polygon'),{...mouseP,clientX:365,clientY:85});fire(mp,'pointermove',mp.d,{...mouseP,clientX:367,clientY:86});assert(!mp.d.getElementById('cfhGhost').classList.contains('show'),'no drag below the 5 px threshold');
+ fire(mp,'pointermove',mp.d,{...mouseP,clientX:kx/2,clientY:8});assert(mp.d.getElementById('cfhGhost').classList.contains('show'),'ghost while dragging from the map');assert(ktrack.querySelector('.drop-day'),'drop target highlighted');
+ fire(mp,'pointermove',mp.d,{...mouseP,clientX:kx,clientY:8});fire(mp,'pointerup',mp.d,{...mouseP,clientX:kx,clientY:8});await tick();await new Promise(res=>setTimeout(res,450));
+ assert.deepEqual(itemsOf(mp,'K-01').map(i=>i.orderId),['H-B01','H-C01'],'map selection planned on K-01');assert(itemsOf(mp,'K-01').every(i=>i.staged));assert(bar(mp,'K-01','H-B01'));
+ // Dispatch line and return dialog: an unsent chain order is named once, not once per machine of the chain.
+ assert.deepEqual(JSON.parse(mp.js("JSON.stringify(CFHApp.vm().dispatch.issues.map(i=>[i.orderId,i.machine,i.code]))")),[['H-B01','harvester','notSent'],['H-B01','forwarder','notSent']]);
+ assert.equal(mp.d.querySelectorAll('.dispatch-line .flag').length,1,'dispatch line deduped per order');assert(mp.d.querySelector('.dispatch-line .flag').textContent.includes('Talgrund: geplant, aber nicht an die Ressource gesendet'));
+ await click(mp,'#cfhReturn');assert.equal(mp.d.querySelectorAll('[data-return-issue]').length,1,'return dialog deduped');await click(mp,'[data-action="dialog-cancel"]');
+ await click(mp,'[data-action="stage-save"]');
+ // Layers (🗂): landings, routes, stands, machines toggle; legend (💡) explains colours and the image-space map.
+ await click(mp,'[data-action="map-layers"]');const pop=mp.d.querySelector('[data-map-layers]');assert.deepEqual([...pop.querySelectorAll('input')].map(i=>i.value),['photo','stands','landings','symbols','protect','neighbours','routes','machines']);
+ assert(pop.textContent.includes('Polterplätze (Avlägg)')&&pop.textContent.includes('Schutzbereiche (Hänsyn)')&&pop.textContent.includes('Ernteketten-Position'));
+ assert(mp.d.querySelector('.map-landing'));await change(mp,'[data-change="map-layer"][value="landings"]',false);assert(!mp.d.querySelector('.map-landing'),'landings hidden');await change(mp,'[data-change="map-layer"][value="landings"]',true);assert.equal(mp.d.querySelectorAll('.map-landing').length,3);
+ assert(!mp.d.querySelector('.map-routes'));await change(mp,'[data-change="map-layer"][value="routes"]',true);assert.equal(mp.d.querySelectorAll('.map-routes').length,3,'harvester/forwarder routes from routes.js');assert(mp.d.querySelector('.map-routes .route-h')&&mp.d.querySelector('.map-routes .route-f'));
+ const machines=mp.d.querySelectorAll('.map-machine').length;assert(machines>=1,'simulated machine positions');assert(mp.d.querySelector('.map-machine title').textContent.includes('simulierte Position'));
+ await change(mp,'[data-change="map-layer"][value="machines"]',false);assert.equal(mp.d.querySelectorAll('.map-machine').length,0);await change(mp,'[data-change="map-layer"][value="machines"]',true);
+ await change(mp,'[data-change="map-layer"][value="protect"]',false);assert(!mp.d.querySelector('.map-bio'));await change(mp,'[data-change="map-layer"][value="protect"]',true);assert.equal(mp.d.querySelectorAll('.map-bio').length,3);
+ await change(mp,'[data-change="map-layer"][value="stands"]',false);assert(!mp.d.querySelector('.map-stand'));await change(mp,'[data-change="map-layer"][value="stands"]',true);assert.equal(mp.d.querySelectorAll('.map-stand').length,3);await cycle(mp);
+ await click(mp,'[data-action="map-layers"]');await click(mp,'[data-action="map-legend"]');const legend=mp.d.querySelector('[data-map-legend]').textContent;
+ for(const t of ['Frei','Geplant, nicht gesendet','An Ressource gesendet','An Team gesendet','Begonnen','Abgeschlossen','Ausgewählt','Wendeplatz','Abladepunkt','Harvester-Route','Forwarder-Route','simulierte Maschinenposition','Bildkoordinaten, nicht georeferenziert','1,33 m','OpenStreetMap-Mitwirkende','ODbL'])assert(legend.includes(t),'legend: '+t);
+ assert.equal(mp.d.querySelectorAll('[data-map-legend] .map-key-stand').length,6,'status palette as the pills');await cycle(mp);await click(mp,'[data-action="map-legend"]');
+ assert.equal(mp.d.querySelector('.map-scalebar').dataset.scaleM,'100','scale bar from the orthophoto scale');assert(mp.d.querySelector('.map-status').textContent.includes('Maßstab'));
+ // Measure: two clicks, distance from the orthophoto scale (300 image units ≈ 399 m).
+ await click(mp,'[data-action="map-tool"][data-tool="measure"]');await clickAt(mp,'svg[data-map-scope="main"]',100,100);await clickAt(mp,'svg[data-map-scope="main"]',400,100);
+ assert.equal(mp.d.querySelector('[data-measure]').textContent,'Strecke: 399 m');assert(mp.d.querySelector('.map-measure line'));await cycle(mp);await click(mp,'[data-action="map-tool-off"]');assert(!mp.d.querySelector('[data-measure]'));
+ // Landing (Avlägg) placed inside Nordhang: map, Avlägg tab, OIN preview, sessionStorage; then sent in the OIN.
+ await click(mp,'[data-action="map-tool"][data-tool="landing"][data-scope="main"]');await clickAt(mp,stand(mp,'H-A01').querySelector('polygon'),120,140);
+ assert.deepEqual(JSON.parse(mp.js("JSON.stringify(CFHApp.state().base.edits['H-A01'].landings)")),[{no:2,point:[120,140],id:'L2'}]);
+ assert(mp.d.querySelector('.map-landing.extra[data-landing="P-A01-2"]'),'new landing on the map');assert(!mp.js('CFHApp.state().view.mapTool'),'tool ends after placing');
+ assert.equal(JSON.parse(mp.storage()['cfharvest-plan-v1']).edits['H-A01'].landings.length,1,'persisted in the plan store');
+ // Map symbol: palette, Wendeplatz inside Nordhang.
+ await click(mp,'[data-action="map-tool"][data-tool="symbol"][data-scope="main"]');assert.equal(mp.d.querySelectorAll('.symbol-pop [data-action="map-symbol-kind"]').length,4);await cycle(mp);
+ await click(mp,'[data-action="map-symbol-kind"][data-kind="turn"]');await clickAt(mp,stand(mp,'H-A01').querySelector('polygon'),100,120);assert(mp.d.querySelector('.map-symbol.sym-turn[data-order="H-A01"]'),'Wendeplatz on the map');
+ // Edit on the map: click the symbol → popover with kind, move, delete.
+ await click(mp,'.map-symbol[data-obj="S1"]');assert(mp.d.querySelector('[data-obj-pop]').textContent.includes('H-A01-S1'));await cycle(mp);
+ await change(mp,'[data-obj-pop] [data-change="map-obj-kind"]','unload');assert(mp.d.querySelector('.map-symbol.sym-unload[data-obj="S1"]'));
+ await click(mp,'[data-obj-pop] [data-action="map-obj-move"]');await clickAt(mp,'svg[data-map-scope="main"]',90,110);assert.deepEqual(JSON.parse(mp.js("JSON.stringify(CFHApp.state().base.edits['H-A01'].symbols[0].point)")),[90,110],'moved');
+ await click(mp,'.map-symbol[data-obj="S1"]');await click(mp,'[data-obj-pop] [data-action="map-obj-close"]');assert(!mp.d.querySelector('[data-obj-pop]'));
+ // Order detail: same layers/legend/tools on its map; the Avlägg tab lists landing and symbol and previews the OIN.
+ await click(mp,'tr[data-row-order="H-A01"] [data-action="open-order"]');await click(mp,'[data-action="detail-tab"][data-tab="landings"]');
+ assert(mp.d.querySelector('.detail-map-wrap [data-action="map-layers"]')&&mp.d.querySelector('.detail-map-wrap [data-action="map-legend"]')&&mp.d.querySelector('.detail-map-wrap [data-tool="landing"][data-scope="detail"]')&&mp.d.querySelector('.detail-map-wrap [data-tool="symbol"]'));
+ assert(!mp.d.querySelector('.detail-map-wrap [data-tool="lasso"]'),'no lasso on the single-order map');assert(mp.d.querySelector('.detail-map .map-landing.extra[data-landing="P-A01-2"]'));
+ assert(mp.d.querySelector('tr[data-landing-row="P-A01-2"]'),'landing in the Avlägg tab');assert(mp.d.querySelector('tr[data-symbol-row="H-A01-S1"]'));
+ let oin=mp.d.querySelector('[data-oin-preview]').textContent;assert(oin.includes('"LandingKey": "P-A01-2"')&&oin.includes('"SymbolKey": "H-A01-S1"')&&oin.includes('"Type": "unload"'));await cycle(mp);
+ await click(mp,'.detail-map-wrap [data-action="map-layers"]');await click(mp,'.detail-map-wrap [data-action="map-legend"]');assert(mp.d.querySelector('.detail-map-wrap [data-map-legend]'));await cycle(mp);await click(mp,'[data-action="map-layers"]');await click(mp,'[data-action="map-legend"]');
+ await click(mp,'.detail-body [data-action="map-add-landing"]');await clickAt(mp,'svg[data-map-scope="detail"]',300,100);assert(mp.d.querySelector('tr[data-landing-row="P-A01-3"]'),'landing from the detail map');
+ await click(mp,'tr[data-landing-row="P-A01-3"] [data-action="map-obj-delete"]');assert(!mp.d.querySelector('tr[data-landing-row="P-A01-3"]'),'deleted');
+ await change(mp,'tr[data-symbol-row="H-A01-S1"] [data-change="map-obj-kind"]','protect');assert(mp.d.querySelector('.detail-map .map-symbol.sym-protect'));
+ await click(mp,'[data-action="detail-back"]');
+ // Plan Nordhang and send: the OIN carries the extra landing and the symbol.
+ await click(mp,'tr[data-row-order="H-A01"] td[data-col="client"]');await change(mp,'[data-change="pick-row"]','H-01');await click(mp,'[data-action="move-open"]');await click(mp,'[data-action="date-ok"]');await click(mp,'[data-action="stage-save"]');
+ await click(mp,'[data-action="send-open"]');await click(mp,'[data-action="send-confirm"]');
+ oin=JSON.parse(mp.js("JSON.stringify(CFHApp.vm().orders[0].instructions.files.oin.OperatingInstruction)"));
+ assert.deepEqual(oin.Landings.map(l=>l.LandingKey),['P-A01','P-A01-2'],'OIN landings');assert.deepEqual(oin.MapSymbols.map(s=>[s.SymbolKey,s.Type]),[['H-A01-S1','protect']]);
+ // Route sequence on the map ("Ordna om löpande nummer"): Südrevier, Nordhang, Talgrund → 1, 2, 3; list Lfd.-Nr. and badges follow.
+ await click(mp,'[data-action="map-tool"][data-tool="seq"]');await cycle(mp);
+ for(const id of ['H-C01','H-A01','H-B01'])await clickAt(mp,stand(mp,id),0,0);
+ assert.deepEqual(JSON.parse(mp.js('JSON.stringify(CFHApp.state().base.routeOrder)')),['H-C01','H-A01','H-B01']);assert(!mp.js('CFHApp.state().view.mapTool'),'mode ends when every order has a number');
+ assert.deepEqual(['H-A01','H-B01','H-C01'].map(id=>mp.d.querySelector(`[data-change="seq"][data-order="${id}"]`).value),['2','3','1'],'Lfd.-Nr. boxes');
+ assert.deepEqual([...mp.d.querySelectorAll('tr[data-row-order]')].map(x=>x.dataset.rowOrder),['H-C01','H-A01','H-B01'],'list sorted by Lfd.-Nr.');
+ assert.deepEqual([...mp.d.querySelectorAll('.map-seq')].map(g=>[g.dataset.seq,g.textContent]),[['H-A01','2'],['H-B01','3'],['H-C01','1']]);assert.equal(mp.d.querySelector('.map-route-seq').getAttribute('points').split(' ').length,3,'route polyline');
+ await click(mp,'[data-action="map-tool"][data-tool="seq"]');await clickAt(mp,stand(mp,'H-B01'),0,0);assert.deepEqual(JSON.parse(mp.js('JSON.stringify(CFHApp.state().base.routeOrder)')),['H-B01'],'a new pass starts at 1');await clickAt(mp,stand(mp,'H-B01'),0,0);assert.deepEqual(JSON.parse(mp.js('JSON.stringify(CFHApp.state().base.routeOrder)')),[],'second click removes the number');
+ await click(mp,'[data-action="map-tool-off"]');
+ // Level 1 (circles): selection and drag sources exist there too.
+ await click(mp,'[data-action="map-zoom-out"]');assert(mp.d.querySelector('.map-circle[data-map-drag][data-order="H-A01"]'));await clickAt(mp,'.map-circle[data-order="H-C01"]',0,0,{shiftKey:true});assert(checkedIds(mp).includes('H-C01'));
+ // OSM basemap flag: no georeference in the game orders → explanatory empty state with attribution, switch back to the photo.
+ const osm=await replica({},'https://forestry.test/cfharvest/app/?basemap=osm');await change(osm,'[data-change="view-toggle"][value="map"]',true);
+ assert(osm.d.querySelector('[data-basemap-empty]').textContent.includes('keine Geokoordinaten'));assert(osm.d.querySelector('[data-view="map"] [data-osm-attribution]').textContent.includes('OpenStreetMap-Mitwirkende'));assert(!osm.d.querySelector('svg.cfh-map'));await cycle(osm);
+ await click(osm,'[data-action="map-basemap"][data-basemap="photo"]');assert(osm.d.querySelector('svg.cfh-map[data-map-scope="main"]'));
+ const tiles=JSON.parse(osm.js("JSON.stringify(CFHViews.osmView([{geo:{boundary:[[51.95,8.50],[51.96,8.50],[51.96,8.52],[51.95,8.52]]}}]))"));assert(tiles.z>=12&&tiles.tiles.length>0&&tiles.tiles.every(t=>t.href.startsWith(`https://tile.openstreetmap.org/${tiles.z}/`)),'OSM tiles for georeferenced orders');
+ results.mapPlanning=['click / shift-click / lasso → list selection + count','drag map selection → calendar row','landing + symbol: map, Avlägg tab, OIN, storage','route sequence on the map → Lfd.-Nr.','layers + legend + measure','OSM flag empty state','dispatch line dedupe'];
  /* Catalogue coverage of every German phrase seen above; every replica phrase has English and French. */
  const cat=r.w.ForestryTranslations,keys=Object.keys(cat).sort((x,y)=>y.length-x.length),reg=new RegExp('(?<![\\p{L}\\p{N}_])(?:'+keys.map(s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|')+')(?![\\p{L}\\p{N}_])','gu');
  const allowed=/CFHarvest|Trimble|Forestry|StanForD|Excel|PDF|XLSX|WoodForce|\bTRI\b|\b(?:PIN|OIN|FOI|FDI|HPR|FPR)\b|Geobasis NRW \/ Land NRW|dl-de\/zero-2-0|BIO-0[123]|Harvester|Forwarder/g;
@@ -364,6 +461,6 @@ async function cycle(p){collect(p);const snapshot=p.js('JSON.stringify(CFHApp.st
  const own=require('../cfharvest/app/i18n-cfharvest.js');for(const [de,t] of Object.entries(own))assert(Array.isArray(t)&&t.length===2&&t.every(x=>typeof x==='string'&&x.trim()),'EN/FR for '+de);
  /* 9. Narrow screen markup: views stack (CSS) and English default language works on load. */
  const en=await page('cfharvest/app/index.html',REPLICA_FILES,'https://forestry.test/cfharvest/app/',{},'en');await tick();assert(en.d.getElementById('cfhNav').textContent.includes('Work planning'),'EN navigation');assert(en.d.querySelector('[data-view="list"] h2').textContent.includes('(Uppdragslista)'));
- for(const p of [g,r,back,g2,r2,solo,en,cf,lb])p.close();
+ for(const p of [g,r,back,g2,r2,solo,en,cf,lb,mp,osm])p.close();
  console.log(JSON.stringify({passed:true,...results,replicaPhrases:Object.keys(own).length,acceptance:['three stands as work orders + K-01 chain','Nordhang on K-01 day 1, Skicka → teal/purple','game: digital handover pre-confirmed, validate null','follow-up = receipt (0.1 fm), status harvesting','round 3: PIN v2, H-01 on v1 flagged','two-server fragment handoff with nonce'],milestone2:['German shell and 14 columns','HTML5 drag list→calendar, bar→resource (Kopiera), reorder','Pointer Events touch drag','insert-between shifts on Spara','Skicka PIN banner','status pill colours','detail page 13 tabs','admin 17-item menu, required markers, Veckokalender'],mode:'jsdom DOM contract; browser layout not tested'}));
 })().catch(e=>{console.error(e);process.exitCode=1;});

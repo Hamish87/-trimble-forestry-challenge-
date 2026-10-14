@@ -11,9 +11,11 @@ const config={longPress:350}; // touch: hold to pick up a row or bar, so normal 
 const PHASES={forest:'Waldplanung',plan:'Schicht in Planung',receipt:'Schichtbericht',logistics:'Logistik',logisticsReceipt:'Abfuhrbericht',settlement:'Abrechnung',result:'Ergebnis'};
 const VIEW_KEYS=['list','map','calendar','resources'],VIEW_NAMES={list:['Auftragsliste','Uppdragslista'],map:['Aufträge auf der Karte','Uppdrag på kartan'],calendar:['Kalender','Kalender'],resources:['Ressourcen','Resurser']};
 const NAV=[['orders','🛒','Bestellungen','Beställningar'],['planning','📋','Arbeitsplanung','Arbetsplanering'],['messages','✉','Nachrichten','Meddelanden'],['admin','⚙','Administration','Administration',true],['integration','⇄','Integrationsprotokoll','Integrationslogg'],['reports','📊','Berichte','Rapporter'],['help','?','Hilfe','Hjälp',true]];
+/** ?basemap=osm switches the map to the OpenStreetMap raster basemap (only meaningful with georeferenced orders). */
+function basemapFlag(){try{return new URLSearchParams(location.search).get('basemap')==='osm'?'osm':'photo';}catch{return 'photo';}}
 function savedViews(){try{const x=JSON.parse(local.get('cfharvest-views-v1')||'null');if(Array.isArray(x)&&x.length&&x.every(k=>VIEW_KEYS.includes(k)))return x;}catch{}return ['list','calendar'];}
 const defaultView=()=>({nav:'planning',views:savedViews(),viewMenu:false,widths:{list:1.3,map:1,calendar:1.5,resources:1},opFilter:'drivning',pickRow:'',checked:[],selected:null,selItem:null,search:'',filtersOpen:false,filters:{},columns:{},colMenu:false,sort:{key:'seq',dir:1},page:0,pageSize:12,
-  zoom:'week',calStart:null,rowChecked:[],rowsShown:null,resMenuOpen:false,resSearch:'',plannedOnly:false,insertMode:false,mapZoom:2,mapPan:[0,0],mapLayers:{},mapLegend:false,mapLayerMenu:false,landingMode:false,dialog:null,
+  zoom:'week',calStart:null,rowChecked:[],rowsShown:null,resMenuOpen:false,resSearch:'',plannedOnly:false,insertMode:false,mapZoom:2,mapPan:[0,0],mapLayers:{},mapLegend:false,mapLayerMenu:false,mapTool:null,mapToolScope:null,symbolKind:'warning',mapObj:null,measure:null,seqStarted:false,basemap:basemapFlag(),dialog:null,
   detail:{orderId:null,tab:'order',draft:{},showMap:true,funcOpen:false},menu:null,admin:{page:'resources',resource:'H-01',tab:'base',typeFilter:'',draft:{},weekSel:[],weekStart:null,weekSpan:7,chainDraft:{}},
   book:{},bookDraft:{},bookMessage:'',msgTo:'K-01',msgText:'',canUndo:false});
 /* base = saved plan (sessionStorage, travels to the game); plan = working plan incl. staged calendar changes. */
@@ -132,7 +134,6 @@ function render(){
   const dlg=$('cfhDialog'),html=V.dialog(vm,v,UI,{sendGroups,unplanList,editPreview,returnPreview,demo:!S.nonce});dlg.innerHTML=html?`<div class="dialog-body" data-dialog-type="${esc(v.dialog.type)}">${html}</div>`:'';
   if(html&&!dlg.open){if(typeof dlg.showModal==='function'){try{dlg.showModal();}catch{dlg.setAttribute('open','');}}else dlg.setAttribute('open','');}
   if(!html&&dlg.open){if(typeof dlg.close==='function')dlg.close();else dlg.removeAttribute('open');}
-  document.body.classList.toggle('landing-mode',!!v.landingMode);
   // Re-flowed bars glow briefly once the calendar is on screen (admin edits happen on another page).
   if(v.flash&&!v.flash.timer&&v.nav==='planning'&&v.views.includes('calendar'))v.flash.timer=setTimeout(()=>{if(S.view.flash){S.view.flash=null;render();}},3500);
   restoreFocus(key,sel);
@@ -145,7 +146,7 @@ const order=id=>S.vm.orders.find(o=>o.id===id),rowById=id=>S.vm.rows.find(r=>r.i
 const names=ids=>ids.map(id=>order(id)?.name||id).join(', ');
 const dq=s=>$('cfhDialog').querySelector(s);
 function openEdit(itemId){const it=itemById(itemId);if(!it)return;S.view.selItem=itemId;S.view.selected=it.orderId;S.view.dialog={type:'edit',itemId,draft:{},msgOpen:false};render();}
-function openOrder(id,tab){const v=S.view;v.selected=id;v.nav='order';v.menu=null;v.detail={orderId:id,tab:tab||'order',draft:{},showMap:v.detail.showMap!==false,funcOpen:false};render();try{window.scrollTo(0,0);}catch{}}
+function openOrder(id,tab){const v=S.view;clearMapTool();v.selected=id;v.nav='order';v.menu=null;v.detail={orderId:id,tab:tab||'order',draft:{},showMap:v.detail.showMap!==false,funcOpen:false};render();try{window.scrollTo(0,0);}catch{}}
 function moveWithin(delta){const it=itemById(S.view.selItem);if(!it)return;const row=rowById(it.rowId),idx=row.items.findIndex(i=>i.id===it.id),to=idx+delta;if(to<0||to>row.items.length-1)return;stage(M.insertAt(S.plan,S.snap,null,row.id,to,{itemId:it.id,stage:true}),tr('Reihenfolge geändert')+' · '+tr('Speichern nicht vergessen'));}
 function planOrders(ids,rowId,opts,how){const plan=M.assign(S.plan,S.snap,ids,rowId,{...opts,stage:true});S.view.selected=ids[0];S.view.checked=[];stage(plan,`${names(ids)} → ${rowById(rowId)?.name||rowId}${how?' · '+how:''}`);}
 /** After a master-data change (rate, working time): re-flow the bars of the affected rows (staged) and highlight them. */
@@ -157,13 +158,61 @@ function reflowAfter(before,resourceIds){
   const msg=`${tr('Kalender neu berechnet')}: ${ids.length} ${tr('Balken')}${moved?' · '+tr('Speichern nicht vergessen'):''}`;
   if(moved)stage(next,msg);else{render();toast(msg);}
 }
-function placeLanding(e){
-  const id=S.view.nav==='order'?S.view.detail.orderId:S.view.selected,o=order(id),svg=e.target.closest('svg.cfh-map');if(!o||!svg)return;
-  let pt=null;try{const m=svg.getScreenCTM?.();if(m&&svg.createSVGPoint){const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;const q=p.matrixTransform(m.inverse());pt=[+q.x.toFixed(1),+q.y.toFixed(1)];}}catch{}
-  S.view.landingMode=false;mutate(plan=>{const list=(plan.edits[id]??={}).landings??=[];if(!pt||!pt.every(Number.isFinite))pt=[o.landing.point[0]+14*(list.length+1),o.landing.point[1]-10];list.push(pt);},`${tr('Polterplatz')} · ${o.landing.id}-${(S.base.edits[id]?.landings?.length||0)+2}`);
+/* ---------- Map as a planning surface (PLAN_OVERNIGHT §3): tools, map objects, route sequence, lasso ---------- */
+/* Tools: lasso (main map), measure, landing (Avlägg), symbol, seq ("Ordna om löpande nummer", main map), move (an extra
+   landing or symbol). A tool belongs to one map (scope 'main' = planning map, 'detail' = order detail). Landings and
+   symbols are immediate plan changes (saved, travel to the game in the plan envelope) like the other order edits. */
+function clearMapTool(){const v=S.view;v.mapTool=null;v.mapToolScope=null;v.mapObj=null;v.measure=null;}
+function setMapTool(tool,scope){
+  const v=S.view;if(v.mapTool===tool&&v.mapToolScope===scope){v.mapTool=null;v.mapToolScope=null;render();return;}
+  v.mapTool=tool;v.mapToolScope=scope;v.mapObj=null;if(tool==='measure')v.measure=null;if(tool==='seq')v.seqStarted=false;
+  if(scope==='detail')v.detail.showMap=true;else{if(!v.views.includes('map'))v.views=VIEW_KEYS.filter(k=>k==='map'||v.views.includes(k));if(['landing','symbol','measure'].includes(tool)&&v.mapZoom<2){v.mapZoom=2;v.mapPan=[0,0];}if(tool==='seq'&&v.mapZoom<1)v.mapZoom=1;}
+  render();toast(tr(V.MAP_TOOL_HINTS[tool]||''));
+}
+const objRef=el=>{const d=el?.dataset||{},ob=S.view.mapObj;return d.obj?{orderId:d.order,kind:d.objKind||'landing',id:d.obj,scope:S.view.nav==='order'?'detail':'main'}:ob;};
+const landingName=(o,plan)=>M.orderLandings(o,plan).at(-1)?.id||o.landing.id;
+/** Route sequence: the first click in the mode starts a new sequence (1), later clicks append; clicking a numbered order again removes it. */
+function seqClick(id){
+  const v=S.view,o=order(id);if(!o)return;let cur=v.seqStarted?[...S.base.routeOrder]:[];v.seqStarted=true;
+  const removed=cur.includes(id);cur=removed?cur.filter(x=>x!==id):[...cur,id];
+  mutate(p=>{p.routeOrder=cur;});
+  if(!removed&&cur.length===S.vm.orders.length){clearMapTool();render();toast(tr('Reihenfolge festgelegt')+': '+cur.map(x=>tr(order(x)?.name||x)).join(' → '));return;}
+  toast(removed?`${tr(o.name)}: ${tr('Nummer entfernt')}`:`${tr(o.name)}: ${tr('Nummer')} ${cur.length}`);
+}
+/** A click on a map while a tool is active. Returns true when the click was consumed. */
+function mapToolClick(e,svg){
+  const v=S.view,tool=v.mapTool,scope=svg.dataset.mapScope,pt=V.svgPoint(svg,e.clientX,e.clientY);
+  if(tool==='lasso')return false;
+  if(tool==='seq'){const g=e.target.closest?.('[data-action="select-order"][data-order]');if(g)seqClick(g.dataset.order);return true;}
+  if(tool==='measure'){if(!pt)return true;const m=v.measure;v.measure=!m||m.b||m.scope!==scope?{scope,a:pt,b:null}:{...m,b:pt};render();if(v.measure.b)toast(`${tr('Strecke')}: ${UI.num(V.distanceM(v.measure.a,v.measure.b),0)} m`);return true;}
+  if(tool==='move'){const ob=v.mapObj;v.mapTool=null;v.mapToolScope=null;v.mapObj=null;if(!ob||!pt){render();return true;}mutate(p=>Object.assign(p,M.updateMapObject(p,ob.orderId,ob.kind,ob.id,{point:pt})),tr('Position geändert'));return true;}
+  const orders=S.vm.orders,o=scope==='detail'?order(svg.dataset.order):(V.orderAt(orders,pt)||order(v.selected)||V.nearestOrder(orders,pt)||orders[0]);if(!o)return true;
+  v.mapTool=null;v.mapToolScope=null;
+  if(tool==='landing'){const n=M.orderLandings(o,S.base).length,at=pt||[o.landing.point[0]+14*n,o.landing.point[1]-10];mutate(p=>Object.assign(p,M.addLanding(p,o.id,at)));toast(`${tr('Polterplatz')} ${landingName(o,S.base)} · ${tr(o.name)}`);return true;}
+  if(tool==='symbol'){const kind=v.symbolKind||'warning',n=M.orderSymbols(o,S.base).length,at=pt||[o.centroid[0]+12*(n+1),o.centroid[1]+12];mutate(p=>Object.assign(p,M.addSymbol(p,o.id,kind,at)));toast(`${tr(V.MAP_SYMBOLS.find(s=>s.key===kind)?.de||kind)} · ${M.orderSymbols(o,S.base).at(-1)?.code||''} · ${tr(o.name)}`);return true;}
+  render();return true;
+}
+/* Lasso: drag a rectangle (tool ⬚, or Shift+drag with the mouse) → every order whose centre lies inside becomes the selection. */
+let LS=null;
+function lassoStart(e,svg){
+  const a=V.svgPoint(svg,e.clientX,e.clientY);if(!a)return;e.preventDefault?.();
+  LS={id:e.pointerId,svg,a,b:a,x:e.clientX,y:e.clientY,moved:false,add:!!(e.shiftKey||e.ctrlKey||e.metaKey),rect:null};try{svg.setPointerCapture?.(e.pointerId);}catch{}
+}
+function lassoMove(e){
+  if(e.pointerId!==LS.id)return;e.preventDefault?.();if(!LS.moved&&Math.hypot(e.clientX-LS.x,e.clientY-LS.y)<4)return;
+  const b=V.svgPoint(LS.svg,e.clientX,e.clientY);if(!b)return;LS.moved=true;LS.b=b;
+  if(!LS.rect){LS.rect=document.createElementNS('http://www.w3.org/2000/svg','rect');LS.rect.setAttribute('class','map-lasso');LS.rect.setAttribute('data-lasso','');LS.svg.append(LS.rect);}
+  const vb=LS.svg.getAttribute('viewBox').split(/\s+/).map(Number),u=vb[2]/620;
+  for(const [k,val] of Object.entries({x:Math.min(LS.a[0],b[0]),y:Math.min(LS.a[1],b[1]),width:Math.abs(b[0]-LS.a[0]),height:Math.abs(b[1]-LS.a[1]),'stroke-width':2*u}))LS.rect.setAttribute(k,String(val));
+}
+function lassoEnd(cancel){
+  const x=LS;LS=null;try{x.svg.releasePointerCapture?.(x.id);}catch{}x.rect?.remove();if(!x.moved)return; // no drag: the click selects as usual
+  S.suppressClick=true;setTimeout(()=>{S.suppressClick=false;},400);if(cancel)return;
+  const v=S.view,ids=V.ordersInRect(S.vm.orders,x.a,x.b).filter(o=>!o.closed).map(o=>o.id);
+  v.checked=x.add?[...new Set([...v.checked,...ids])]:ids;if(ids.length)v.selected=ids[0];render();toast(`${tr('Auswahlrechteck')}: ${UI.num(v.checked.length,0)} ${tr('ausgewählt')}`);
 }
 const actions={
-  nav:el=>{const v=S.view;v.nav=el.dataset.nav;v.menu=null;v.dialog=null;render();},
+  nav:el=>{const v=S.view;clearMapTool();v.nav=el.dataset.nav;v.menu=null;v.dialog=null;render();},
   'nav-menu':el=>{S.view.menu=S.view.menu===el.dataset.key?null:el.dataset.key;render();},
   'admin-page':el=>{const v=S.view;v.nav='admin';v.admin.page=el.dataset.key;v.admin.draft={};v.admin.weekSel=[];v.menu=null;render();},
   'help-page':()=>{S.view.nav='help';S.view.menu=null;render();},
@@ -188,7 +237,10 @@ const actions={
   'page-size':el=>{S.view.pageSize=el.dataset.size==='all'?'all':Number(el.dataset.size);S.view.page=0;render();},
   sort:el=>{const k=el.dataset.key;S.view.sort=S.view.sort.key===k?{key:k,dir:-S.view.sort.dir}:{key:k,dir:1};render();},
   'open-order':el=>openOrder(el.dataset.order,el.dataset.tab),
-  'select-order':el=>{const v=S.view,id=el.dataset.order;v.selected=id;if(!v.checked.includes(id))v.checked=order(id)?.closed?[]:[id];render();},
+  'select-order':(el,e)=>{const v=S.view,id=el.dataset.order,closed=order(id)?.closed;
+    // Shift/Ctrl/Cmd adds or removes (map and list share the selection); a plain click keeps a group it belongs to, so it can be dragged.
+    if(e&&(e.shiftKey||e.ctrlKey||e.metaKey)){const off=v.checked.includes(id);if(!closed)v.checked=off?v.checked.filter(x=>x!==id):[...v.checked,id];v.selected=off?v.checked.at(-1)??null:id;}
+    else{v.selected=id;if(!v.checked.includes(id))v.checked=closed?[]:[id];}render();},
   /* calendar */
   'select-item':el=>{const id=el.dataset.item,now=Date.now(),dbl=S.lastBar&&S.lastBar.id===id&&now-S.lastBar.t<450;S.lastBar={id,t:now};if(dbl){S.lastBar=null;return openEdit(id);}S.view.selItem=id;S.view.selected=el.dataset.order;render();},
   'send-open':()=>{const v=S.view,d={type:'send',filter:true,sel:[],notify:{}};const groups=sendGroups(d),rows=v.rowChecked.length?v.rowChecked:null;
@@ -228,9 +280,17 @@ const actions={
   'map-print':()=>api.print(),
   'map-layers':()=>{S.view.mapLayerMenu=!S.view.mapLayerMenu;render();},
   'map-legend':()=>{S.view.mapLegend=!S.view.mapLegend;render();},
-  'map-add-landing':()=>{const v=S.view,id=v.nav==='order'?v.detail.orderId:v.selected;if(!id)return;v.landingMode=!v.landingMode;if(v.nav==='order')v.detail.showMap=true;else{if(v.mapZoom<2)v.mapZoom=2;if(!v.views.includes('map'))v.views=[...v.views,'map'];}render();if(v.landingMode)toast(tr('In die Karte klicken, um den Polterplatz zu setzen.'));},
+  'map-add-landing':()=>setMapTool('landing',S.view.nav==='order'?'detail':'main'),
+  'map-tool':el=>setMapTool(el.dataset.tool,el.dataset.scope||(S.view.nav==='order'?'detail':'main')),
+  'map-tool-off':()=>{clearMapTool();render();},
+  'map-symbol-kind':el=>{S.view.symbolKind=el.dataset.kind;render();},
+  'map-obj':el=>{const v=S.view,ob=objRef(el);v.mapObj=v.mapObj&&ob&&v.mapObj.orderId===ob.orderId&&v.mapObj.kind===ob.kind&&v.mapObj.id===ob.id?null:ob;render();},
+  'map-obj-close':()=>{S.view.mapObj=null;render();},
+  'map-obj-move':el=>{const v=S.view,ob=objRef(el);if(!ob)return;v.mapObj=ob;v.mapTool='move';v.mapToolScope=ob.scope;if(ob.scope==='detail')v.detail.showMap=true;render();toast(tr(V.MAP_TOOL_HINTS.move));},
+  'map-obj-delete':el=>{const v=S.view,ob=objRef(el);if(!ob)return;v.mapObj=null;if(v.mapTool==='move')clearMapTool();mutate(p=>Object.assign(p,M.removeMapObject(p,ob.orderId,ob.kind,ob.id)),tr(ob.kind==='symbol'?'Kartensymbol gelöscht':'Polterplatz gelöscht'));},
+  'map-basemap':el=>{S.view.basemap=el.dataset.basemap==='osm'?'osm':'photo';render();},
   /* order detail */
-  'detail-back':()=>{S.view.nav='planning';render();},
+  'detail-back':()=>{clearMapTool();S.view.nav='planning';render();},
   'detail-tab':el=>{S.view.detail.tab=el.dataset.tab;S.view.detail.funcOpen=false;render();},
   'detail-map':()=>{S.view.detail.showMap=S.view.detail.showMap===false;render();},
   'detail-func-menu':()=>{S.view.detail.funcOpen=!S.view.detail.funcOpen;render();},
@@ -295,6 +355,8 @@ function grabDelta(bar,it,clientX){const track=bar.closest?.('[data-drop-row]');
 function payloadFor(target,clientX){
   const row=target.closest?.('tr[data-row-order]');
   if(row){if(row.getAttribute('draggable')!=='true')return null;const id=row.dataset.rowOrder,v=S.view,ids=v.checked.includes(id)?S.vm.orders.filter(o=>v.checked.includes(o.id)&&!o.closed).map(o=>o.id):[id];const o=order(ids[0]);return{kind:'orders',ids,label:tr(o.operationLabel)+(ids.length>1?` (${ids.length})`:'')};}
+  const feature=target.closest?.('[data-map-drag][data-order]');
+  if(feature){const id=feature.dataset.order,v=S.view,o=order(id);if(!o||o.closed)return null;const ids=v.checked.includes(id)?S.vm.orders.filter(x=>v.checked.includes(x.id)&&!x.closed).map(x=>x.id):[id];return{kind:'orders',ids,label:tr(o.operationLabel)+(ids.length>1?` (${ids.length})`:''),from:'map'};}
   const bar=target.closest?.('.cal-item[data-item]');if(bar){const it=itemById(bar.dataset.item);if(!it)return null;return{kind:'item',id:it.id,rowId:it.rowId,grab:grabDelta(bar,it,clientX),span:it.startPos!=null&&it.endPos!=null?Math.max(1,Math.ceil(it.endPos-1e-9)-Math.floor(it.startPos)):1,label:UI.orderLabelText(order(it.orderId)).replace(/ - ([^-]+)$/,(m,n)=>' - '+tr(n))};}
   return null;
 }
@@ -342,6 +404,13 @@ function hitTrack(x,y){const el=document.elementFromPoint?.(x,y);return el?.clos
 function onPointerDown(e){
   const split=e.target.closest?.('.splitter');if(split)return splitStart(e,split);
   const handle=e.target.closest?.('[data-resize]');if(handle&&!(e.button>0))return resizeStart(e,handle);
+  const msvg=e.target.closest?.('svg.cfh-map[data-map-scope="main"]'),v=S.view;
+  if(msvg&&!(e.button>0)){
+    if((v.mapTool==='lasso'&&v.mapToolScope==='main')||(e.shiftKey&&e.pointerType==='mouse'&&!v.mapTool))return lassoStart(e,msvg);
+    // SVG has no HTML5 drag and drop: a mouse drag of a stand or circle uses the pointer path (starts after 5 px).
+    if(e.pointerType==='mouse'){if(v.mapTool)return;const payload=payloadFor(e.target,e.clientX);if(!payload)return;e.preventDefault?.();P={id:e.pointerId,x:e.clientX,y:e.clientY,payload,active:false,timer:null,mouse:true};return;}
+    if(v.mapTool)return;
+  }
   if(e.pointerType==='mouse'||e.button>0)return; // mouse uses native HTML5 drag and drop
   if(e.target.closest?.('input,select,textarea,a,button:not(.cal-item)'))return;
   const payload=payloadFor(e.target,e.clientX);if(!payload)return;
@@ -351,17 +420,20 @@ function onPointerDown(e){
 function onPointerMove(e){
   if(R)return resizeMove(e);
   if(SP)return splitMove(e);
+  if(LS)return lassoMove(e);
   if(!P||e.pointerId!==P.id)return;
+  if(!P.active&&P.mouse){if(Math.hypot(e.clientX-P.x,e.clientY-P.y)<=5)return;startPointerDrag();}
   if(!P.active){if(Math.hypot(e.clientX-P.x,e.clientY-P.y)>10){clearTimeout(P.timer);P=null;}return;}
   e.preventDefault?.();ghost(P.payload.label,e.clientX,e.clientY);const track=hitTrack(e.clientX,e.clientY);if(track)highlight(track,dropInfo(track,e.clientX));else clearHighlight();
 }
 function onPointerUp(e){
   if(R)return e.pointerId===R.id?resizeEnd():undefined;
   if(SP)return splitEnd();
+  if(LS)return e.pointerId===LS.id?lassoEnd():undefined;
   if(!P||e.pointerId!==P.id)return;clearTimeout(P.timer);const was=P;P=null;
   if(was.active){const track=hitTrack(e.clientX,e.clientY),info=track?dropInfo(track,e.clientX):null;clearHighlight();hideGhost();document.body.classList.remove('dragging');S.suppressClick=true;setTimeout(()=>{S.suppressClick=false;},400);if(info)performDrop(was.payload,info);}
 }
-function onPointerCancel(){if(R)return resizeEnd(true);if(SP)return splitEnd();if(P){clearTimeout(P.timer);P=null;}clearHighlight();hideGhost();document.body.classList.remove('dragging');}
+function onPointerCancel(){if(R)return resizeEnd(true);if(SP)return splitEnd();if(LS)return lassoEnd(true);if(P){clearTimeout(P.timer);P=null;}clearHighlight();hideGhost();document.body.classList.remove('dragging');}
 /* ---------- Bar resize: right-edge handle (Pointer Events for mouse, touch and pen) ---------- */
 /* The end snaps to day columns; the label shows the resulting working hours; release sets the manual working time (staged,
    counted in Zurücksetzen, persisted by Speichern). The bar's native drag is switched off while the handle is held. */
@@ -411,7 +483,8 @@ function splitKey(e,split){const [a,b]=split.dataset.split.split('|'),w=S.view.w
 function onClick(e){
   if(S.suppressClick){S.suppressClick=false;e.preventDefault();return;}
   const v=S.view;
-  if(v.landingMode&&e.target.closest?.('svg.cfh-map')){placeLanding(e);return;}
+  const mapSvg=e.target.closest?.('svg.cfh-map');
+  if(mapSvg&&v.mapTool&&mapSvg.dataset.mapScope===v.mapToolScope&&mapToolClick(e,mapSvg))return;
   const el=e.target.closest?.('[data-action],[data-nav]');
   const closeMenus=()=>{let changed=false;if(v.menu&&!e.target.closest('.nav-drop')){v.menu=null;changed=true;}if(v.colMenu&&!e.target.closest('.menu')){v.colMenu=false;changed=true;}if(v.detail.funcOpen&&!e.target.closest('.menu')){v.detail.funcOpen=false;changed=true;}if(v.viewMenu&&!e.target.closest('.view-select')){v.viewMenu=false;changed=true;}if(v.resMenuOpen&&!e.target.closest('.res-picker')&&el?.dataset.action!=='res-menu'){v.resMenuOpen=false;changed=true;}return changed;};
   if(el&&!el.disabled){const a=el.dataset.nav?'nav':el.dataset.action;closeMenus();if(actions[a]){if(el.tagName==='BUTTON'||el.tagName==='SUMMARY')e.preventDefault();actions[a](el,e);}return;}
@@ -431,7 +504,8 @@ function onChange(e){
   else if(c==='moved-row'||c==='moved-lock'){const d=v.dialog;if(d?.type!=='moved')return;d.rowId=$('cfhDialog').querySelector('[data-dialog="row"]')?.value||d.rowId;d.lock=!!$('cfhDialog').querySelector('[data-dialog="lock"]')?.checked;d.dateISO=$('cfhDialog').querySelector('[data-dialog="date"]')?.value||d.dateISO;}
   else if(c==='row')v.rowChecked=el.checked?[...new Set([...v.rowChecked,el.value])]:v.rowChecked.filter(x=>x!==el.value);
   else if(c==='res-shown'){const all=S.vm.rows.map(r=>r.id),cur=v.rowsShown||all;const next=el.checked?[...new Set([...cur,el.value])]:cur.filter(x=>x!==el.value);v.rowsShown=next.length===all.length?null:all.filter(x=>next.includes(x));}
-  else if(c==='map-layer')v.mapLayers={photo:true,overlay:true,landings:true,...v.mapLayers,[el.value]:el.checked};
+  else if(c==='map-layer')v.mapLayers={...V.mapLayerState(v),[el.value]:el.checked};
+  else if(c==='map-obj-kind'){const ob=el.dataset.obj?{orderId:el.dataset.order,id:el.dataset.obj}:v.mapObj;if(!ob)return;mutate(p=>Object.assign(p,M.updateMapObject(p,ob.orderId,'symbol',ob.id,{kind:el.value})),tr('Gespeichert'));return;}
   else if(c==='send-item'){const d=v.dialog;d.sel=el.checked?[...new Set([...d.sel,el.value])]:d.sel.filter(x=>x!==el.value);}
   else if(c==='send-row'){const d=v.dialog,ids=rowById(el.value)?.items.map(i=>i.id)||[];d.sel=el.checked?[...new Set([...d.sel,...ids])]:d.sel.filter(x=>!ids.includes(x));}
   else if(c==='send-filter'){const d=v.dialog;d.filter=el.checked;}
@@ -464,19 +538,19 @@ function onInput(e){
 }
 function onKey(e){
   const v=S.view;
-  if(e.key==='Escape'){if(v.dialog){v.dialog=null;render();}else if(v.landingMode){v.landingMode=false;render();}else if(v.menu||v.colMenu||v.detail.funcOpen){v.menu=null;v.colMenu=false;v.detail.funcOpen=false;render();}return;}
+  if(e.key==='Escape'){if(v.dialog){v.dialog=null;render();}else if(v.mapTool||v.mapObj||v.measure){clearMapTool();render();}else if(v.menu||v.colMenu||v.detail.funcOpen){v.menu=null;v.colMenu=false;v.detail.funcOpen=false;render();}return;}
   const split=e.target.closest?.('.splitter');if(split&&(e.key==='ArrowLeft'||e.key==='ArrowRight')){e.preventDefault();return splitKey(e,split);}
   const calBar=e.target.closest?.('.cal-item[data-item]');if(calBar&&e.shiftKey&&(e.key==='ArrowLeft'||e.key==='ArrowRight')){e.preventDefault();return keyResize(calBar.dataset.item,e.key==='ArrowRight'?1:-1);}
   const row=e.target.matches?.('tr[data-row-order]')?e.target:null;if(row&&(e.key===' '||e.key==='Enter')){e.preventDefault();row.dispatchEvent(new MouseEvent('click',{bubbles:true}));return;}
   if((e.key==='Enter'||e.key===' ')&&e.target.getAttribute?.('role')==='button'&&e.target.tagName!=='BUTTON'){e.preventDefault();e.target.dispatchEvent(new MouseEvent('click',{bubbles:true}));}
 }
-function onMapMove(e){const svg=e.target.closest?.('svg.cfh-map');if(!svg)return;const out=svg.parentElement?.querySelector('[data-map-coords]');if(!out)return;try{const m=svg.getScreenCTM?.();if(!m||!svg.createSVGPoint)return;const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;const q=p.matrixTransform(m.inverse());out.textContent=`Bildkoordinaten: x ${Math.round(q.x)} · y ${Math.round(q.y)}`;}catch{}}
+function onMapMove(e){const svg=e.target.closest?.('svg.cfh-map');if(!svg)return;const out=svg.parentElement?.querySelector('[data-map-coords]');if(!out)return;const q=V.svgPoint(svg,e.clientX,e.clientY);if(q)out.textContent=`${tr('Bildkoordinaten')}: x ${Math.round(q[0])} · y ${Math.round(q[1])}`;}
 function init(){
   load();
   document.addEventListener('click',onClick);document.addEventListener('dblclick',onDblClick);document.addEventListener('change',onChange);document.addEventListener('input',onInput);document.addEventListener('keydown',onKey);
   document.addEventListener('dragstart',onDragStart);document.addEventListener('dragover',onDragOver);document.addEventListener('drop',onDrop);document.addEventListener('dragend',onDragEnd);
-  document.addEventListener('pointerdown',onPointerDown);document.addEventListener('pointermove',e=>{onPointerMove(e);if(!P&&!SP)onMapMove(e);});document.addEventListener('pointerup',onPointerUp);document.addEventListener('pointercancel',onPointerCancel);
-  document.addEventListener('touchmove',e=>{if(P?.active||SP||R)e.preventDefault();},{passive:false});
+  document.addEventListener('pointerdown',onPointerDown);document.addEventListener('pointermove',e=>{onPointerMove(e);if(!P&&!SP&&!LS)onMapMove(e);});document.addEventListener('pointerup',onPointerUp);document.addEventListener('pointercancel',onPointerCancel);
+  document.addEventListener('touchmove',e=>{if(P?.active||SP||R||LS)e.preventDefault();},{passive:false});
   document.addEventListener('contextmenu',e=>{if(P)e.preventDefault();});
   // dist/i18n.js fires this event on first load before its MutationObserver exists: translate the re-render explicitly.
   document.addEventListener('forestry-language-change',()=>{render();try{I18n.localize(document.body);}catch{}});

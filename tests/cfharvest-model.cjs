@@ -211,4 +211,18 @@ assert.deepEqual([startOf(rfOut,'H-A01'),startOf(rfOut,'H-C01'),startOf(rfOut,'H
 const rfSent=M.send(rf,snap,{orderIds:['H-C01']});rfOut=M.reflow(rfSent,{...rfSent,resources:slower.resources},snap,'H-01');
 assert.deepEqual([startOf(rfOut,'H-A01'),startOf(rfOut,'H-C01'),startOf(rfOut,'H-B01')],[0,20,50],'sent bar stays');
 assert.deepEqual(M.reflow(rf,{...rf,resources:{'F-01':{production:{Slutavverkning:10}}}},snap,'F-01').reflowed,[],'other resource: nothing on H-01 changes');
+/* Map objects (PLAN_OVERNIGHT §3): legacy [x,y] landings converted, numbering, symbols, update/remove, route order, OIN/FOI. */
+{const o=snap.orders[0],legacy=M.normalizePlan({edits:{'H-A01':{landings:[[10,20]]}}});
+assert.deepEqual(legacy.edits['H-A01'].landings,[{no:2,point:[10,20],id:'L2'}],'milestone-2 point converted');
+let mp=M.addLanding(legacy,'H-A01',[30.04,40]);assert.deepEqual(mp.lastObject,{orderId:'H-A01',kind:'landing',id:'L3'});assert.deepEqual(legacy.edits['H-A01'].landings.length,1,'pure');
+assert.deepEqual(M.orderLandings(o,mp).map(l=>[l.id,l.point]),[['P-A01',o.landing.point],['P-A01-2',[10,20]],['P-A01-3',[30,40]]]);
+mp=M.addSymbol(mp,'H-A01','turn',[5,5]);mp=M.addSymbol(mp,'H-A01','bogus',[6,6]);assert.deepEqual(M.orderSymbols(o,mp).map(s=>[s.code,s.kind]),[['H-A01-S1','turn'],['H-A01-S2','warning']]);
+mp=M.updateMapObject(mp,'H-A01','symbol','S2',{kind:'protect',point:[7,8]});assert.deepEqual(M.orderSymbols(o,mp)[1].point,[7,8]);assert.equal(M.orderSymbols(o,mp)[1].kind,'protect');
+mp=M.removeMapObject(mp,'H-A01','landing','L2');mp=M.addLanding(mp,'H-A01',[1,1]);assert.deepEqual(M.orderLandings(o,mp).map(l=>l.id),['P-A01','P-A01-3','P-A01-4'],'names stay stable after a delete');
+assert.deepEqual(M.setRouteOrder(mp,['H-C01','H-A01','H-C01',3]).routeOrder,['H-C01','H-A01']);
+const ctx={contract:snap.meta.contract,landings:M.orderLandings(o,mp),symbols:M.orderSymbols(o,mp)};
+assert.deepEqual(M.toOIN(o,ctx).OperatingInstruction.Landings.map(l=>l.LandingKey),['P-A01','P-A01-3','P-A01-4']);assert.deepEqual(M.toOIN(o,ctx).OperatingInstruction.MapSymbols.map(s=>s.Type),['turn','protect']);
+assert.deepEqual(M.toFOI(o,ctx).ForwardingObjectInstruction.Landings.length,3);assert.deepEqual(M.toOIN(o,{}).OperatingInstruction.Landings.map(l=>l.LandingKey),['P-A01'],'without ctx: the game landing');
+const sent=M.send(M.assign(mp,snap,['H-A01'],'K-01',{mode:'day',day:0}),snap,{orderIds:['H-A01']});assert.deepEqual(sent.instructions['H-A01'].files.oin.OperatingInstruction.Landings.length,3,'send carries the landings');
+assert(Array.isArray(o.routes.harvester)&&o.routes.harvester.length>2&&o.routes.forwarder.length>2,'bridge: routes in image units');}
 console.log(JSON.stringify({passed:true,statuses:M.STATUSES.length,capacity:{nordhangChainDays:2.5,talgrundChainHours:+(600/32).toFixed(2)},stanford:['oin','pin','foi','fdi'],fromHPR:true}));

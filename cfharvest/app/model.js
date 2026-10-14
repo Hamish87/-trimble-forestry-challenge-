@@ -123,8 +123,44 @@ function normalizePlan(p){
   out.seq=Number.isFinite(out.seq)?out.seq:0;
   out.assignments=out.assignments.filter(a=>a&&typeof a.orderId==='string'&&typeof a.rowId==='string'&&Number.isFinite(a.startHour));
   const used=new Set();for(const a of out.assignments){if(typeof a.id!=='string'||used.has(a.id))a.id='A'+(++out.seq);used.add(a.id);if(!Number.isFinite(a.seq))a.seq=out.seq;}
+  for(const e of Object.values(out.edits))if(e&&typeof e==='object'){if('landings'in e)e.landings=normObjects(e.landings,'L',2);if('symbols'in e)e.symbols=normObjects(e.symbols,'S',1).map(s=>({...s,kind:SYMBOL_KINDS.includes(s.kind)?s.kind:SYMBOL_KINDS[0]}));}
+  out.routeOrder=[...new Set(out.routeOrder.filter(x=>typeof x==='string'))];
   return out;
 }
+/* ---------- Map objects on an order: extra landings (Avlägg) and map symbols [M73][MM][DEMO] ----------
+   Stored in plan.edits[orderId].landings / .symbols as {id, no, point:[x,y], kind?}. Coordinates are orthophoto image
+   units like every other game geometry (no georeference). Milestone-2 plans stored bare [x,y] points: they are converted. */
+const SYMBOL_KINDS=['warning','turn','unload','protect'];
+const isPoint=p=>Array.isArray(p)&&p.length===2&&p.every(Number.isFinite);
+function normObjects(list,prefix,first){
+  const out=[];for(const [i,x] of (Array.isArray(list)?list:[]).entries()){const o=isPoint(x)?{no:first+i,point:x}:x&&typeof x==='object'&&isPoint(x.point)?{...x}:null;if(!o)continue;
+    if(!Number.isInteger(o.no)||out.some(y=>y.no===o.no))o.no=Math.max(first-1,...out.map(y=>y.no))+1;o.id=prefix+o.no;out.push(o);}
+  return out;
+}
+const nextNo=(list,first)=>Math.max(first-1,...list.map(x=>x.no))+1;
+/** All landings of an order: the game's landing (P-A01) first, then the planner's extra ones (P-A01-2 …). */
+function orderLandings(order,plan){
+  const extra=normObjects(plan?.edits?.[order.id]?.landings,'L',2);
+  return [{key:'primary',id:order.landing.id,point:order.landing.point,primary:true},...extra.map(x=>({key:x.id,id:order.landing.id+'-'+x.no,point:x.point,primary:false,no:x.no}))];
+}
+/** Map symbols of an order (Hinweis/Warnung · Wendeplatz · Abladepunkt · Schutzbereich), code "H-A01-S1". */
+function orderSymbols(order,plan){return normObjects(plan?.edits?.[order.id]?.symbols,'S',1).map(x=>({...x,key:x.id,kind:SYMBOL_KINDS.includes(x.kind)?x.kind:SYMBOL_KINDS[0],code:order.id+'-S'+x.no}));}
+function addLanding(planIn,orderId,point){
+  const plan=normalizePlan(clone(planIn)),e=plan.edits[orderId]??={},list=e.landings=normObjects(e.landings,'L',2);if(!isPoint(point))return plan;
+  const no=nextNo(list,2);list.push({id:'L'+no,no,point:point.map(n=>+Number(n).toFixed(1))});plan.lastObject={orderId,kind:'landing',id:'L'+no};return plan;
+}
+function addSymbol(planIn,orderId,kind,point){
+  const plan=normalizePlan(clone(planIn)),e=plan.edits[orderId]??={},list=e.symbols=normObjects(e.symbols,'S',1);if(!isPoint(point))return plan;
+  const no=nextNo(list,1);list.push({id:'S'+no,no,kind:SYMBOL_KINDS.includes(kind)?kind:SYMBOL_KINDS[0],point:point.map(n=>+Number(n).toFixed(1))});plan.lastObject={orderId,kind:'symbol',id:'S'+no};return plan;
+}
+/** Move a landing/symbol (patch.point) or change a symbol's kind (patch.kind). */
+function updateMapObject(planIn,orderId,kind,id,patch={}){
+  const plan=normalizePlan(clone(planIn)),list=plan.edits[orderId]?.[kind==='symbol'?'symbols':'landings']||[],o=list.find(x=>x.id===id);if(!o)return plan;
+  if(isPoint(patch.point))o.point=patch.point.map(n=>+Number(n).toFixed(1));if(kind==='symbol'&&SYMBOL_KINDS.includes(patch.kind))o.kind=patch.kind;return plan;
+}
+function removeMapObject(planIn,orderId,kind,id){const plan=normalizePlan(clone(planIn)),e=plan.edits[orderId],k=kind==='symbol'?'symbols':'landings';if(e?.[k])e[k]=e[k].filter(x=>x.id!==id);return plan;}
+/** Löpnummer / route sequence ("Ordna om löpande nummer" [M48]): order ids in driving order, 1..n. */
+function setRouteOrder(planIn,ids){const plan=normalizePlan(clone(planIn));plan.routeOrder=[...new Set((ids||[]).filter(x=>typeof x==='string'))];return plan;}
 const clone=x=>structuredClone(x);
 function itemDuration(order,row,a){return Number(a.manualHours)>0?Number(a.manualHours):durationHours(order,row);}
 function rowItems(snapshot,plan,row){
@@ -287,24 +323,27 @@ function send(planIn,snapshot,{rowIds=[],orderIds=[],itemIds=[]}){
 function header(ctx,fileType){return{fileType,standard:'StanForD 2010',shape:'demo JSON',HeaderInformation:{CreationDate:ctx.createdAt||dayISO(ctx.day??0),SenderApplication:'CFHarvest Planning · demo replica',Sender:ctx.company||'Trimble Forestry demo contractor',ContractNumber:ctx.contract?.id}};}
 const lengthOf=spec=>spec?Number(String(spec).replace(',','.')):null;
 const pinFileName=(order,a,version)=>`${a.code}_${String(order.name).replace(/\s+/g,'_')}_${order.pin?.spec&&a.key==='saw'?String(order.pin.spec).replace(',','-')+'m_':''}v${version}`;
+/** Landings in the OIN/FOI: ctx.landings (game landing + planner's extra landings, orderLandings()) or the game landing. */
+const landingsOf=(order,ctx)=>(ctx.landings||[{id:order.landing.id,point:order.landing.point}]).map(l=>({LandingKey:l.id,Coordinates:l.point}));
 function toOIN(order,ctx){
   return{...header(ctx,'oin'),OperatingInstruction:{ObjectDefinition:{ObjectKey:order.id,ObjectUserID:order.id,ObjectName:order.name,ContractNumber:ctx.contract?.id,Client:order.client,LoggingForm:order.operation||'Avverkning',StartDate:ctx.start||null,EndDate:ctx.end||null,SubObject:[{SubObjectKey:1,SubObjectName:order.name,SpeciesGroup:order.species,EstimatedVolume_m3sub:order.estimatedVolume}]},
     MachineDefinition:ctx.machine?{MachineKey:ctx.machine.id,StanForDCode:ctx.machine.stanford}:null,
     ProductInstructionReferences:order.assortments.filter(a=>a.pin).map(a=>({ProductKey:order.id+'-'+a.code,ProductUserID:a.code,PINVersion:order.pin.required})),
-    Landings:[{LandingKey:order.landing.id,Coordinates:order.landing.point}],
+    Landings:landingsOf(order,ctx),
     EnvironmentalRestrictions:order.bio?[{Code:order.bio.code,Text:order.bio.instruction}]:[],
+    MapSymbols:(ctx.symbols||[]).map(s=>({SymbolKey:s.code,Type:s.kind,Coordinates:s.point})),
     BoundaryReference:{Polygon:order.boundary,Note:'fictional game overlay'}}};
 }
 function toPIN(assortment,order,ctx){
   return{...header(ctx,'pin'),fileName:pinFileName(order,assortment,order.pin.required),ProductInstruction:{ProductDefinition:{ProductKey:order.id+'-'+assortment.code,ProductUserID:assortment.code,ProductName:assortment.name,ProductVersion:order.pin.required,SpeciesGroupName:order.species,NominalLength_m:assortment.key==='saw'?lengthOf(order.pin.spec):null,DeliveryDestination:assortment.receiver,EstimatedVolume_m3sub:assortment.estimatedVolume}}};
 }
-function toFOI(order,ctx){return{...header(ctx,'foi'),ForwardingObjectInstruction:{ObjectDefinition:{ObjectKey:order.id,ObjectName:order.name,ContractNumber:ctx.contract?.id},MachineDefinition:ctx.forwarder?{MachineKey:ctx.forwarder.id,StanForDCode:ctx.forwarder.stanford}:null,Landings:[{LandingKey:order.landing.id,Coordinates:order.landing.point}],ExpectedVolume_m3sub:order.estimatedVolume+(order.openingStock||0)}};}
+function toFOI(order,ctx){return{...header(ctx,'foi'),ForwardingObjectInstruction:{ObjectDefinition:{ObjectKey:order.id,ObjectName:order.name,ContractNumber:ctx.contract?.id},MachineDefinition:ctx.forwarder?{MachineKey:ctx.forwarder.id,StanForDCode:ctx.forwarder.stanford}:null,Landings:landingsOf(order,ctx),ExpectedVolume_m3sub:order.estimatedVolume+(order.openingStock||0)}};}
 function toFDI(order,ctx){return{...header(ctx,'fdi'),ForwardingDeliveryInstruction:{Deliveries:order.assortments.filter(a=>a.pin).map((a,i)=>({DeliveryKey:i+1,ProductKey:order.id+'-'+a.code,ProductName:a.name,FromLanding:order.landing.id,Destination:a.receiver,ExpectedVolume_m3sub:a.estimatedVolume+(a.openingVolume||0)}))}};}
 function instructionsFor(order,row,snapshot,plan,item){
   const members=row.memberResources||[],h=members.find(m=>m.type==='harvester'),f=members.find(m=>m.type==='forwarder'),a=item||plan.assignments.find(x=>x.orderId===order.id&&x.rowId===row.id)||plan.assignments.find(x=>x.orderId===order.id);
   const dur=a?itemDuration(order,row,a):0,start=a?positionOf(row,a.startHour):null,end=a?positionOf(row,a.startHour+dur,true):null;
   const removed=plan.pinRemoved?.[order.id]||{},pinned=order.assortments.filter(x=>x.pin&&!removed[x.key]);
-  const ctx={contract:snapshot.meta.contract,day:snapshot.calendar.currentDay,machine:h,forwarder:f,start:start===null?null:dayISO(Math.floor(start)),end:end===null?null:dayISO(Math.max(0,Math.ceil(end)-1))};
+  const ctx={contract:snapshot.meta.contract,day:snapshot.calendar.currentDay,landings:orderLandings(order,plan),symbols:orderSymbols(order,plan),machine:h,forwarder:f,start:start===null?null:dayISO(Math.floor(start)),end:end===null?null:dayISO(Math.max(0,Math.ceil(end)-1))};
   const files={oin:h?toOIN(order,ctx):null,pin:h?pinned.map(x=>toPIN(x,order,ctx)):[],foi:f?toFOI(order,ctx):null,fdi:f?toFDI(order,ctx):null};
   return{round:snapshot.meta.round,pinVersion:snapshot.meta.requiredVersion,rowId:row.id,files};
 }
@@ -413,6 +452,6 @@ function viewModel(snapshot,planIn){
   const orderBook=snapshot.orderBook.map(b=>({...b,confirmed:!!plan.orderBook[b.id]?.confirmed,limits:{min:plan.orderBook[b.id]?.min??90,max:plan.orderBook[b.id]?.max??110},comment:plan.orderBook[b.id]?.comment||'',planned:orders.filter(o=>o.assignment&&o.status!=='completed').reduce((s,o)=>s+(o.assortments.find(x=>x.key===b.assortment)?.estimatedVolume||0),0)}));
   return{...snapshot,plan,rows:rowsOut,orders,dispatch,orderBook,followUp:hpr,conflicts,resourcesAll:resources(snapshot,plan),chainsAll:chains(snapshot,plan).map(c=>({...c,lag:chainLag(c)})),staged:plan.assignments.filter(a=>a.staged).length};
 }
-return{STATUSES,STATUS_INFO,OPERATIONS,opLabel,PLANNER_TRANSITIONS,canTransition,deriveStatus,WEEKDAYS,CALENDAR_START,START_CLOCK,dayISO,dayIndexOf,weekday,mondayOf,hoursOn,weeklyTotal,hasCapacity,startHourOfDay,positionOf,timeOf,hourAt,hourAtPosition,overlapOnDay,workDays,addWorkingDays,hourAtBoundary,rateFor,estimate,durationHours,resources,chains,chainLag,DEFAULT_LAG,rows,emptyPlan,normalizePlan,rowItems,normalizeRow,commit,hasOverlap,assign,unassign,removeItems,moveItem,insertAt,compressPreview,compress,setEstimatedStart,updateItem,resizeHours,resizeItem,shiftItem,reflow,memberSpans,conflictsOf,send,toOIN,toPIN,toFOI,toFDI,instructionsFor,pinStatus,pinFileName,fromHPR,dispatchPlan,viewModel};
+return{STATUSES,STATUS_INFO,OPERATIONS,opLabel,PLANNER_TRANSITIONS,canTransition,deriveStatus,WEEKDAYS,CALENDAR_START,START_CLOCK,dayISO,dayIndexOf,weekday,mondayOf,hoursOn,weeklyTotal,hasCapacity,startHourOfDay,positionOf,timeOf,hourAt,hourAtPosition,overlapOnDay,workDays,addWorkingDays,hourAtBoundary,rateFor,estimate,durationHours,resources,chains,chainLag,DEFAULT_LAG,rows,emptyPlan,normalizePlan,rowItems,normalizeRow,commit,hasOverlap,assign,unassign,removeItems,moveItem,insertAt,compressPreview,compress,setEstimatedStart,updateItem,resizeHours,resizeItem,shiftItem,reflow,memberSpans,conflictsOf,send,toOIN,toPIN,toFOI,toFDI,instructionsFor,SYMBOL_KINDS,orderLandings,orderSymbols,addLanding,addSymbol,updateMapObject,removeMapObject,setRouteOrder,pinStatus,pinFileName,fromHPR,dispatchPlan,viewModel};
 })();
 if(typeof module!=='undefined')module.exports=CFHModel;
