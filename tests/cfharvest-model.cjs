@@ -86,4 +86,58 @@ assert.deepEqual([hpr.byObject.X.felled,hpr.byObject.X.opening,hpr.byObject.X.fe
 assert.equal(hpr.byObject.Y.forestStock,-10,'negative forest stock when the forwarder reports more than the harvester [MM]');assert.equal(hpr.totals.forestStock,20);
 // Order book "planned" = estimated assortment volume of planned orders.
 const book=M.viewModel(snap,p1).orderBook;close(book[0].planned,560*.65);close(book[1].planned,560*.35);assert.equal(book[2].planned,0);
+/* ---------- Milestone 2: copy, staged insert-between + Spara, manual override, weekends, clock times, overrides ---------- */
+// Assignment ids; legacy plans without ids get one.
+assert.match(M.normalizePlan({assignments:[{orderId:'H-A01',rowId:'K-01',startHour:0}]}).assignments[0].id,/^A\d+$/);
+// Kopiera: the bar stays on F-01 and a copy appears on H-01 (one order on several resources) [M60][MW].
+let cp=M.assign(M.emptyPlan(),snap,['H-B01'],'F-01',{mode:'day',day:0});const srcId=cp.assignments[0].id;
+cp=M.moveItem(cp,snap,srcId,'H-01',{day:2,copy:true});
+assert.equal(cp.assignments.length,2,'copy keeps the original');assert.deepEqual(cp.assignments.map(a=>a.rowId).sort(),['F-01','H-01']);
+assert.notEqual(cp.lastItem,srcId);close(cp.assignments.find(a=>a.id===cp.lastItem).startHour,16,1e-9,'copy starts on the drop day');
+let cvm=M.viewModel(snap,cp);assert.equal(cvm.orders[1].assignments.length,2);assert.equal(cvm.orders[1].pill.cls,'planned');assert.equal(cvm.orders[1].pill.text,'Forwarder F-01, Harvester H-01','names in start order');
+cp=M.send(cp,snap,{rowIds:['F-01']});cvm=M.viewModel(snap,cp);assert.equal(cvm.orders[1].status,'planned','sent only when every copy is sent');
+cp=M.send(cp,snap,{rowIds:['H-01']});cvm=M.viewModel(snap,cp);assert.equal(cvm.orders[1].status,'sent');assert.equal(cvm.orders[1].pill.cls,'sent');
+const merged=cvm.orders[1].instructions.files;assert(merged.oin&&merged.foi&&merged.pin.length===2,'files of both machines are kept');
+// Flytta (no copy) moves the bar and resets "sent".
+let mv=M.moveItem(cp,snap,srcId,'K-01',{day:7});assert.equal(mv.assignments.length,2);assert.equal(mv.assignments.find(a=>a.id===srcId).rowId,'K-01');assert.equal(mv.assignments.find(a=>a.id===srcId).sent,false);
+// Lås start- och slutdatumen: same calendar start/end on the target row.
+let lk=M.assign(M.emptyPlan(),snap,['H-A01'],'H-01',{mode:'day',day:1});const lkId=lk.assignments[0].id;lk=M.moveItem(lk,snap,lkId,'F-01',{lock:true});
+const Fr=M.rows(snap,lk).find(r=>r.id==='F-01'),lkIt=M.rowItems(snap,lk,Fr)[0];close(M.positionOf(Fr,lkIt.start),1);close(M.positionOf(Fr,lkIt.end,true),3.5,1e-9,'locked end date kept although F-01 is faster');assert(lkIt.manualHours>0);
+// Insert between, staged: the inserted bar overlaps until Spara; Spara shifts the later bars right [M68].
+let st=M.assign(M.emptyPlan(),snap,['H-A01','H-C01'],'K-01',{mode:'day',day:0});
+assert.deepEqual(ids(M.rowItems(snap,st,K)),['H-A01','H-C01']);close(M.rowItems(snap,st,K)[1].start,20,1e-9,'batch follows in sequence');
+st=M.insertAt(st,snap,'H-B01','K-01',1,{stage:true});assert(M.hasOverlap(snap,st,K),'staged insert overlaps');assert.equal(M.viewModel(snap,st).staged,1);
+const vmStaged=M.viewModel(snap,st).rows.find(r=>r.id==='K-01');assert(vmStaged.overlap&&vmStaged.lanes===2,'overlap shown in a second lane');
+st=M.commit(st,snap);items=M.rowItems(snap,st,K);assert.deepEqual(ids(items),['H-A01','H-B01','H-C01']);close(items[1].start,20);close(items[2].start,20+600/32,1e-9,'Spara shifts later bars');
+assert(!st.assignments.some(a=>a.staged),'Spara clears the stage marks');
+// Reorder within a row: move the first bar behind the last one.
+let ro=M.insertAt(st,snap,null,'K-01',3,{itemId:st.assignments.find(a=>a.orderId==='H-A01').id,stage:true});ro=M.commit(ro,snap);assert.deepEqual(ids(M.rowItems(snap,ro,K)),['H-B01','H-C01','H-A01']);
+// Drop from the list onto an occupied day, staged: the dropped orders keep their slot, existing ones move behind them.
+let dl=M.assign(M.emptyPlan(),snap,['H-C01'],'K-01',{mode:'day',day:0});dl=M.assign(dl,snap,['H-A01','H-B01'],'K-01',{mode:'day',day:0,stage:true});dl=M.commit(dl,snap);assert.deepEqual(ids(M.rowItems(snap,dl,K)),['H-A01','H-B01','H-C01']);
+// Manual working time ("Manuell arbetstid") overrides the estimate [M72].
+let ov=M.assign(M.emptyPlan(),snap,['H-A01'],'K-01',{mode:'day',day:0});const ovId=ov.assignments[0].id;ov=M.updateItem(ov,snap,ovId,{manualHours:56});
+let ovIt=M.rowItems(snap,ov,K)[0];assert.equal(ovIt.duration,56);close(ovIt.estimated,20);close(M.positionOf(K,ovIt.end,true),9,1e-9,'56 h = 7 working days → ends Friday of week 2');
+ov=M.updateItem(ov,snap,ovId,{manualHours:null});assert.equal(M.rowItems(snap,ov,K)[0].duration,20,'clearing the override restores the estimate');
+// Start time and Beräknad sluttidpunkt: day starts 09:00; 20 h with 8 h days → Wednesday 13:00.
+ov=M.updateItem(ov,snap,ovId,{day:0,minutes:9*60});let t=M.timeOf(K,M.rowItems(snap,ov,K)[0].end,true);assert.deepEqual([t.iso,t.clock],['2026-10-21','13:00']);
+ov=M.updateItem(ov,snap,ovId,{day:0,minutes:15*60});ovIt=M.rowItems(snap,ov,K)[0];close(ovIt.start,6);t=M.timeOf(K,ovIt.end,true);assert.deepEqual([t.iso,t.clock],['2026-10-22','11:00'],'15:00 start: 2 h Mon + 8 + 8 + 2 h Thu');
+assert.deepEqual([M.timeOf(K,8,true).clock,M.timeOf(K,8).clock,M.timeOf(K,8).iso],['17:00','09:00','2026-10-20']);
+// Weekend skipping: a 30 h job started Thursday runs Thu, Fri, (Sat/Sun 0 h), Mon, Tue.
+let wk=M.assign(M.emptyPlan(),snap,['H-A01'],'K-01',{mode:'day',day:3});wk=M.updateItem(wk,snap,wk.assignments[0].id,{manualHours:30});const wkIt=M.rowItems(snap,wk,K)[0];
+t=M.timeOf(K,wkIt.end,true);assert.deepEqual([t.iso,t.clock],['2026-10-27','15:00']);assert.equal(M.positionOf(K,wkIt.start+16),7,'hour 17 of the job opens Monday');
+// Veckokalender override: Saturday 8 h on H-01 only; the chain still needs both members → stays 0 h.
+const ovPlan={...M.emptyPlan(),resources:{'H-01':{days:{5:8}}}},ovRows=M.rows(snap,ovPlan);
+assert.equal(M.hoursOn(ovRows.find(r=>r.id==='H-01'),5),8);assert.equal(M.hoursOn(ovRows.find(r=>r.id==='K-01'),5),0);assert.equal(M.hoursOn(ovRows.find(r=>r.id==='H-01'),12),0);
+// Produktionsdata per Maßnahme; chain = slowest member.
+const est=M.estimate(b,K);assert.deepEqual(est.lines.map(l=>[l.resourceId,l.rate,l.volume]),[['H-01',28,520],['F-01',32,600]]);close(est.hours,600/32);
+const fast={...M.emptyPlan(),resources:{'F-01':{production:{Slutavverkning:64}}}};close(M.durationHours(b,M.rows(snap,fast).find(r=>r.id==='K-01')),520/28,1e-9,'faster forwarder → harvester is now the bottleneck');
+assert.equal(M.rateFor({rate:5,production:{Gallring:20}},'Gallring'),20);assert.equal(M.rateFor({rate:5},'Gallring'),5);
+// Komprimera within an interval with a new start date.
+let cz=M.assign(M.emptyPlan(),snap,['H-A01'],'K-01',{mode:'day',day:2});cz=M.assign(cz,snap,['H-C01'],'K-01',{mode:'day',day:9});
+const czp=M.compressPreview(snap,cz,'K-01',{from:0,to:20,newStartDay:0});assert.deepEqual(czp.map(p=>[p.orderId,p.newStart]),[['H-A01',0],['H-C01',20]]);
+const czq=M.compressPreview(snap,cz,'K-01',{from:0,to:20});assert.deepEqual(czq.map(p=>[p.orderId,p.newStart]),[['H-A01',16],['H-C01',36]],'without a new start date the first order keeps its start');
+assert.deepEqual(M.compressPreview(snap,cz,'K-01',{from:8,to:20}).map(p=>p.orderId),['H-C01'],'only items starting inside the interval');
+// PIN status: removing a PIN file makes the assortment "missing" [M53].
+const ps=M.pinStatus(a,M.emptyPlan());assert.deepEqual(ps.missing,[]);assert.equal(ps.files.length,2);assert.match(ps.files[0],/^SAG_Nordhang_5-1m_v1$/);
+assert.deepEqual(M.pinStatus(a,{pinRemoved:{'H-A01':{saw:true}}}).missing,['saw']);
 console.log(JSON.stringify({passed:true,statuses:M.STATUSES.length,capacity:{nordhangChainDays:2.5,talgrundChainHours:+(600/32).toFixed(2)},stanford:['oin','pin','foi','fdi'],fromHPR:true}));

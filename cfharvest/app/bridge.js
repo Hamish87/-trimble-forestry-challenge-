@@ -10,17 +10,26 @@ const KEYS={toReplica:'cfharvest-handoff-v1',toGame:'cfharvest-return-v1',plan:'
 const G=()=>ForestGame,J=()=>typeof ForestJourney!=='undefined'?ForestJourney:null,R=()=>WorksiteRoutes;
 const GRADES=['saw','pulp','down'];
 // Assortments of the game contract; delivery points as in ForestJourney.haul (saw → Sägewerk, otherwise Industrieabnehmer).
-const ASSORTMENTS={saw:{key:'saw',code:'SAG',name:'Sägeholz',receiver:'Sägewerk',pin:true},pulp:{key:'pulp',code:'IND',name:'Industrieholz',receiver:'Industrieabnehmer',pin:true},down:{key:'down',code:'ABW',name:'Abgewertet',receiver:'Industrieabnehmer',pin:false}};
+const ASSORTMENTS={saw:{key:'saw',code:'SAG',name:'Sägeholz',group:'Stammholz',receiver:'Sägewerk',pin:true},pulp:{key:'pulp',code:'IND',name:'Industrieholz',group:'Industrieholz',receiver:'Industrieabnehmer',pin:true},down:{key:'down',code:'ABW',name:'Abgewertet',group:'Industrieholz',receiver:'Industrieabnehmer',pin:false}};
 /* Planning master data taken from the game's published model assumptions (dist/index.html, rules dialog):
-   one shift = 8 booked hours; base output 28 fm/h harvester, 32 fm/h forwarder. Used only for calendar capacity. */
+   one shift = 8 booked hours; base output 28 fm/h harvester, 32 fm/h forwarder. Used only for calendar capacity.
+   Produktionsdata per Maßnahme [M22]: Slutavverkning = the game rates; the two thinning rates are [DEMO] values that no
+   game order uses. Grunddata fields [M11] are [DEMO] master data (no machine brand is implied). */
 const SHIFT_HOURS=8,WEEK={mon:SHIFT_HOURS,tue:SHIFT_HOURS,wed:SHIFT_HOURS,thu:SHIFT_HOURS,fri:SHIFT_HOURS,sat:0,sun:0};
 const MASTER=[
-  {id:'H-01',type:'harvester',gameKey:'harvester',name:'Harvester H-01',model:'Radharvester · Demo',stanford:'90001',operation:'Holzernte',rate:28,unit:'fm/h',weekly:{...WEEK},active:true,plannable:true,subcontractor:false},
-  {id:'F-01',type:'forwarder',gameKey:'forwarder',name:'Forwarder F-01',model:'Forwarder · Demo',stanford:'90002',operation:'Rücken',rate:32,unit:'fm/h',weekly:{...WEEK},active:true,plannable:true,subcontractor:false},
-  {id:'L-01',type:'truck',name:'Lkw L-01',model:'Holz-Lkw · Demo',stanford:'',operation:'Abfuhr',rate:25,unit:'fm/Tour',weekly:{...WEEK},active:true,plannable:false,subcontractor:true},
-  {id:'L-02',type:'truck',name:'Lkw L-02',model:'Holz-Lkw · Demo',stanford:'',operation:'Abfuhr',rate:25,unit:'fm/Tour',weekly:{...WEEK},active:true,plannable:false,subcontractor:true}];
-const CHAINS=[{id:'K-01',name:'Drivningskedja K-01',kind:'drivningskedja',members:['H-01','F-01']}];
-const CLIENT='Auftraggeber (Spielszenario)';
+  {id:'H-01',type:'harvester',gameKey:'harvester',name:'Harvester H-01',model:'Radharvester · Demo',stanford:'90001',operation:'Holzernte',rate:28,unit:'fm/h',production:{'Slutavverkning':28,'Första gallring':14,'Gallring':20},weekly:{...WEEK},active:true,plannable:true,subcontractor:false,
+    base:{manufacturer:'Demo-Hersteller',year:2022,bearingClass:'B',plateWeight:21500,extinguisherChecked:'2026-03-12',aggregate:'Demo-Aggregat 60',phone:'',email:'h-01@demo.invalid',servicePackages:['Fernwartung'],woodforceStart:'2026-01-05'}},
+  {id:'F-01',type:'forwarder',gameKey:'forwarder',name:'Forwarder F-01',model:'Forwarder · Demo',stanford:'90002',operation:'Rücken',rate:32,unit:'fm/h',production:{'Slutavverkning':32,'Första gallring':18,'Gallring':24},weekly:{...WEEK},active:true,plannable:true,subcontractor:false,
+    base:{manufacturer:'Demo-Hersteller',year:2021,bearingClass:'B',plateWeight:18900,extinguisherChecked:'',aggregate:'',phone:'',email:'f-01@demo.invalid',servicePackages:[],woodforceStart:'2026-01-05'}},
+  {id:'L-01',type:'truck',name:'Lkw L-01',model:'Holz-Lkw · Demo',stanford:'',operation:'Abfuhr',rate:25,unit:'fm/Tour',weekly:{...WEEK},active:true,plannable:false,subcontractor:true,base:{manufacturer:'',year:null,bearingClass:'',plateWeight:null,extinguisherChecked:'',aggregate:'',phone:'',email:'',servicePackages:[],woodforceStart:''}},
+  {id:'L-02',type:'truck',name:'Lkw L-02',model:'Holz-Lkw · Demo',stanford:'',operation:'Abfuhr',rate:25,unit:'fm/Tour',weekly:{...WEEK},active:true,plannable:false,subcontractor:true,base:{manufacturer:'',year:null,bearingClass:'',plateWeight:null,extinguisherChecked:'',aggregate:'',phone:'',email:'',servicePackages:[],woodforceStart:''}}];
+const CHAINS=[{id:'K-01',name:'H-01/F-01',kind:'drivningskedja',members:['H-01','F-01']}];
+const CLIENT='Auftraggeber (Spielszenario)',CLIENT_CODE='TRI';
+/* [DEMO] stand facts the game does not model: area (ha). All three game stands are planned as final fellings
+   (Slutavverkning / Endnutzung), so the game's 28/32 fm/h rates apply unchanged. */
+const STAND_FACTS={a:{areaHa:1.9},b:{areaHa:2.4},c:{areaHa:2.1}};
+const CONTACTS=[{group:'Waldbesitzer',name:'Waldbesitzer (Spielszenario)',role:'Eigentümer',address:'Forstweg 1 · Demo',phone:'',email:'',language:'Deutsch',messages:true},
+  {group:'Auftraggeber',name:'Holzeinkauf (Spielszenario)',role:'Einkäufer',address:'',phone:'',email:'einkauf@demo.invalid',language:'Deutsch',messages:true}];
 const orderId=id=>'H-'+String(id).toUpperCase()+'01',landingId=id=>'P-'+String(id).toUpperCase()+'01';
 function standIdOf(ref){if(typeof ref!=='string')return null;const m=/^H-([A-Z])01$/.exec(ref);return m?m[1].toLowerCase():/^[a-z]$/.test(ref)?ref:null;}
 const requiredVersion=s=>s.round>=3?2:1; // same rule as dist/handover.js and ForestGame.validate
@@ -76,7 +85,10 @@ function fromGameState(s){
     const openingShare=st.initialStock?{saw:(st.initialStock*share),pulp:st.initialStock*(1-share)}:{saw:0,pulp:0};
     const assortments=GRADES.map(g=>({...ASSORTMENTS[g],estimatedVolume:g==='saw'?st.volume*share:g==='pulp'?st.volume*(1-share):0,openingVolume:openingShare[g]||0,lengthSpec:g==='saw'?spec:null}));
     const accepted=!!(s.handoverAccepted?.[st.id]&&s.handoverVersions?.[st.id]>=req);
-    return{id:orderId(st.id),standId:st.id,name:st.name,client:CLIENT,contractId:contract.id,operation:'Avverkning',operationLabel:'Holzernte',species:st.species,terrain:st.terrain,
+    const events=[];if(s.handoverRound?.[st.id])events.push({round:s.handoverRound[st.id],kind:'handover',version:s.handoverVersions?.[st.id]||0});
+    for(const r of s.history){if(r.harvestOrigin===st.id&&r.harvest>0)events.push({round:r.round,kind:'harvest',machine:'H-01',volume:r.harvest});if(r.forwardOrigin===st.id&&r.forwarded>0)events.push({round:r.round,kind:'forward',machine:'F-01',volume:r.forwarded});}
+    return{id:orderId(st.id),standId:st.id,name:st.name,client:CLIENT,clientCode:CLIENT_CODE,contractId:contract.id,operation:'Slutavverkning',operationLabel:'Endnutzung',species:st.species,terrain:st.terrain,
+      areaHa:STAND_FACTS[st.id]?.areaHa??null,window:{fromShift:1,toShift:4},predecessor:null,contacts:structuredClone(CONTACTS),events,
       estimatedVolume:st.volume,openingStock:st.initialStock,remaining:st.remaining,closed:!!st.closed,surveyCoverage:st.surveyCoverage,boundaryChecked:!!s.boundaryChecked?.[st.id],
       assortments,
       landing:{id:landingId(st.id),point:world(anchor,site.polter),roadside:st.roadside,roadsideGrades:{...st.roadsideGrades},delivered:st.delivered||0},
@@ -129,6 +141,6 @@ function applyPlan(state,plan){
 /** Handoff envelope used by both directions (dist/cfharvest-link.js writes the same shape). */
 function envelope(kind,state,extra={}){return{schema:SCHEMA,kind,state,...extra};}
 function readEnvelope(raw,kind){try{const p=typeof raw==='string'?JSON.parse(raw):raw;if(!p||p.schema!==SCHEMA||p.kind!==kind||!isGameState(p.state))return null;return p;}catch{return null;}}
-return{SCHEMA,KEYS,ASSORTMENTS,MASTER,CHAINS,SHIFT_HOURS,orderId,landingId,standIdOf,requiredVersion,isGameState,fromGameState,applyPlan,productionMessages,envelope,readEnvelope};
+return{SCHEMA,KEYS,ASSORTMENTS,MASTER,CHAINS,CLIENT_CODE,SHIFT_HOURS,orderId,landingId,standIdOf,requiredVersion,isGameState,fromGameState,applyPlan,productionMessages,envelope,readEnvelope};
 })();
 if(typeof module!=='undefined')module.exports=CFHBridge;
