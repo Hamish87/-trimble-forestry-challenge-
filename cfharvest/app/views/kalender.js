@@ -1,19 +1,23 @@
 /* Kalender — resource calendar / Gantt [M38][M52][M55][M56–M59][M64][M67][M71]: toolbar, zoom D/V/MÅN/3MÅN, period,
    month/week/day bands (today green, weekends shaded), purple bars "client - contract - order nr - name", chain bars solid
-   on the chain row and mirrored outlined on member rows, orange selection outline, hover tooltip, Återställ (n) + Spara.
+   on the chain row and greyed, hatched, non-interactive member bars on each member row (forwarder after the chain lag),
+   orange selection outline, hover tooltip "560 fm · 20 h · 2,5 Tage", right-edge resize handle ("✎ manuell" badge when the
+   working time is manual), red conflict outline + warning line for double bookings, Återställ (n) + Spara.
    Bars are drop targets and drag sources (app.js); button alternatives sit in the toolbar. */
 'use strict';
 CFHViews.ZOOMS={day:{days:7,de:'T',title:'Tag',sv:'D'},week:{days:21,de:'W',title:'Woche',sv:'V'},month:{days:31,de:'M',title:'Monat',sv:'MÅN'},quarter:{days:92,de:'3M',title:'3 Monate',sv:'3MÅN'}};
 CFHViews.isoWeek=i=>{const d=new Date(CFHModel.CALENDAR_START+i*864e5),t=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()));const day=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-day);const y=new Date(Date.UTC(t.getUTCFullYear(),0,1));return Math.ceil(((t-y)/864e5+1)/7);};
 CFHViews.calWindow=v=>{const zoom=CFHViews.ZOOMS[v.zoom]?v.zoom:'week';return{zoom,days:CFHViews.ZOOMS[zoom].days,off:Math.max(0,v.calStart|0)};};
-CFHViews.calRows=(vm,v)=>vm.rows.filter(r=>(!v.rowsShown||v.rowsShown.includes(r.id))&&(!v.plannedOnly||r.items.length||r.mirrors.length));
+CFHViews.calRows=(vm,v)=>vm.rows.filter(r=>(!v.rowsShown||v.rowsShown.includes(r.id))&&(!v.plannedOnly||r.items.length||(r.ghosts||[]).length));
 CFHViews.barTone=(o,it)=>['harvesting','felled','forwarding'].includes(o.status)?'started':o.status==='completed'?'completed':it.sent&&!it.outdated?'sent':'planned';
-CFHViews.barTitle=(o,it,ui)=>[ui.orderLabelText(o),o.operationLabel,ui.fm(o.estimatedVolume),`${ui.dateText(it.startTime?.iso)} ${it.startTime?.clock||''} - ${ui.dateText(it.endTime?.iso)} ${it.endTime?.clock||''}`,`${ui.num(it.duration)} h${it.manualHours?' · '+'manuell':''}`].join('\n');
+/** Hover text [M71]: label, Maßnahme, "560 fm · 20 h · 2,5 Tage" (volume of the member that drives the duration, working
+    hours, working days on this row), start - end, and the manual-working-time note. */
+CFHViews.barTitle=(o,it,ui)=>[ui.orderLabelText(o),o.operationLabel,`${ui.fm(it.volume??o.estimatedVolume)} · ${ui.num(it.duration)} h · ${ui.num(it.workDays??0,2)} Tage`,`${ui.dateText(it.startTime?.iso)} ${it.startTime?.clock||''} - ${ui.dateText(it.endTime?.iso)} ${it.endTime?.clock||''}`,...(it.manualHours?['Manuelle Arbeitszeit']:[])].join('\n');
 CFHViews.kalender=(vm,v,ui)=>{
   const{esc,num,term,tip,ibtn,code}=ui,M=CFHModel,{zoom,days,off}=CFHViews.calWindow(v),today=vm.calendar.currentDay;
   const X=p=>(p-off)/days*100,clip=(a,b)=>{const l=Math.max(0,X(a)),r=Math.min(100,X(b));return r>l?{l,w:r-l}:null;};
   const shown=CFHViews.calRows(vm,v),checkedRows=v.rowChecked.filter(id=>vm.rows.some(r=>r.id===id)),selItem=vm.rows.flatMap(r=>r.items).find(i=>i.id===v.selItem);
-  const dayW=100/days,isWeekend=i=>[5,6].includes(((i%7)+7)%7);
+  const dayW=100/days,isWeekend=i=>[5,6].includes(((i%7)+7)%7),flash=v.flash?.ids||[];
   // Header bands: month/year, ISO week, day numbers [M38][M59]
   let months='',weeks='',dayCells='';
   {let i=off;while(i<off+days){const d=new Date(M.CALENDAR_START+i*864e5),next=Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,1),j=Math.round((next-M.CALENDAR_START)/864e5),c=clip(i,j);if(c)months+=`<span class="band-cell" style="left:${c.l}%;width:${c.w}%" data-no-translate>${d.getUTCMonth()+1}/${d.getUTCFullYear()}</span>`;i=j;}}
@@ -23,11 +27,14 @@ CFHViews.kalender=(vm,v,ui)=>{
     let bg='';for(let i=off;i<off+days;i++){if(M.hoursOn(r,i)===0)bg+=`<span class="cal-off" style="left:${X(i)}%;width:${dayW}%"></span>`;}
     const t=clip(today,today+1);if(t)bg+=`<span class="cal-today" style="left:${t.l}%;width:${t.w}%"></span>`;
     let bars='';
-    for(const m of r.mirrors){const c=m.startPos!=null&&clip(m.startPos,Math.max(m.endPos,m.startPos+.02));if(!c)continue;const o=vm.orders.find(x=>x.id===m.orderId);bars+=`<span class="cal-item mirror tone-${CFHViews.barTone(o,m)}" data-mirror-of="${esc(m.id)}" data-order="${esc(o.id)}" style="left:${c.l}%;width:${c.w}%;top:${6+m.lane*30}px" title="${esc(CFHViews.barTitle(o,m,ui))}\n${esc('über Erntekette')} ${esc(m.chainId)}">${ui.orderLabel(o)}</span>`;}
+    // Member bars of chain planning: greyed and hatched, no drag, resize or selection; hover says which chain planned them.
+    for(const g of r.ghosts||[]){const c=g.startPos!=null&&clip(g.startPos,Math.max(g.endPos,g.startPos+.02));if(!c)continue;const o=vm.orders.find(x=>x.id===g.orderId);
+      bars+=`<span class="cal-item ghost ${g.conflict?'conflict':''} ${flash.includes(g.itemId)?'reflow':''}" data-ghost-of="${esc(g.itemId)}" data-chain="${esc(g.chainId)}" data-order="${esc(o.id)}" aria-disabled="true" style="left:${c.l}%;width:${c.w}%;top:${6+g.lane*30}px" title="${esc('geplant über Erntekette')} ${esc(g.chainId)}\n${esc(CFHViews.barTitle(o,g,ui))}${g.lag?`\n${esc('Vorlauf Harvester → Forwarder')}: ${num(g.lag,0)} ${esc(g.lag===1?'Tag':'Tage')}`:''}"><span class="cal-item-text">${ui.orderLabel(o)}</span></span>`;}
     for(const it of r.items){
       if(it.startPos==null){bars+=`<span class="cal-warn">${esc('Keine Kapazität im Wochenkalender')}</span>`;continue;}
       const c=clip(it.startPos,Math.max(it.endPos,it.startPos+.02));if(!c)continue;const o=vm.orders.find(x=>x.id===it.orderId),tone=CFHViews.barTone(o,it),prog=ui.pct(o.followUp.felledByShifts,o.estimatedVolume);
-      bars+=`<div role="button" tabindex="0" class="cal-item tone-${tone} ${it.id===v.selItem?'selected':''} ${it.staged?'unsaved':''} ${it.outdated?'outdated':''} ${r.kind==='chain'?'chain':''}" data-action="select-item" data-item="${esc(it.id)}" data-order="${esc(o.id)}" data-row="${esc(r.id)}" data-tone="${tone}" draggable="true" style="left:${c.l}%;width:${c.w}%;top:${6+it.lane*30}px" title="${esc(CFHViews.barTitle(o,it,ui))}"><span class="cal-item-text">${ui.orderLabel(o)}</span>${it.outdated?`<span class="cal-flag">${esc('neue PIN-Version senden')}</span>`:''}${prog>0?`<span class="cal-progress" style="width:${prog}%"></span>`:''}</div>`;
+      const endVisible=X(it.endPos)<=100+1e-9; // the handle sits on the real end, not on a clipped window edge
+      bars+=`<div role="button" tabindex="0" class="cal-item tone-${tone} ${it.id===v.selItem?'selected':''} ${it.staged?'unsaved':''} ${it.outdated?'outdated':''} ${r.kind==='chain'?'chain':''} ${it.conflict?'conflict':''} ${it.manualHours?'manual':''} ${flash.includes(it.id)?'reflow':''}" data-action="select-item" data-item="${esc(it.id)}" data-order="${esc(o.id)}" data-row="${esc(r.id)}" data-tone="${tone}" draggable="true" aria-keyshortcuts="Shift+ArrowLeft Shift+ArrowRight" style="left:${c.l}%;width:${c.w}%;top:${6+it.lane*30}px" title="${esc(CFHViews.barTitle(o,it,ui))}"><span class="cal-item-text">${ui.orderLabel(o)}</span>${it.manualHours?`<span class="cal-badge" data-manual-badge title="${esc('Manuelle Arbeitszeit')}: ${num(it.manualHours)} h">✎ ${esc('manuell')}</span>`:''}${it.outdated?`<span class="cal-flag">${esc('neue PIN-Version senden')}</span>`:''}${prog>0?`<span class="cal-progress" style="width:${prog}%"></span>`:''}${endVisible?`<span class="cal-resize" data-resize="${esc(it.id)}" title="${esc('Rechten Rand ziehen: Dauer in ganzen Tagen ändern')}"></span>`:''}</div>`;
     }
     for(const rep of vm.calendar.reports.filter(x=>r.kind==='resource'&&x.machine===r.id)){const c=clip(rep.day,rep.day+1);if(c)bars+=`<span class="cal-report" style="left:${c.l}%;width:${c.w}%" title="${esc('Gemeldete Produktion')}">${code(rep.type)} ${ui.fm(rep.volume)}</span>`;}
     const insertFor=v.insertMode&&(selItem||vm.orders.find(o=>o.id===v.selected&&!o.closed));
@@ -59,7 +66,9 @@ CFHViews.kalender=(vm,v,ui)=>{
   </div>
   <p class="dispatch-line"><b>${esc('Heute')} · ${esc('Schicht')} ${num(vm.meta.round,0)}:</b> ${code('H-01')} → ${d.harvester?name(d.harvester):esc('keine gesendete Planung')} · ${code('F-01')} → ${d.forwarder?name(d.forwarder):esc('keine gesendete Planung')}${d.issues.map(i=>` <span class="flag warn">${name(i.orderId)}: ${esc(issueText[i.code])}</span>`).join('')}</p>
   <div class="cal-scroll"><div class="cal" data-zoom="${zoom}" style="--days:${days}"><div class="cal-head"><div class="cal-label head">${picker}</div><div class="cal-bands"><div class="band months">${months}</div><div class="band weeks">${weeks}</div><div class="band days">${dayCells}</div></div></div>${shown.map(row).join('')||`<p class="note pad">${esc('Keine Ressource ausgewählt.')}</p>`}</div></div>
-  <div class="legend"><span><i class="lg-planned"></i>${esc('Geplant, nicht gesendet')}</span><span><i class="lg-sent"></i>${esc('An Ressource gesendet')}</span><span><i class="lg-started"></i>${esc('Begonnen')}</span><span><i class="lg-completed"></i>${esc('Abgeschlossen')}</span><span><i class="lg-mirror"></i>${esc('über Erntekette')}</span><span><i class="lg-unsaved"></i>${esc('Nicht gespeichert')}</span><span><i class="lg-report"></i>${esc('Gemeldete Produktion (HPR/FPR)')}</span></div>
+  ${(vm.conflicts||[]).length?`<div class="conflicts" role="status" data-conflicts>${vm.conflicts.map(c=>`<p class="conflict-line" data-conflict="${esc(c.resourceId)}:${esc(c.iso||'')}"><span aria-hidden="true">⚠ </span><b>${esc('Konflikt')}:</b> ${code(c.resourceId)} ${esc('ist am')} <span class="date" data-no-translate>${esc(ui.dateText(c.iso,{day:'2-digit',month:'2-digit'}))}</span> ${esc('doppelt verplant')}</p>`).join('')}<p class="note">${esc('Nur eine Warnung: die Planung bleibt möglich.')}</p></div>`:''}
+  <div class="legend"><span><i class="lg-planned"></i>${esc('Geplant, nicht gesendet')}</span><span><i class="lg-sent"></i>${esc('An Ressource gesendet')}</span><span><i class="lg-started"></i>${esc('Begonnen')}</span><span><i class="lg-completed"></i>${esc('Abgeschlossen')}</span><span><i class="lg-ghost"></i>${esc('geplant über Erntekette')}</span><span><i class="lg-conflict"></i>${esc('Konflikt')}</span><span><i class="lg-unsaved"></i>${esc('Nicht gespeichert')}</span><span><b class="lg-manual">✎</b> ${esc('Manuelle Arbeitszeit')}</span><span><i class="lg-report"></i>${esc('Gemeldete Produktion (HPR/FPR)')}</span></div>
   <p class="note">${esc('Dauer = Arbeitsmenge ÷ Leistung je Maßnahme, verteilt auf die Tagesstunden des Wochenkalenders (Start 09:00, Tage ohne Stunden werden übersprungen). Spielschicht n = Kalendertag n. Aufträge aus der Liste oder Balken auf eine Ressource ziehen; Doppelklick auf einen Balken öffnet die Bearbeitung.')}</p>
+  <p class="note">${esc('Rechten Balkenrand ziehen (oder Umschalt + Pfeiltaste): Dauer in ganzen Tagen ändern, das setzt die manuelle Arbeitszeit. Ernteketten: der Forwarder beginnt nach dem Vorlauf; graue Balken der Mitglieder sind nicht bearbeitbar.')}</p>
   </section>`;
 };

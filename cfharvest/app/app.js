@@ -1,6 +1,7 @@
 /* CFHarvest replica · application shell: game handoff, plan store with staged changes (Återställ/Spara), selection sync
    (list ↔ map ↔ calendar), actions, dialogs, drag and drop (HTML5 drag events for mouse, Pointer Events with long press for
-   touch/pen) and the view splitters. All planning values are derived from the received game state via CFHBridge. */
+   touch/pen), bar resizing on the right edge (Pointer Events for mouse, touch and pen; Shift+Arrow on a focused bar) and
+   the view splitters. All planning values are derived from the received game state via CFHBridge. */
 'use strict';
 const CFHApp=(()=>{
 const B=CFHBridge,M=CFHModel,UI=CFHUI,V=CFHViews,$=id=>document.getElementById(id),esc=UI.esc;
@@ -132,6 +133,8 @@ function render(){
   if(html&&!dlg.open){if(typeof dlg.showModal==='function'){try{dlg.showModal();}catch{dlg.setAttribute('open','');}}else dlg.setAttribute('open','');}
   if(!html&&dlg.open){if(typeof dlg.close==='function')dlg.close();else dlg.removeAttribute('open');}
   document.body.classList.toggle('landing-mode',!!v.landingMode);
+  // Re-flowed bars glow briefly once the calendar is on screen (admin edits happen on another page).
+  if(v.flash&&!v.flash.timer&&v.nav==='planning'&&v.views.includes('calendar'))v.flash.timer=setTimeout(()=>{if(S.view.flash){S.view.flash=null;render();}},3500);
   restoreFocus(key,sel);
 }
 let toastTimer=null;
@@ -145,6 +148,15 @@ function openEdit(itemId){const it=itemById(itemId);if(!it)return;S.view.selItem
 function openOrder(id,tab){const v=S.view;v.selected=id;v.nav='order';v.menu=null;v.detail={orderId:id,tab:tab||'order',draft:{},showMap:v.detail.showMap!==false,funcOpen:false};render();try{window.scrollTo(0,0);}catch{}}
 function moveWithin(delta){const it=itemById(S.view.selItem);if(!it)return;const row=rowById(it.rowId),idx=row.items.findIndex(i=>i.id===it.id),to=idx+delta;if(to<0||to>row.items.length-1)return;stage(M.insertAt(S.plan,S.snap,null,row.id,to,{itemId:it.id,stage:true}),tr('Reihenfolge geändert')+' · '+tr('Speichern nicht vergessen'));}
 function planOrders(ids,rowId,opts,how){const plan=M.assign(S.plan,S.snap,ids,rowId,{...opts,stage:true});S.view.selected=ids[0];S.view.checked=[];stage(plan,`${names(ids)} → ${rowById(rowId)?.name||rowId}${how?' · '+how:''}`);}
+/** After a master-data change (rate, working time): re-flow the bars of the affected rows (staged) and highlight them. */
+function reflowAfter(before,resourceIds){
+  const next=M.reflow(before,S.plan,S.snap||B.fromGameState(S.game),resourceIds,{stage:true}),ids=next.reflowed||[];delete next.reflowed;
+  if(!ids.length)return;
+  const moved=next.assignments.some(a=>{const b=S.plan.assignments.find(x=>x.id===a.id);return b&&Math.abs(b.startHour-a.startHour)>1e-9;});
+  S.view.flash={ids,timer:null};
+  const msg=`${tr('Kalender neu berechnet')}: ${ids.length} ${tr('Balken')}${moved?' · '+tr('Speichern nicht vergessen'):''}`;
+  if(moved)stage(next,msg);else{render();toast(msg);}
+}
 function placeLanding(e){
   const id=S.view.nav==='order'?S.view.detail.orderId:S.view.selected,o=order(id),svg=e.target.closest('svg.cfh-map');if(!o||!svg)return;
   let pt=null;try{const m=svg.getScreenCTM?.();if(m&&svg.createSVGPoint){const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;const q=p.matrixTransform(m.inverse());pt=[+q.x.toFixed(1),+q.y.toFixed(1)];}}catch{}
@@ -232,6 +244,7 @@ const actions={
   /* quick edit */
   'edit-message':()=>{const d=S.view.dialog;d.msgOpen=!d.msgOpen;render();},
   'edit-message-send':()=>{const d=S.view.dialog,it=itemById(d.itemId),text=String(dq('[data-dialog="message"]')?.value||'').trim();if(!text)return;d.msgOpen=false;d.message='';mutate(p=>{p.messages.push({to:it.rowId,orderId:it.orderId,text:text.slice(0,500),round:S.vm.meta.round});},tr('Nachricht gesendet'));},
+  'edit-reset-manual':()=>{const d=S.view.dialog;d.draft={...(d.draft||{}),manualOn:false};delete d.draft.manual;delete d.draft.edate;delete d.draft.etime;d.endTouched=false;render();},
   'edit-delete':()=>{const d=S.view.dialog;S.view.dialog=null;S.view.selItem=null;stage(M.removeItems(S.plan,[d.itemId]),tr('Aus dem Kalender gelöscht')+' · '+tr('Speichern nicht vergessen'));},
   'edit-update':()=>{const d=S.view.dialog,p=editPreview(d);S.view.dialog=null;stage(M.updateItem(S.plan,S.snap,d.itemId,{day:p.day??S.vm.calendar.currentDay,minutes:minutesOf(p.stime),manualHours:p.manualOn?p.manual:null,stage:true}),tr('Aktualisiert')+' · '+tr('Speichern nicht vergessen'));},
   /* order book */
@@ -252,17 +265,22 @@ const actions={
     if(d.base)patch.base={...(r.base||{}),...d.base};
     if(d.production){patch.production={...(r.production||{})};for(const [k,val] of Object.entries(d.production))if(Number(val)>0)patch.production[k]=Number(val);if(patch.production.Slutavverkning)patch.rate=patch.production.Slutavverkning;}
     if(d.week){const w={...r.weekly},h=k=>Math.max(0,Math.min(24,Number(d.week[k])||0));if(d.week.workday!==undefined)for(const k of ['mon','tue','wed','thu','fri'])w[k]=h('workday');if(d.week.sat!==undefined)w.sat=h('sat');if(d.week.sun!==undefined)w.sun=h('sun');patch.weekly=w;}
-    a.draft={};mutate(p=>{const extra=p.extraResources.find(x=>x.id===id);if(extra)Object.assign(extra,patch);else p.resources[id]={...(p.resources[id]||{}),...patch};},tr('Gespeichert'));},
+    a.draft={};const before=S.plan;mutate(p=>{const extra=p.extraResources.find(x=>x.id===id);if(extra)Object.assign(extra,patch);else p.resources[id]={...(p.resources[id]||{}),...patch};},tr('Gespeichert'));
+    if(patch.production||patch.weekly)reflowAfter(before,[id]);},
   'week-prev':()=>{const a=S.view.admin;a.weekStart=(a.weekStart??M.mondayOf(S.vm.calendar.currentDay))-(a.weekSpan||7);render();},
   'week-next':()=>{const a=S.view.admin;a.weekStart=(a.weekStart??M.mondayOf(S.vm.calendar.currentDay))+(a.weekSpan||7);render();},
   'week-today':()=>{S.view.admin.weekStart=null;render();},
   'week-span':el=>{S.view.admin.weekSpan=Number(el.dataset.span);render();},
   'week-cell':el=>{const a=S.view.admin,k=el.dataset.key;a.weekSel=a.weekSel.includes(k)?a.weekSel.filter(x=>x!==k):[...a.weekSel,k];render();},
-  'week-apply':()=>{const a=S.view.admin,h=Math.max(0,Math.min(24,Number(a.draft.hours??8)||0)),sel=[...a.weekSel];a.weekSel=[];
-    mutate(p=>{for(const key of sel){const [id,dayS]=key.split(':'),day=Number(dayS),r=S.vm.resourcesAll.find(x=>x.id===id);if(!r)continue;const extra=p.extraResources.find(x=>x.id===id),e=extra||(p.resources[id]??={});e.days={...(e.days||{})};if(h===Number(r.weekly[M.weekday(day)]))delete e.days[day];else e.days[day]=h;}},tr('Wochenkalender gespeichert'));},
+  'week-apply':()=>{const a=S.view.admin,h=Math.max(0,Math.min(24,Number(a.draft.hours??8)||0)),sel=[...a.weekSel];a.weekSel=[];const before=S.plan;
+    mutate(p=>{for(const key of sel){const [id,dayS]=key.split(':'),day=Number(dayS),r=S.vm.resourcesAll.find(x=>x.id===id);if(!r)continue;const extra=p.extraResources.find(x=>x.id===id),e=extra||(p.resources[id]??={});e.days={...(e.days||{})};if(h===Number(r.weekly[M.weekday(day)]))delete e.days[day];else e.days[day]=h;}},tr('Wochenkalender gespeichert'));
+    reflowAfter(before,[...new Set(sel.map(k=>k.split(':')[0]))]);},
   'week-reset':()=>{const a=S.view.admin,sel=[...a.weekSel];a.weekSel=[];mutate(p=>{for(const key of sel){const [id,day]=key.split(':'),e=p.extraResources.find(x=>x.id===id)||p.resources[id];if(e?.days)delete e.days[day];}},tr('Wochenkalender gespeichert'));},
   'chain-new':()=>{const chains=structuredClone(S.vm.chainsAll),n=chains.length+1,id='K-'+String(n).padStart(2,'0'),first=S.vm.resourcesAll.find(r=>r.plannable!==false&&r.active!==false);if(!first)return;mutate(p=>{p.chains=[...chains,{id,name:'Erntekette '+id,kind:'drivningskedja',members:[first.id]}];},tr('Neue Erntekette angelegt'));},
-  'chain-save':()=>{const dr=S.view.admin.chainDraft||{};S.view.admin.chainDraft={};mutate(p=>{p.chains=structuredClone(S.vm.chainsAll).map(c=>dr[c.id]!==undefined&&String(dr[c.id]).trim()?{...c,name:String(dr[c.id]).trim().slice(0,40)}:c);},tr('Gespeichert'));},
+  'chain-save':()=>{const a=S.view.admin,dr=a.chainDraft||{},lag=a.lagDraft||{};a.chainDraft={};a.lagDraft={};
+    const changed=S.vm.chainsAll.filter(c=>lag[c.id]!==undefined&&String(lag[c.id]).trim()!==''&&M.chainLag({lag:lag[c.id]})!==c.lag).map(c=>c.id);
+    mutate(p=>{p.chains=structuredClone(S.vm.chainsAll).map(c=>{const n={...c};if(dr[c.id]!==undefined&&String(dr[c.id]).trim())n.name=String(dr[c.id]).trim().slice(0,40);if(changed.includes(c.id))n.lag=M.chainLag({lag:lag[c.id]});return n;});},tr('Gespeichert'));
+    const ids=S.vm.rows.filter(r=>changed.includes(r.id)).flatMap(r=>r.items.map(i=>i.id));if(ids.length){S.view.flash={ids,timer:null};render();}},
   /* messages */
   'msg-send':()=>{const v=S.view,text=String(v.msgText||'').trim();if(!text)return toast(tr('Bitte eine Nachricht eingeben.'));v.msgText='';mutate(p=>{p.messages.push({to:v.msgTo,text:text.slice(0,500),round:S.vm.meta.round});},tr('Nachricht gesendet'));},
   return:()=>{S.view.dialog={type:'return'};render();},
@@ -272,10 +290,12 @@ function movedConfirm(copy){const d=S.view.dialog,rowId=dq('[data-dialog="row"]'
   const plan=M.moveItem(S.plan,S.snap,d.itemId,rowId,{day:day??undefined,lock,copy,stage:true});S.view.selItem=plan.lastItem||d.itemId;stage(plan,`${tr(copy?'Kopiert nach':'Verschoben nach')} ${rowById(rowId)?.name||rowId} · ${tr('Speichern nicht vergessen')}`);}
 
 /* ---------- Drag and drop: list rows and calendar bars onto calendar rows ---------- */
-function payloadFor(target){
+/** Columns between a bar's start day and the grabbed day: a dropped bar starts that many columns before the drop day. */
+function grabDelta(bar,it,clientX){const track=bar.closest?.('[data-drop-row]');if(!track||!Number.isFinite(clientX)||it.startPos==null)return 0;const r=track.getBoundingClientRect();if(!(r.width>0))return 0;const pos=(Number(track.dataset.off)||0)+(clientX-r.left)/r.width*(Number(track.dataset.days)||7);return Math.max(0,Math.floor(pos)-Math.floor(it.startPos));}
+function payloadFor(target,clientX){
   const row=target.closest?.('tr[data-row-order]');
   if(row){if(row.getAttribute('draggable')!=='true')return null;const id=row.dataset.rowOrder,v=S.view,ids=v.checked.includes(id)?S.vm.orders.filter(o=>v.checked.includes(o.id)&&!o.closed).map(o=>o.id):[id];const o=order(ids[0]);return{kind:'orders',ids,label:tr(o.operationLabel)+(ids.length>1?` (${ids.length})`:'')};}
-  const bar=target.closest?.('.cal-item[data-item]');if(bar){const it=itemById(bar.dataset.item);if(!it)return null;return{kind:'item',id:it.id,rowId:it.rowId,label:UI.orderLabelText(order(it.orderId)).replace(/ - ([^-]+)$/,(m,n)=>' - '+tr(n))};}
+  const bar=target.closest?.('.cal-item[data-item]');if(bar){const it=itemById(bar.dataset.item);if(!it)return null;return{kind:'item',id:it.id,rowId:it.rowId,grab:grabDelta(bar,it,clientX),span:it.startPos!=null&&it.endPos!=null?Math.max(1,Math.ceil(it.endPos-1e-9)-Math.floor(it.startPos)):1,label:UI.orderLabelText(order(it.orderId)).replace(/ - ([^-]+)$/,(m,n)=>' - '+tr(n))};}
   return null;
 }
 function dropInfo(track,clientX){const r=track.getBoundingClientRect(),off=Number(track.dataset.off)||0,days=Number(track.dataset.days)||7;const f=r.width>0?Math.max(0,Math.min(.9999,(clientX-r.left)/r.width)):0,pos=off+f*days;return{rowId:track.dataset.dropRow,day:Math.max(S.vm.calendar.currentDay,Math.floor(pos)),pos};}
@@ -284,22 +304,26 @@ function highlight(track,info){
   if(hl&&hl.track!==track)clearHighlight();
   const off=Number(track.dataset.off)||0,days=Number(track.dataset.days)||7;
   if(!hl){track.classList.add('drop-hover');track.closest('.cal-row')?.classList.add('drop-hover');const m=document.createElement('span');m.className='drop-day';track.append(m);hl={track,marker:m};}
-  hl.marker.style.left=((info.day-off)/days*100)+'%';hl.marker.style.width=(100/days)+'%';hl.marker.textContent=UI.dateText(M.dayISO(info.day),{day:'2-digit',month:'2-digit'});
+  const p=S.drag||P?.payload,day=targetDay(p,info),span=p?.kind==='item'?p.span||1:1;
+  hl.marker.style.left=((day-off)/days*100)+'%';hl.marker.style.width=(Math.min(span,days)*100/days)+'%';hl.marker.textContent=UI.dateText(M.dayISO(day),{day:'2-digit',month:'2-digit'});
 }
 function clearHighlight(){if(!hl)return;hl.track.classList.remove('drop-hover');hl.track.closest('.cal-row')?.classList.remove('drop-hover');hl.marker.remove();hl=null;}
 function ghost(text,x,y){const g=$('cfhGhost');if(!g)return null;g.textContent=text;g.classList.add('show');if(x!=null){g.style.left=(x+14)+'px';g.style.top=(y+10)+'px';}return g;}
 function hideGhost(){const g=$('cfhGhost');if(g){g.classList.remove('show');g.style.left='-9999px';}}
+const targetDay=(p,info)=>p?.kind==='item'?Math.max(S.vm.calendar.currentDay,info.day-(p.grab||0)):info.day;
 function performDrop(p,info){
   if(!p||!info?.rowId||!rowById(info.rowId))return;
   if(p.kind==='orders'){planOrders(p.ids,info.rowId,{mode:'day',day:info.day},tr('Speichern nicht vergessen'));return;}
   const it=itemById(p.id);if(!it)return;
-  if(it.rowId===info.rowId){const row=rowById(it.rowId),others=row.items.filter(x=>x.id!==it.id),idx=others.filter(x=>x.startPos!=null&&(x.startPos+x.endPos)/2<info.pos).length;
-    S.view.selItem=it.id;stage(M.insertAt(S.plan,S.snap,null,row.id,idx,{itemId:it.id,stage:true}),tr('Reihenfolge geändert')+' · '+tr('Speichern nicht vergessen'));return;}
-  S.view.selItem=it.id;S.view.dialog={type:'moved',itemId:it.id,rowId:info.rowId,dateISO:M.dayISO(info.day),lock:true};render();
+  const day=targetDay(p,info);
+  // Within the row: move in time, duration kept, start snapped to the day (09:00). Later bars make room on Speichern.
+  if(it.rowId===info.rowId){S.view.selItem=it.id;if(it.startPos!=null&&day===Math.floor(it.startPos))return render();
+    stage(M.shiftItem(S.plan,S.snap,it.id,day,{stage:true}),`${tr('Verschoben auf')} ${UI.dateText(M.dayISO(day))} · ${tr('Speichern nicht vergessen')}`);return;}
+  S.view.selItem=it.id;S.view.dialog={type:'moved',itemId:it.id,rowId:info.rowId,dateISO:M.dayISO(day),lock:true};render();
 }
 function onDragStart(e){
-  if(P){e.preventDefault?.();return;}
-  const p=payloadFor(e.target);if(!p)return;S.drag=p;document.body.classList.add('dragging');
+  if(P||R){e.preventDefault?.();return;}
+  const p=payloadFor(e.target,e.clientX);if(!p)return;S.drag=p;document.body.classList.add('dragging');
   const dt=e.dataTransfer;if(dt){try{dt.setData('text/plain',JSON.stringify(p));dt.effectAllowed='copyMove';}catch{}const g=ghost(p.label,-9999,-9999);try{if(g&&dt.setDragImage)dt.setDragImage(g,12,12);}catch{}}
 }
 function onDragOver(e){const track=e.target.closest?.('[data-drop-row]');if(!track||!S.drag)return;e.preventDefault();if(e.dataTransfer)try{e.dataTransfer.dropEffect='move';}catch{}highlight(track,dropInfo(track,e.clientX));}
@@ -315,24 +339,65 @@ function startPointerDrag(){if(!P)return;P.active=true;document.body.classList.a
 function hitTrack(x,y){const el=document.elementFromPoint?.(x,y);return el?.closest?.('[data-drop-row]')||null;}
 function onPointerDown(e){
   const split=e.target.closest?.('.splitter');if(split)return splitStart(e,split);
+  const handle=e.target.closest?.('[data-resize]');if(handle&&!(e.button>0))return resizeStart(e,handle);
   if(e.pointerType==='mouse'||e.button>0)return; // mouse uses native HTML5 drag and drop
   if(e.target.closest?.('input,select,textarea,a,button:not(.cal-item)'))return;
-  const payload=payloadFor(e.target);if(!payload)return;
+  const payload=payloadFor(e.target,e.clientX);if(!payload)return;
   P={id:e.pointerId,x:e.clientX,y:e.clientY,payload,active:false,timer:null};
   if(config.longPress<=0)startPointerDrag();else P.timer=setTimeout(startPointerDrag,config.longPress);
 }
 function onPointerMove(e){
+  if(R)return resizeMove(e);
   if(SP)return splitMove(e);
   if(!P||e.pointerId!==P.id)return;
   if(!P.active){if(Math.hypot(e.clientX-P.x,e.clientY-P.y)>10){clearTimeout(P.timer);P=null;}return;}
   e.preventDefault?.();ghost(P.payload.label,e.clientX,e.clientY);const track=hitTrack(e.clientX,e.clientY);if(track)highlight(track,dropInfo(track,e.clientX));else clearHighlight();
 }
 function onPointerUp(e){
+  if(R)return e.pointerId===R.id?resizeEnd():undefined;
   if(SP)return splitEnd();
   if(!P||e.pointerId!==P.id)return;clearTimeout(P.timer);const was=P;P=null;
   if(was.active){const track=hitTrack(e.clientX,e.clientY),info=track?dropInfo(track,e.clientX):null;clearHighlight();hideGhost();document.body.classList.remove('dragging');S.suppressClick=true;setTimeout(()=>{S.suppressClick=false;},400);if(info)performDrop(was.payload,info);}
 }
-function onPointerCancel(){if(SP)return splitEnd();if(P){clearTimeout(P.timer);P=null;}clearHighlight();hideGhost();document.body.classList.remove('dragging');}
+function onPointerCancel(){if(R)return resizeEnd(true);if(SP)return splitEnd();if(P){clearTimeout(P.timer);P=null;}clearHighlight();hideGhost();document.body.classList.remove('dragging');}
+/* ---------- Bar resize: right-edge handle (Pointer Events for mouse, touch and pen) ---------- */
+/* The end snaps to day columns; the label shows the resulting working hours; release sets the manual working time (staged,
+   counted in Zurücksetzen, persisted by Speichern). The bar's native drag is switched off while the handle is held. */
+let R=null;
+function resizeStart(e,handle){
+  const bar=handle.closest('.cal-item[data-item]'),track=bar?.closest('[data-drop-row]'),it=bar&&itemById(bar.dataset.item),row=it&&rowById(it.rowId);if(!it||!row||!track||it.startPos==null)return;
+  e.preventDefault?.();e.stopPropagation?.();
+  R={id:e.pointerId,handle,bar,track,it,row,x0:e.clientX,moved:false,endDay:null,hours:it.duration,label:null};
+  bar.removeAttribute('draggable');bar.classList.add('resizing');document.body.classList.add('resizing');
+  try{handle.setPointerCapture?.(e.pointerId);}catch{}
+  const lab=document.createElement('span');lab.className='cal-resize-label';lab.dataset.resizeLabel='';lab.textContent=`${UI.num(it.duration)} h`;bar.append(lab);R.label=lab;
+}
+function resizeMove(e){
+  if(e.pointerId!==R.id)return;e.preventDefault?.();
+  const{track,it,row,bar}=R,r=track.getBoundingClientRect(),off=Number(track.dataset.off)||0,days=Number(track.dataset.days)||7;if(!(r.width>0))return;
+  if(!R.moved&&Math.abs(e.clientX-R.x0)<=3)return;R.moved=true;
+  const endDay=Math.round(off+(e.clientX-r.left)/r.width*days),hours=M.resizeHours(row,it,endDay),endPos=M.positionOf(row,it.start+hours,true);
+  R.endDay=endDay;R.hours=hours;
+  const left=Math.max(0,(it.startPos-off)/days*100),right=Math.min(100,(endPos-off)/days*100);bar.style.width=Math.max(.5,right-left)+'%';
+  R.label.textContent=`${UI.num(hours)} h`;
+}
+function resizeEnd(cancel){
+  const x=R;R=null;try{x.handle.releasePointerCapture?.(x.id);}catch{}
+  document.body.classList.remove('resizing');x.label?.remove();x.bar.classList.remove('resizing');x.bar.setAttribute('draggable','true');
+  if(!x.moved)return; // a plain click on the handle selects the bar as usual
+  S.suppressClick=true;setTimeout(()=>{S.suppressClick=false;},400);
+  if(cancel||x.endDay==null||Math.abs(x.hours-x.it.duration)<1e-6){render();return;}
+  S.view.selItem=x.it.id;S.view.selected=x.it.orderId;
+  stage(M.resizeItem(S.plan,S.snap,x.it.id,x.endDay,{stage:true}),`${tr('Manuelle Arbeitszeit')}: ${UI.num(x.hours)} h · ${tr('Speichern nicht vergessen')}`);
+}
+/** Keyboard alternative: Shift+ArrowRight/Left on a focused bar moves its end by one working day. */
+function keyResize(id,dir){
+  const it=itemById(id),row=it&&rowById(it.rowId);if(!it||!row||it.startPos==null||it.endPos==null)return;
+  const b=Math.ceil(it.endPos-1e-9),frac=b-it.endPos>1e-6,min=Math.floor(it.startPos)+1;let to=dir>0?(frac?b:b+1):b-1;
+  if(dir>0)while(M.hoursOn(row,to-1)===0&&to<b+60)to++;else while(to>min&&M.hoursOn(row,to-1)===0)to--;
+  to=Math.max(min,to);const hours=M.resizeHours(row,it,to);if(Math.abs(hours-it.duration)<1e-6)return;
+  S.view.selItem=id;S.view.selected=it.orderId;stage(M.resizeItem(S.plan,S.snap,id,to,{stage:true}),`${tr('Manuelle Arbeitszeit')}: ${UI.num(hours)} h · ${tr('Speichern nicht vergessen')}`);
+}
 /* ---------- View splitters (Pointer Events + keyboard) [M37] ---------- */
 let SP=null;
 function splitStart(e,split){e.preventDefault?.();const l=split.previousElementSibling,r=split.nextElementSibling;if(!l||!r)return;SP={split,l,r,x:e.clientX,lw:l.getBoundingClientRect().width,rw:r.getBoundingClientRect().width,lg:Number(l.style.flexGrow)||1,rg:Number(r.style.flexGrow)||1};try{split.setPointerCapture?.(e.pointerId);}catch{}split.classList.add('active');}
@@ -361,6 +426,7 @@ function onChange(e){
   else if(c==='filter'){v.filters={...v.filters,[el.dataset.key]:el.value};v.page=0;}
   else if(c==='view-toggle'){const set=new Set(v.views);if(el.checked)set.add(el.value);else set.delete(el.value);v.views=VIEW_KEYS.filter(k=>set.has(k));local.set('cfharvest-views-v1',JSON.stringify(v.views));}
   else if(c==='pick-row')v.pickRow=el.value;
+  else if(c==='moved-row'||c==='moved-lock'){const d=v.dialog;if(d?.type!=='moved')return;d.rowId=$('cfhDialog').querySelector('[data-dialog="row"]')?.value||d.rowId;d.lock=!!$('cfhDialog').querySelector('[data-dialog="lock"]')?.checked;d.dateISO=$('cfhDialog').querySelector('[data-dialog="date"]')?.value||d.dateISO;}
   else if(c==='row')v.rowChecked=el.checked?[...new Set([...v.rowChecked,el.value])]:v.rowChecked.filter(x=>x!==el.value);
   else if(c==='res-shown'){const all=S.vm.rows.map(r=>r.id),cur=v.rowsShown||all;const next=el.checked?[...new Set([...cur,el.value])]:cur.filter(x=>x!==el.value);v.rowsShown=next.length===all.length?null:all.filter(x=>next.includes(x));}
   else if(c==='map-layer')v.mapLayers={photo:true,overlay:true,landings:true,...v.mapLayers,[el.value]:el.checked};
@@ -382,6 +448,7 @@ function onInput(e){
   else if(d.input==='filter'){v.filters={...v.filters,[d.key]:el.value};v.page=0;render();}
   else if(d.input==='res-search'){v.resSearch=el.value;render();}
   else if(d.input==='chain-name')(v.admin.chainDraft??={})[d.chain]=el.value;
+  else if(d.input==='chain-lag')(v.admin.lagDraft??={})[d.chain]=el.value;
   else if(d.input==='book-detail')(v.bookDraft[d.book]??={})[d.key]=el.value;
   else if(d.input==='book-message')v.bookMessage=el.value;
   else if(d.input==='msg-to')v.msgTo=el.value;
@@ -397,6 +464,7 @@ function onKey(e){
   const v=S.view;
   if(e.key==='Escape'){if(v.dialog){v.dialog=null;render();}else if(v.landingMode){v.landingMode=false;render();}else if(v.menu||v.colMenu||v.detail.funcOpen){v.menu=null;v.colMenu=false;v.detail.funcOpen=false;render();}return;}
   const split=e.target.closest?.('.splitter');if(split&&(e.key==='ArrowLeft'||e.key==='ArrowRight')){e.preventDefault();return splitKey(e,split);}
+  const calBar=e.target.closest?.('.cal-item[data-item]');if(calBar&&e.shiftKey&&(e.key==='ArrowLeft'||e.key==='ArrowRight')){e.preventDefault();return keyResize(calBar.dataset.item,e.key==='ArrowRight'?1:-1);}
   const row=e.target.matches?.('tr[data-row-order]')?e.target:null;if(row&&(e.key===' '||e.key==='Enter')){e.preventDefault();row.dispatchEvent(new MouseEvent('click',{bubbles:true}));return;}
   if((e.key==='Enter'||e.key===' ')&&e.target.getAttribute?.('role')==='button'&&e.target.tagName!=='BUTTON'){e.preventDefault();e.target.dispatchEvent(new MouseEvent('click',{bubbles:true}));}
 }
@@ -406,7 +474,7 @@ function init(){
   document.addEventListener('click',onClick);document.addEventListener('dblclick',onDblClick);document.addEventListener('change',onChange);document.addEventListener('input',onInput);document.addEventListener('keydown',onKey);
   document.addEventListener('dragstart',onDragStart);document.addEventListener('dragover',onDragOver);document.addEventListener('drop',onDrop);document.addEventListener('dragend',onDragEnd);
   document.addEventListener('pointerdown',onPointerDown);document.addEventListener('pointermove',e=>{onPointerMove(e);if(!P&&!SP)onMapMove(e);});document.addEventListener('pointerup',onPointerUp);document.addEventListener('pointercancel',onPointerCancel);
-  document.addEventListener('touchmove',e=>{if(P?.active||SP)e.preventDefault();},{passive:false});
+  document.addEventListener('touchmove',e=>{if(P?.active||SP||R)e.preventDefault();},{passive:false});
   document.addEventListener('contextmenu',e=>{if(P)e.preventDefault();});
   // dist/i18n.js fires this event on first load before its MutationObserver exists: translate the re-render explicitly.
   document.addEventListener('forestry-language-change',()=>{render();try{I18n.localize(document.body);}catch{}});

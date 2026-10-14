@@ -118,8 +118,9 @@ async function cycle(p){collect(p);const snapshot=p.js('JSON.stringify(CFHApp.st
  item=bar(r,'K-01','H-A01');assert.equal(item.dataset.tone,'sent');assert(item.classList.contains('tone-sent'));assert.equal(bar(r,'K-01','H-C01').dataset.tone,'planned','unchecked item not sent');
  assert.equal(r.d.querySelector('tr[data-row-order="H-A01"] .pill').className,'pill pill-team','sent to a team = teal');assert(r.d.querySelector('tr[data-row-order="H-A01"] .sent-ico'));
  assert.equal(r.js("CFHApp.vm().dispatch.harvester"),'H-A01');assert.equal(r.js("CFHApp.vm().dispatch.forwarder"),'H-A01');
- // Chain bars mirrored as outlined bars on the member rows [M59].
- assert(r.d.querySelector('[data-cal-row="H-01"] .cal-item.mirror[data-order="H-A01"]')&&r.d.querySelector('[data-cal-row="F-01"] .cal-item.mirror[data-order="H-A01"]'));
+ // Chain bars appear as greyed member bars on the member rows [M59]; the forwarder's starts after the 1-day lag.
+ assert(r.d.querySelector('[data-cal-row="H-01"] .cal-item.ghost[data-order="H-A01"]')&&r.d.querySelector('[data-cal-row="F-01"] .cal-item.ghost[data-order="H-A01"]'));
+ close(parseFloat(r.d.querySelector('[data-cal-row="F-01"] .cal-item.ghost[data-order="H-A01"]').style.left),1/21*100,.01,'forwarder member bar one day later');
  /* DnD 1 — list row → calendar row (HTML5): Talgrund into the running Nordhang day = insert between; Spara shifts Südrevier. */
  await html5Drag(r,r.d.querySelector('tr[data-row-order="H-B01"]'),'K-01',2);
  assert.equal(r.d.getElementById('cfhGhost').textContent,'Endnutzung','ghost shows the Maßnahme');
@@ -276,6 +277,84 @@ async function cycle(p){collect(p);const snapshot=p.js('JSON.stringify(CFHApp.st
  await click(solo,'#cfhReturn');assert(solo.d.getElementById('cfhDialog').textContent.includes('ungespeicherte Änderungen werden vorher gespeichert'));await click(solo,'[data-action="return-confirm"]');assert.equal(solo.js('__nav'),'https://forestry.test/dist/');assert.equal(solo.storage()['cfharvest-return-v1'],undefined);
  assert.equal(JSON.parse(solo.storage()['cfharvest-plan-v1']).assignments.length,1,'staged drop saved on return');
 
+ /* 8b. Calendar fidelity (PLAN_OVERNIGHT §1): capacity tooltip and zooms, resize gesture (Pointer Events), move in time,
+    cross-row recompute vs lock, greyed member bars, conflicts, Kopiera onto a member, chain lag, rate re-flow, long bars. */
+ const cf=await replica({}),cfText=el=>el.textContent.replace(/\s+/g,' ').trim(),dlgType=p=>p.d.getElementById('cfhDialog').querySelector('[data-dialog-type]')?.dataset.dialogType;
+ await click(cf,'tr[data-row-order="H-A01"] td[data-col="client"]');await change(cf,'[data-change="pick-row"]','K-01');await click(cf,'[data-action="move-open"]');cf.d.querySelector('[data-dialog="date"]').value='2026-10-19';await click(cf,'[data-action="date-ok"]');await click(cf,'[data-action="stage-save"]');
+ let kb=bar(cf,'K-01','H-A01');assert(kb.title.includes('560 fm · 20 h · 2,5 Tage'),'tooltip: volume · hours · working days');
+ for(const [z,d] of [['day',7],['week',21],['month',31],['quarter',92]]){await click(cf,`[data-action="cal-zoom"][data-zoom="${z}"]`);close(parseFloat(bar(cf,'K-01','H-A01').style.width),2.5/d*100,.01,'2.5-day bar at zoom '+z);close(parseFloat(cf.d.querySelector('[data-cal-row="F-01"] .cal-item.ghost').style.left),1/d*100,.01);}
+ await click(cf,'[data-action="cal-zoom"][data-zoom="week"]');kb=bar(cf,'K-01','H-A01');
+ // Greyed member bars: hatched, tooltip names the chain, no select / drag / resize / quick edit.
+ let gH=cf.d.querySelector('[data-cal-row="H-01"] .cal-item.ghost[data-order="H-A01"]'),gF=cf.d.querySelector('[data-cal-row="F-01"] .cal-item.ghost[data-order="H-A01"]');
+ assert(gH&&gF,'member bars');assert(gH.title.startsWith('geplant über Erntekette K-01'));assert(gF.title.includes('560 fm · 17,5 h · 2,19 Tage'),'forwarder member: own rate');assert(gF.title.includes('Vorlauf Harvester → Forwarder: 1 Tag'));
+ for(const g of [gH,gF]){assert(!g.hasAttribute('draggable')&&!g.dataset.item&&!g.dataset.action&&!g.querySelector('[data-resize]')&&!g.hasAttribute('tabindex'));assert.equal(g.getAttribute('aria-disabled'),'true');}
+ close(parseFloat(gH.style.left),0,.01);close(parseFloat(gH.style.width),2.5/21*100,.01);close(parseFloat(gF.style.left),1/21*100,.01,'forwarder after the 1-day lag');close(parseFloat(gF.style.width),17.5/8/21*100,.01);
+ await click(cf,gH);assert.equal(cf.js('CFHApp.state().view.selItem'),null,'click on a member bar selects nothing');
+ let gdt=dataTransfer();fire(cf,'dragstart',gH,{dataTransfer:gdt,clientX:10});assert.equal(gdt.data['text/plain'],undefined,'member bar is no drag source');assert.equal(cf.js('CFHApp.state().drag'),null);
+ fire(cf,'dblclick',gH);await tick();assert(!dlgType(cf),'no quick edit from a member bar');
+ cf.js('CFHApp.config.longPress=0');fire(cf,'pointerdown',gF,{pointerType:'touch',pointerId:3,button:0,clientX:5,clientY:5});fire(cf,'pointermove',cf.d,{pointerType:'touch',pointerId:3,clientX:60,clientY:8});assert(!cf.d.getElementById('cfhGhost').classList.contains('show'),'no touch drag from a member bar');fire(cf,'pointerup',cf.d,{pointerType:'touch',pointerId:3,clientX:60,clientY:8});await tick();
+ // Resize gesture with the mouse (Pointer Events): end snaps to day columns, live label, staged, badge, Speichern persists.
+ stubTracks(cf);let trk=cf.d.querySelector('[data-drop-row="K-01"]'),handle=kb.querySelector('[data-resize]');assert(handle,'right-edge handle');
+ const mouse={pointerType:'mouse',pointerId:1,button:0,isPrimary:true};
+ fire(cf,'pointerdown',handle,{...mouse,clientX:xForDay(cf,trk,2,.5),clientY:10});assert(kb.classList.contains('resizing'));assert.equal(kb.getAttribute('draggable'),null,'native drag off while resizing');
+ assert(fire(cf,'dragstart',kb,{dataTransfer:dataTransfer()}).defaultPrevented,'HTML5 drag blocked during resize');
+ fire(cf,'pointermove',cf.d,{...mouse,clientX:xForDay(cf,trk,4,.6),clientY:10});assert.equal(kb.querySelector('[data-resize-label]').textContent,'40 h','live label');
+ fire(cf,'pointermove',cf.d,{...mouse,clientX:xForDay(cf,trk,4,.4),clientY:10});assert.equal(kb.querySelector('[data-resize-label]').textContent,'32 h');close(parseFloat(kb.style.width),4/21*100,.01,'bar follows in whole days');
+ fire(cf,'pointerup',cf.d,{...mouse,clientX:xForDay(cf,trk,4,.4),clientY:10});await tick();await new Promise(res=>setTimeout(res,450)); // the click after a resize is swallowed for 400 ms
+ kb=bar(cf,'K-01','H-A01');assert.equal(itemsOf(cf,'K-01')[0].manualHours,32);assert(kb.classList.contains('unsaved'));assert.equal(cf.d.querySelector('[data-staged-count]').textContent,'1','Zurücksetzen (1)');
+ assert.equal(cfText(kb.querySelector('[data-manual-badge]')),'✎ manuell');close(parseFloat(kb.style.width),4/21*100,.01);assert(kb.title.includes('32 h · 4 Tage')&&kb.title.includes('Manuelle Arbeitszeit'));
+ close(parseFloat(cf.d.querySelector('[data-cal-row="H-01"] .cal-item.ghost').style.width),4/21*100,.01,'harvester member follows the manual time');close(parseFloat(cf.d.querySelector('[data-cal-row="F-01"] .cal-item.ghost').style.width),17.5*1.6/8/21*100,.01,'forwarder member scaled');
+ assert(cf.js('CFHApp.state().view.selItem'),'resized bar selected');await click(cf,'[data-action="stage-save"]');assert.equal(JSON.parse(cf.storage()['cfharvest-plan-v1']).assignments[0].manualHours,32,'Speichern persists the manual time');
+ // Quick edit is in sync and resets to the computed value.
+ fire(cf,'dblclick',bar(cf,'K-01','H-A01'));await tick();let dl=cf.d.getElementById('cfhDialog');assert(dl.querySelector('[data-dialog="manualOn"]').checked);assert.equal(dl.querySelector('[data-dialog="manual"]').value,'32');assert(dl.textContent.includes('Manuelle Arbeitszeit für den Arbeitsauftrag ist auf 32 Stunden gesetzt'));await cycle(cf);
+ await click(cf,'[data-action="edit-reset-manual"]');dl=cf.d.getElementById('cfhDialog');assert(!dl.querySelector('[data-dialog="manualOn"]').checked);assert.equal(dl.querySelector('[data-calc-hours]').textContent,'20');
+ await click(cf,'[data-action="edit-update"]');assert.equal(itemsOf(cf,'K-01')[0].manualHours,null);assert(!bar(cf,'K-01','H-A01').querySelector('[data-manual-badge]'));await click(cf,'[data-action="stage-save"]');
+ // Touch resize (Pointer Events, no long press needed on the handle): shorten to the first day = 8 h.
+ stubTracks(cf);trk=cf.d.querySelector('[data-drop-row="K-01"]');kb=bar(cf,'K-01','H-A01');const touch={pointerType:'touch',pointerId:9,button:0,isPrimary:true};
+ fire(cf,'pointerdown',kb.querySelector('[data-resize]'),{...touch,clientX:xForDay(cf,trk,2,.5),clientY:10});fire(cf,'pointermove',cf.d,{...touch,clientX:xForDay(cf,trk,0,.7),clientY:10});fire(cf,'pointerup',cf.d,{...touch,clientX:xForDay(cf,trk,0,.7),clientY:10});await tick();await new Promise(res=>setTimeout(res,450));
+ assert.equal(itemsOf(cf,'K-01')[0].manualHours,8,'touch resize to one day');await click(cf,'[data-action="stage-reset"]');
+ // Keyboard alternative: Shift+ArrowRight on the focused bar = end of the next day column.
+ fire(cf,'keydown',bar(cf,'K-01','H-A01'),{key:'ArrowRight',shiftKey:true});await tick();assert.equal(itemsOf(cf,'K-01')[0].manualHours,24,'2,5 → 3 days');
+ fire(cf,'keydown',bar(cf,'K-01','H-A01'),{key:'ArrowLeft',shiftKey:true});await tick();assert.equal(itemsOf(cf,'K-01')[0].manualHours,16);await click(cf,'[data-action="stage-reset"]');
+ // Move in time within the row: grabbed on its 2nd day and dropped on day 8 → starts day 7, duration kept; drop marker spans the bar.
+ stubTracks(cf);trk=cf.d.querySelector('[data-drop-row="K-01"]');gdt=dataTransfer();fire(cf,'dragstart',bar(cf,'K-01','H-A01'),{dataTransfer:gdt,clientX:xForDay(cf,trk,1)});
+ fire(cf,'dragover',trk,{dataTransfer:gdt,clientX:xForDay(cf,trk,8),clientY:10});const mk=trk.querySelector('.drop-day');close(parseFloat(mk.style.left),7/21*100,.01,'marker at the new start');close(parseFloat(mk.style.width),3/21*100,.01,'marker spans the bar');
+ fire(cf,'drop',trk,{dataTransfer:gdt,clientX:xForDay(cf,trk,8),clientY:10});fire(cf,'dragend',trk,{});await tick();
+ assert.deepEqual([itemsOf(cf,'K-01')[0].start,itemsOf(cf,'K-01')[0].duration],[40,20],'Monday of week 2, duration kept');assert(!dlgType(cf),'no dialog within the row');await click(cf,'[data-action="stage-reset"]');
+ // Across rows: Südrevier H-01 → F-01. Lock preset keeps the dates (manual 15 h); without the lock the F-01 rate applies.
+ await html5Drag(cf,cf.d.querySelector('tr[data-row-order="H-C01"]'),'H-01',8);await click(cf,'[data-action="stage-save"]');
+ await html5Drag(cf,bar(cf,'H-01','H-C01'),'F-01',9);assert.equal(dlgType(cf),'moved');assert(cfText(cf.d.querySelector('[data-moved-duration]')).startsWith('Gesperrt: Start- und Enddatum bleiben'));await cycle(cf);
+ await change(cf,'[data-dialog="lock"]',false);assert.equal(cfText(cf.d.querySelector('[data-moved-duration]')),'Dauer auf Forwarder F-01: 13,1 h aus der Leistung der Zielressource');await cycle(cf);
+ await click(cf,'[data-action="moved-move"]');let fIt=itemsOf(cf,'F-01')[0];assert.equal(fIt.manualHours,null);close(fIt.duration,420/32,1e-9,'recomputed from the forwarder rate');close(fIt.start,56,1e-9,'drop day');await click(cf,'[data-action="stage-reset"]');
+ await html5Drag(cf,bar(cf,'H-01','H-C01'),'F-01',9);await click(cf,'[data-action="moved-move"]');fIt=itemsOf(cf,'F-01')[0];assert.equal(fIt.manualHours,15,'locked: same dates, manual hours');close(fIt.start,48);await click(cf,'[data-action="stage-reset"]');
+ // Conflict: Südrevier moved in time onto day 1 of H-01 while the chain's harvester member works Nordhang.
+ await html5Drag(cf,bar(cf,'H-01','H-C01'),'H-01',1);assert(!dlgType(cf));
+ const lines=[...cf.d.querySelectorAll('[data-conflicts] .conflict-line')].map(cfText);assert.deepEqual(lines,['⚠ Konflikt: H-01 ist am 20.10. doppelt verplant'],'warning line under the calendar');
+ assert(bar(cf,'K-01','H-A01').classList.contains('conflict')&&bar(cf,'H-01','H-C01').classList.contains('conflict')&&cf.d.querySelector('[data-cal-row="H-01"] .cal-item.ghost').classList.contains('conflict'),'red outline on both bars');
+ assert(!cf.d.querySelector('[data-cal-row="F-01"] .cal-item.ghost').classList.contains('conflict'));await cycle(cf);
+ await click(cf,'[data-action="stage-save"]');assert(cf.d.querySelector('[data-conflicts]'),'warning only: saved with the conflict');assert.equal(vmOf(cf).orders.find(o=>o.id==='H-C01').status,'planned');
+ // Kopiera onto a member machine: an independent, fully interactive bar (and a conflict with the forwarder's member bar).
+ await html5Drag(cf,bar(cf,'K-01','H-A01'),'F-01',0);await click(cf,'[data-action="moved-copy"]');const copy=bar(cf,'F-01','H-A01');
+ assert(copy&&copy.dataset.item&&copy.getAttribute('draggable')==='true'&&copy.querySelector('[data-resize]')&&copy.dataset.action==='select-item','copy is interactive');assert(bar(cf,'K-01','H-A01'),'original stays on the chain');
+ assert.deepEqual([...cf.d.querySelectorAll('[data-conflicts] .conflict-line')].map(cfText).map(t=>t.split(' ist')[0]),['⚠ Konflikt: F-01','⚠ Konflikt: H-01'],'same day, sorted by machine');await click(cf,copy);assert.equal(cf.js('CFHApp.state().view.selItem'),copy.dataset.item);await click(cf,'[data-action="stage-reset"]');
+ // Chain lag in Administration → Arbeitsgruppen/Ernteketten.
+ await click(cf,'[data-action="nav-menu"][data-key="admin"]');await click(cf,'[data-action="admin-page"][data-key="chains"]');assert.equal(cf.d.querySelector('[data-input="chain-lag"][data-chain="K-01"]').value,'1');await cycle(cf);
+ await input(cf,'[data-input="chain-lag"][data-chain="K-01"]','2');await click(cf,'[data-action="chain-save"]');assert.equal(vmOf(cf).chainsAll[0].lag,2);await click(cf,'[data-nav="planning"]');
+ gF=cf.d.querySelector('[data-cal-row="F-01"] .cal-item.ghost');close(parseFloat(gF.style.left),2/21*100,.01,'forwarder two days after the harvester');assert(gF.classList.contains('reflow'),'changed member bars highlighted');
+ // Rate change re-flows: Talgrund after Nordhang on K-01; H-01 at 14 fm/h doubles Nordhang → Talgrund follows (staged), both highlighted.
+ await click(cf,'tr[data-row-order="H-B01"] td[data-col="client"]');await click(cf,'[data-action="move-open"]');await click(cf,'[data-action="date-last"]');await click(cf,'[data-action="stage-save"]');close(itemsOf(cf,'K-01')[1].start,20,1e-9);
+ await click(cf,'[data-action="nav-menu"][data-key="admin"]');await click(cf,'[data-action="admin-page"][data-key="resources"]');await click(cf,'[data-action="admin-res"][data-res="H-01"]');await input(cf,'[data-admin-prod="Slutavverkning"]','14');await click(cf,'[data-action="admin-save"]');
+ await click(cf,'[data-nav="planning"]');let kItems=itemsOf(cf,'K-01');close(kItems[0].duration,40);close(kItems[1].start,40,1e-9,'Talgrund follows Nordhang');
+ assert(bar(cf,'K-01','H-B01').classList.contains('unsaved')&&bar(cf,'K-01','H-B01').classList.contains('reflow')&&bar(cf,'K-01','H-A01').classList.contains('reflow'),'re-flowed bars staged and highlighted');
+ assert(bar(cf,'H-01','H-C01').classList.contains('reflow'),'direct H-01 bar re-computed too');assert.equal(cf.d.querySelector('[data-staged-count]').textContent,'1');await cycle(cf);await click(cf,'[data-action="stage-save"]');
+ // "1 h + 1 fm" product rule: H-01 at 1 fm/h and 1 h per weekday blocks the calendar beyond every zoom window.
+ const lb=await replica({});await click(lb,'[data-action="nav-menu"][data-key="admin"]');await click(lb,'[data-action="admin-page"][data-key="resources"]');await input(lb,'[data-admin-prod="Slutavverkning"]','1');await click(lb,'[data-action="admin-save"]');
+ await click(lb,'[data-action="admin-res-tab"][data-tab="week"]');await input(lb,'[data-admin-week="workday"]','1');await click(lb,'[data-action="admin-save"]');await click(lb,'[data-nav="planning"]');
+ await html5Drag(lb,lb.d.querySelector('tr[data-row-order="H-C01"]'),'H-01',0);await click(lb,'[data-action="stage-save"]');
+ assert(bar(lb,'H-01','H-C01').title.includes('420 fm · 420 h · 420 Tage'));
+ for(const z of ['day','week','month','quarter']){await click(lb,`[data-action="cal-zoom"][data-zoom="${z}"]`);const b=bar(lb,'H-01','H-C01');close(parseFloat(b.style.left),0,.01);close(parseFloat(b.style.left)+parseFloat(b.style.width),100,.01,'blocks the whole window at '+z);assert(!b.querySelector('[data-resize]'),'no handle on a clipped end');}
+ results.calendarFidelity=['capacity tooltip + zooms','pointer resize (mouse, touch) + keyboard','move in time','cross-row recompute vs lock','greyed member bars','conflict warning','Kopiera onto member','chain lag','rate re-flow','1 h + 1 fm blocks the window'];
+
  /* Catalogue coverage of every German phrase seen above; every replica phrase has English and French. */
  const cat=r.w.ForestryTranslations,keys=Object.keys(cat).sort((x,y)=>y.length-x.length),reg=new RegExp('(?<![\\p{L}\\p{N}_])(?:'+keys.map(s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('|')+')(?![\\p{L}\\p{N}_])','gu');
  const allowed=/CFHarvest|Trimble|Forestry|StanForD|Excel|PDF|XLSX|WoodForce|\bTRI\b|\b(?:PIN|OIN|FOI|FDI|HPR|FPR)\b|Geobasis NRW \/ Land NRW|dl-de\/zero-2-0|BIO-0[123]|Harvester|Forwarder/g;
@@ -285,6 +364,6 @@ async function cycle(p){collect(p);const snapshot=p.js('JSON.stringify(CFHApp.st
  const own=require('../cfharvest/app/i18n-cfharvest.js');for(const [de,t] of Object.entries(own))assert(Array.isArray(t)&&t.length===2&&t.every(x=>typeof x==='string'&&x.trim()),'EN/FR for '+de);
  /* 9. Narrow screen markup: views stack (CSS) and English default language works on load. */
  const en=await page('cfharvest/app/index.html',REPLICA_FILES,'https://forestry.test/cfharvest/app/',{},'en');await tick();assert(en.d.getElementById('cfhNav').textContent.includes('Work planning'),'EN navigation');assert(en.d.querySelector('[data-view="list"] h2').textContent.includes('(Uppdragslista)'));
- for(const p of [g,r,back,g2,r2,solo,en])p.close();
+ for(const p of [g,r,back,g2,r2,solo,en,cf,lb])p.close();
  console.log(JSON.stringify({passed:true,...results,replicaPhrases:Object.keys(own).length,acceptance:['three stands as work orders + K-01 chain','Nordhang on K-01 day 1, Skicka → teal/purple','game: digital handover pre-confirmed, validate null','follow-up = receipt (0.1 fm), status harvesting','round 3: PIN v2, H-01 on v1 flagged','two-server fragment handoff with nonce'],milestone2:['German shell and 14 columns','HTML5 drag list→calendar, bar→resource (Kopiera), reorder','Pointer Events touch drag','insert-between shifts on Spara','Skicka PIN banner','status pill colours','detail page 13 tabs','admin 17-item menu, required markers, Veckokalender'],mode:'jsdom DOM contract; browser layout not tested'}));
 })().catch(e=>{console.error(e);process.exitCode=1;});

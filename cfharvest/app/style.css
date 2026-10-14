@@ -161,3 +161,19 @@ label.check{display:inline-flex;gap:6px;align-items:center;margin:4px 0}.dialog-
 @container (max-width:340px){.map-ctrl.pan,.map-ctrl.tools{display:none}.map-ctrl.zoom{top:8px;left:8px}}
 .dlg-head{position:relative;padding-right:46px!important}.dlg-head .close{position:absolute;right:10px;top:8px}
 .send-item{display:flex;flex-wrap:wrap;align-items:center;gap:2px 6px}.send-item .pin-line{flex-basis:100%}
+/* Calendar fidelity (PLAN_OVERNIGHT §1): chain member bars, conflicts, manual badge, resize handle, re-flow highlight */
+.cal-item.ghost{background:repeating-linear-gradient(135deg,#eceff2 0 6px,#dde2e6 6px 12px);border:1px dashed #9aa6b0;color:#5f6d78;cursor:default;z-index:1;font-weight:500;opacity:.92}
+.cal-item.ghost .lbl-code{opacity:.8}
+.cal-item.conflict{outline:2px solid var(--bad);outline-offset:1px;box-shadow:0 0 0 4px #b3261e22}.cal-item.selected.conflict{outline-color:var(--orange)}
+.cal-badge{flex:none;margin-left:6px;font-size:10px;font-weight:700;border-radius:8px;padding:0 5px;background:#ffffffd9;color:#4b2f93;line-height:14px}
+.cal-item.tone-sent .cal-badge{color:#4b2f93}
+.cal-resize{position:absolute;right:0;top:0;bottom:0;width:10px;cursor:ew-resize;touch-action:none;z-index:2;background:linear-gradient(90deg,transparent 0 3px,#ffffff99 3px 4px,transparent 4px 6px,#ffffff99 6px 7px,transparent 7px)}
+.cal-item.tone-planned .cal-resize{background:linear-gradient(90deg,transparent 0 3px,#4b2f9366 3px 4px,transparent 4px 6px,#4b2f9366 6px 7px,transparent 7px)}
+.cal-item:hover .cal-resize,.cal-item.resizing .cal-resize{background-color:#ffffff40}
+.cal-item.resizing{outline:2px dashed var(--orange);outline-offset:1px;z-index:6;overflow:visible}
+.cal-resize-label{position:absolute;right:-4px;top:-20px;transform:translateX(100%);background:var(--ink);color:#fff;font-size:11px;font-weight:700;border-radius:4px;padding:1px 6px;white-space:nowrap;pointer-events:none;z-index:7}
+body.resizing,body.resizing *{cursor:ew-resize!important;user-select:none}
+@keyframes cfh-reflow{0%,100%{box-shadow:0 0 0 0 #f2c14e00}30%,70%{box-shadow:0 0 0 4px #f2c14ecc}}
+.cal-item.reflow{animation:cfh-reflow 1.1s ease-in-out 3}
+.conflicts{margin:6px 0 0}.conflict-line{margin:3px 0;padding:5px 10px;border-left:4px solid var(--bad);background:#fde3e1;color:#7a1712;border-radius:0 6px 6px 0;font-size:12.5px}
+.lg-ghost{background:repeating-linear-gradient(135deg,#eceff2 0 3px,#dde2e6 3px 6px);border:1px dashed #9aa6b0!important}.lg-conflict{background:#fff;border:2px solid var(--bad)!important}.lg-manual{color:#4b2f93}
