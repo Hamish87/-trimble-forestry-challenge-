@@ -115,11 +115,11 @@ function rows(snapshot,plan={}){
 }
 
 /* ---------- Plan (the planner's own data; never game state) ---------- */
-function emptyPlan(){return{schema:1,seq:0,assignments:[],instructions:{},edits:{},resources:{},extraResources:[],chains:null,orderBook:{},routeOrder:[],messages:[],log:[],pinRemoved:{},basis:null};}
+function emptyPlan(){return{schema:1,seq:0,assignments:[],instructions:{},edits:{},resources:{},extraResources:[],chains:null,orderBook:{},routeOrder:[],messages:[],log:[],pinRemoved:{},admin:{},basis:null};}
 function normalizePlan(p){
   const base=emptyPlan();if(!p||typeof p!=='object')return base;const out={...base,...p};
   for(const k of ['assignments','extraResources','routeOrder','messages','log'])if(!Array.isArray(out[k]))out[k]=[];
-  for(const k of ['instructions','edits','resources','orderBook','pinRemoved'])if(!out[k]||typeof out[k]!=='object')out[k]={};
+  for(const k of ['instructions','edits','resources','orderBook','pinRemoved','admin'])if(!out[k]||typeof out[k]!=='object')out[k]={};
   out.seq=Number.isFinite(out.seq)?out.seq:0;
   out.assignments=out.assignments.filter(a=>a&&typeof a.orderId==='string'&&typeof a.rowId==='string'&&Number.isFinite(a.startHour));
   const used=new Set();for(const a of out.assignments){if(typeof a.id!=='string'||used.has(a.id))a.id='A'+(++out.seq);used.add(a.id);if(!Number.isFinite(a.seq))a.seq=out.seq;}

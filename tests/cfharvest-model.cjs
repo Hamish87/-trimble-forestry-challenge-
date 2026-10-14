@@ -225,4 +225,25 @@ assert.deepEqual(M.toOIN(o,ctx).OperatingInstruction.Landings.map(l=>l.LandingKe
 assert.deepEqual(M.toFOI(o,ctx).ForwardingObjectInstruction.Landings.length,3);assert.deepEqual(M.toOIN(o,{}).OperatingInstruction.Landings.map(l=>l.LandingKey),['P-A01'],'without ctx: the game landing');
 const sent=M.send(M.assign(mp,snap,['H-A01'],'K-01',{mode:'day',day:0}),snap,{orderIds:['H-A01']});assert.deepEqual(sent.instructions['H-A01'].files.oin.OperatingInstruction.Landings.length,3,'send carries the landings');
 assert(Array.isArray(o.routes.harvester)&&o.routes.harvester.length>2&&o.routes.forwarder.length>2,'bridge: routes in image units');}
-console.log(JSON.stringify({passed:true,statuses:M.STATUSES.length,capacity:{nordhangChainDays:2.5,talgrundChainHours:+(600/32).toFixed(2)},stanford:['oin','pin','foi','fdi'],fromHPR:true}));
+
+/* Administration master data (PLAN_OVERNIGHT §4): seed ids as cfharvest/db/seed.sql, merge of plan.admin edits, validation. */
+{const A=require('../cfharvest/app/admin-model.js'),sn=B.fromGameState(j.start(j.initial())),d0=A.data(sn,M.emptyPlan());
+assert.deepEqual(d0.roles.map(r=>[r.code,r.nameSv]),[['administrator','Administratör'],['planner','Planerare'],['mobile','Mobil/Maskin']]);
+assert.deepEqual(d0.users.map(u=>[u.id,u.email,u.resourceId]),[['planer','planer@demo.invalid',null],['h-01','h-01@demo.invalid','H-01']]);
+assert.deepEqual(d0.contracts.map(c=>[c.contractNo,c.clientCode,c.activeInGame,c.targetVolume]),[['V-26-014','TRI',true,600],['V-26-015','TRI',false,720]],'game contracts as Avtal');
+assert.deepEqual(d0.clients.map(c=>c.code),['TRI']);assert.equal(d0.company.name,'Demo-Lohnunternehmen');assert.deepEqual(d0.templates.map(t=>t.id),['MT-01','MT-02','MT-03']);
+assert(A.isBiometria('12345+00000')&&!A.isBiometria('1234+00000')&&!A.isBiometria('12345-00000')&&!A.isBiometria('12345+0000')&&!A.isBiometria(''));
+assert(A.isSE('SE556677889901')&&A.isSE('se 556677-8899')&&!A.isSE('DE556677889901')&&!A.isSE('SE12345'));
+assert.equal(A.validateCompany({...d0.company,biometriaId:'x'}).biometriaId,'Format NNNNN+00000');assert.equal(A.validateCompany({...d0.company,biometriaId:''}).biometriaId,'Pflichtangabe');assert.deepEqual(A.validateCompany(d0.company),{});
+assert.deepEqual(Object.keys(A.validateUser({displayName:'',email:'x',roles:['mobile']},d0.users)).sort(),['displayName','email','resourceId']);
+assert.equal(A.validateContract({contractNo:'V-26-014',clientCode:'TRI',name:'x',validFrom:'2026-10-19',validTo:'2026-10-01',operationTypes:['Gallring']},d0.contracts,true).validTo,'Ende vor Beginn');
+let p=A.saveUser(M.emptyPlan(),{id:'user-01',displayName:'Anna',email:'a@x.de',roles:['planner'],resourceAccess:['F-01','F-01']});p=A.setUserActive(p,'h-01',false);
+let d1=A.data(sn,p);assert.deepEqual(d1.users.map(u=>[u.id,u.active]),[['planer',true],['h-01',false],['user-01',true]]);assert.deepEqual(d1.users[2].resourceAccess,['F-01']);
+p=A.addTransfer(p,{resourceId:'L-01',direction:'out',partner:'Rundholz AB',seNumber:'SE 556677-8899',date:'2026-10-20'});p=A.addTransfer(p,{resourceId:'L-01',direction:'in',partner:'Rundholz AB',seNumber:'SE5566778899',date:'2026-10-22'});
+assert.deepEqual(A.data(sn,p).transfers.map(t=>[t.id,t.direction]),[['RT-01','out'],['RT-02','in']]);assert.equal(p.resources['L-01'].subcontractor,false,'latest transfer wins');
+p=A.removeTemplate(p,'MT-02');assert.deepEqual(A.data(sn,p).templates.map(t=>t.id),['MT-01','MT-03']);
+p=A.saveLayers(p,{order:['routes','photo','bogus'],on:{routes:true},colours:{stands:'#FF0000',landings:'red'}});const L=A.layers(p);
+assert.deepEqual(L.order.slice(0,3),['photo','routes','stands'],'photo stays first, unknown keys dropped');assert.equal(L.on.routes,true);assert.equal(L.colours.stands,'#ff0000');assert.equal(L.colours.landings,'#eef7ff','invalid colour ignored');
+assert.equal(A.fill('{Auftrag} · {Ressource} · {Datum} · {X}',{Auftrag:'H-A01',Ressource:'K-01'}),'H-A01 · K-01 · {Datum} · {X}');
+const back=M.normalizePlan(JSON.parse(JSON.stringify(p)));assert.deepEqual(A.data(sn,back),A.data(sn,p),'plan.admin survives the JSON envelope');}
+console.log(JSON.stringify({passed:true,admin:true,statuses:M.STATUSES.length,capacity:{nordhangChainDays:2.5,talgrundChainHours:+(600/32).toFixed(2)},stanford:['oin','pin','foi','fdi'],fromHPR:true}));

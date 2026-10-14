@@ -121,6 +121,8 @@ function fromGameState(s){
     meta:{round:s.round,phase:s.phase,requiredVersion:req,contract,client:CLIENT,handoverMode:s.handoverMode,cutting:s.cutting,reporting:s.reporting,loadedGrade:s.loadedGrade,
       dispatch:{harvester:orderId(s.harvester),forwarder:orderId(s.forwarder)},journey:!!s.journey,documentation:s.journey?.documentation||null,canApply:s.phase==='plan'},
     orders,resources,chains:structuredClone(CHAINS),calendar,orderBook,
+    // Avtal master data [PLAN_OVERNIGHT §4]: every contract the game offers (dist/journey.js); meta.contract is the one in play.
+    contracts:J()?Object.values(J().contracts).map(c=>structuredClone(c)):[{id:contract.id,name:contract.name,volume:contract.volume,saw:contract.saw,prices:contract.prices,shortfallRate:contract.shortfallRate}],
     production:{messages,totals:{felled:sum(orders.map(o=>o.stand.felled)),forwarded:sum(orders.map(o=>o.stand.forwarded)),forestStock:sum(orders.map(o=>o.stand.forestStock)),roadside:sum(orders.map(o=>o.stand.roadside)),delivered:sum(orders.map(o=>o.stand.delivered)),neighbourVolume:s.neighbourVolume||0},
       lastShift:last?{round:last.round,harvest:last.harvest,forwarded:last.forwarded,harvestOrigin:orderId(last.harvestOrigin),forwardOrigin:orderId(last.forwardOrigin),forestStock:sum(s.stands.map(x=>x.stock))}:null}};
 }
