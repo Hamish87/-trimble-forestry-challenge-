@@ -136,6 +136,7 @@ function render(){
   if(!html&&dlg.open){if(typeof dlg.close==='function')dlg.close();else dlg.removeAttribute('open');}
   // Re-flowed bars glow briefly once the calendar is on screen (admin edits happen on another page).
   if(v.flash&&!v.flash.timer&&v.nav==='planning'&&v.views.includes('calendar'))v.flash.timer=setTimeout(()=>{if(S.view.flash){S.view.flash=null;render();}},3500);
+  const am=document.querySelector('.admin-menu'),cur=am?.querySelector('[aria-current="true"]');if(am&&cur&&am.scrollWidth>am.clientWidth+1)am.scrollLeft=Math.max(0,cur.offsetLeft-(am.clientWidth-cur.offsetWidth)/2);
   restoreFocus(key,sel);
 }
 let toastTimer=null;
