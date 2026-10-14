@@ -122,6 +122,20 @@ Filters: Uppdragsgivare (select) + Sök; area tree (client → regions "10 - Nor
 ## 7. Game integration (unchanged contract)
 `bridge.js`: `fromGameState(state)` → orders (stands a/b/c as work orders of contract V-26-014/015, client "SYD"-style code "TRI"), resources H-01/F-01 (+ chain K-01), calendar, orderBook, production; `applyPlan(state, plan)` sets harvester/forwarder, `handoverMode:'digital'`, `cutting:'current'`, `reporting:'live'`, handover accepted/version. Sending emits OIN/PIN/FOI/FDI; `fromHPR` feeds the Sortiment table's Skördare/Skotare/Skogslager columns and the Resurser view.
 
+## 7a. Replica decisions in milestone 2 [DEMO]
+- Default views Auftragsliste + Kalender (product starts empty [V6-0:12]); calendar default zoom W = 21 days (T 7 · W 21 · M 31 · 3M 92 days).
+- All three game stands are Slutavverkning/Endnutzung, so the game rates (28/32 fm/h) drive capacity; Första gallring/Gallring rates in Produktionsdata are demo values no game order uses. Areas (ha) per stand are demo values; the game has no areas.
+- Client code "TRI", contract = game contract id, Arbetsorder nr. = H-A01 etc.; Tillgänglig från/till = game shifts 1 and 4.
+- Calendar changes (drops, Flytta/Kopiera, insert, reorder, Avplanera, Komprimera, quick edit) are staged until Spara; Skicka and Zurück zum Spiel save first. On Spara, the staged bars are anchors: an unstaged bar that started earlier keeps its place, bars starting inside the dropped block move behind it.
+- Lås start- och slutdatumen is preset (as in [M60]); when locked, the copy/moved bar keeps the calendar start and end by setting a manual working time on the new row.
+- Status "Skickad" to a chain = teal pill; calendar bars stay purple. Started bars orange, pills yellow. Completed = green "Abgeschlossen".
+- "Ledig *": the asterisk is shown for every game order (all have map data).
+- Skicka: "Några sortiment saknar PIN-filer" appears when an assortment with volume has no PIN (downgraded wood, or a PIN removed in the Sortiment tab). "Förhandsanmälan" is a per-resource checkbox without further effect. Default selection = unsent/outdated items (of the checked calendar rows).
+- Not observed, shown disabled: list ⚡ 🔗, calendar ⬇ 📊 🌲, map measure and polygon, XLSX, Ny Arbetsorder, Ny Beställning, 13 of 17 Administration items, Funktioner Mätdokument/Kopiera/Radera. "Planeradn" is a toggle "only resources with planned orders". PDF = browser print.
+- Map: scale labels are approximations and the readout shows image coordinates, because the game's orthophoto is not georeferenced.
+- Veckokalender: click toggles a day chip (no Ctrl needed); Veckoarbetstid is edited as Werktag (Mon–Fri) · Samstag · Sonntag.
+- Order detail: Säkerhet, Tillägg/Avdrag and Provytor are empty states; Hänsyn shows the game's BIO restriction; contacts are scenario placeholders.
+
 ## 8. Gaps
 - Exact colour hex values (approximated from captures: purple ≈ #6f42c1, light purple ≈ #b9a7e8, teal ≈ #2bb3a3, yellow ≈ #f2c14e, green outline ≈ #2e8b57, header green ≈ #2fae5f, newer bar ≈ #0b3d6b).
 - Behaviour of ⚡ and 🔗 toolbar icons not observed.

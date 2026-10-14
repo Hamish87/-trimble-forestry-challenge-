@@ -20,7 +20,15 @@ The replica loads the game's `dist/game.js`, `dist/journey.js`, `dist/routes.js`
 
 ### Files and tests
 
-`bridge.js` (only file that knows the game's state shape) · `model.js` (status enum, capacity maths, plan operations, `toOIN/toPIN/toFOI/toFDI`, `fromHPR`) · `ui.js` + `views/*.js` (HTML only) · `app.js` (shell, handoff, actions) · `i18n-cfharvest.js` (DE→EN/FR phrases merged before `dist/i18n.js`). Tests: `tests/cfharvest-bridge.cjs`, `tests/cfharvest-model.cjs`, `tests/cfharvest-ui.cjs` (jsdom, needs `jsdom` from `npm ci`), all part of `npm test`.
+`bridge.js` (only file that knows the game's state shape) · `model.js` (status enum, capacity maths, plan operations incl. Kopiera and staged changes, `toOIN/toPIN/toFOI/toFDI`, `fromHPR`) · `ui.js` (helpers, `term()` German label + Swedish caption, status pills) · `views/*.js` (HTML only: `uppdragslista`, `kalender`, `karta`, `resurser`, `dialogs`, `order-detail`, `bestallningar`, `admin`, `pages`) · `app.js` (shell, handoff, plan store, actions, drag and drop, splitters) · `i18n-cfharvest.js` (DE→EN/FR phrases merged before `dist/i18n.js`). Tests: `tests/cfharvest-bridge.cjs`, `tests/cfharvest-model.cjs`, `tests/cfharvest-ui.cjs` (jsdom, needs `jsdom` from `npm ci`; the UI test reads the script list from `index.html`), all part of `npm test`.
+
+### Planning in milestone 2 (how the screens behave)
+
+- **Arbeitsplanung**: pick views (Auftragsliste · Aufträge auf der Karte · Kalender · Ressourcen); they sit left to right with draggable ↔ splitters and stack below 900 px. Choice is remembered per browser (`localStorage`).
+- **Planning**: click list rows (orange selection), then either drag them onto a calendar row/day, or choose "Ressource wählen" and "Auf Ressource verschieben (n)" → "Datum wählen" (OK / Als letzten hinzufügen). Calendar changes are **staged**: dashed bars, "Zurücksetzen (n)" and "Speichern". Speichern resolves overlaps (a bar dropped into a gap stays after the bar it overlaps; later bars move right) and writes the plan envelope.
+- **Bars**: drag to another resource → dialog "Arbeitsauftrag auf Ressource verschoben" (Start- und Enddatum sperren · Verschieben · Kopieren); drag within a row to reorder; double-click (or ✎) for the quick edit with estimate table, Wochenarbeitszeit, manual working time and calculated end. Button alternatives: ⇆, ◂ ▸, ↔ "Zwischen Aufträgen einfügen", ⛓ Ausplanen.
+- **Drag and drop** uses HTML5 drag events for the mouse and Pointer Events for touch/pen (hold ~350 ms to pick up, so scrolling still works).
+- **Senden** opens "An Ressource senden" (per resource, PIN file names, banner when an assortment has no PIN); staged changes are saved first. The pill turns purple (teal when sent to a chain) and the list shows ➦.
 
 ## Reverse-engineering toolkit
 
@@ -41,4 +49,4 @@ app/                                          the replica
 scripts/                                      setup-rea.sh, capture-frames.sh
 ```
 
-Status vocabulary, screen names and button labels are kept in Swedish where they are the documented product UI (Uppdragslista, Skicka till resurs, Komprimera …); the DE/EN/FR catalogue of the game supplies the surrounding text.
+Language: the replica is **German first** (EN/FR via the game's switch). Where `SPEC_PLANNING.md` marks a Swedish product term (view names, Flytta/Skicka/Avplanera/Komprimera, status words, tab names), it is shown as a small muted caption "(Uppdragslista)" or as a tooltip "SV: …" and stays Swedish in every language. The Komprimera dialog keeps the product's English title, as observed. The Hilfe page lists the German ↔ Swedish glossary.
