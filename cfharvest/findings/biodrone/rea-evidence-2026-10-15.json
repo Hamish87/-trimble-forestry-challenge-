@@ -1,0 +1,1765 @@
+{
+ "generated": "2026-10-15",
+ "tool": "REA (rea-agents 6.5.0, MCP server rea) · passive Chrome DevTools Protocol observation of https://biodroneportal.com/ public pages; headless Google Chrome 155, remote-debugging-port 9222",
+ "scope": "Public, unauthenticated pages only (landing, /register, /login, /contact, /eula, /privacy-policy). No login, no tenant data. Script bundle analysed statically; the public source map index-*.js.map was read for the functional inventory (see EVIDENCE.md §H). No vendor code is stored in this repository.",
+ "records": {
+  "landing": {
+   "evidence_id": "ev_40f01fc14d49474187ea203cb85beaa9057bc8000303585ae5aa0a15c3bea199",
+   "operation": "inspect_web_page",
+   "provider": {
+    "id": "rea-cdp-browser",
+    "name": "REA Chrome DevTools Protocol observation provider",
+    "version": "2"
+   },
+   "confidence": "observed",
+   "authority": "external-service",
+   "captured_at": "2026-10-14T22:05:45.104Z",
+   "url": "https://biodroneportal.com/",
+   "title": "Biodrone Portal",
+   "scripts": [
+    {
+     "url": "https://biodroneportal.com/assets/react-pdf-DTSDwuC4.js",
+     "source_map_url": "https://biodroneportal.com/assets/react-pdf-DTSDwuC4.js.map"
+    },
+    {
+     "url": "https://biodroneportal.com/assets/vendor-data-N15SsA7z.js",
+     "source_map_url": "https://biodroneportal.com/assets/vendor-data-N15SsA7z.js.map"
+    },
+    {
+     "url": "https://biodroneportal.com/assets/vendor-ui-DZJR_ndM.js",
+     "source_map_url": "https://biodroneportal.com/assets/vendor-ui-DZJR_ndM.js.map"
+    },
+    {
+     "url": "https://biodroneportal.com/assets/vendor-react-bootstrap-DgvqlKk2.js",
+     "source_map_url": "https://biodroneportal.com/assets/vendor-react-bootstrap-DgvqlKk2.js.map"
+    },
+    {
+     "url": "https://biodroneportal.com/assets/vendor-misc-RdTOoKu7.js",
+     "source_map_url": "https://biodroneportal.com/assets/vendor-misc-RdTOoKu7.js.map"
+    },
+    {
+     "url": "https://biodroneportal.com/assets/vendor-forms-D8pgTOO8.js",
+     "source_map_url": "https://biodroneportal.com/assets/vendor-forms-D8pgTOO8.js.map"
+    },
+    {
+     "url": "https://biodroneportal.com/assets/ol-C2RRmdta.js",
+     "source_map_url": "https://biodroneportal.com/assets/ol-C2RRmdta.js.map"
+    },
+    {
+     "url": "https://biodroneportal.com/assets/index-CqwK7TSW.js",
+     "source_map_url": "https://biodroneportal.com/assets/index-CqwK7TSW.js.map"
+    }
+   ],
+   "resources": [
+    {
+     "url": "https://biodroneportal.com/assets/vendor-misc-RdTOoKu7.js",
+     "type": "Script",
+     "bytes": 125486
+    },
+    {
+     "url": "https://biodroneportal.com/assets/index-CqwK7TSW.js",
+     "type": "Script",
+     "bytes": 2036499
+    },
+    {
+     "url": "https://biodroneportal.com/assets/ol-C2RRmdta.js",
+     "type": "Script",
+     "bytes": 289749
+    },
+    {
+     "url": "https://biodroneportal.com/assets/vendor-forms-D8pgTOO8.js",
+     "type": "Script",
+     "bytes": 38134
+    },
+    {
+     "url": "https://biodroneportal.com/assets/index-CfTnvyKK.css",
+     "type": "Stylesheet",
+     "bytes": 256375
+    },
+    {
+     "url": "https://biodroneportal.com/assets/vendor-react-bootstrap-DgvqlKk2.js",
+     "type": "Script",
+     "bytes": 109044
+    },
+    {
+     "url": "https://biodroneportal.com/assets/vendor-data-N15SsA7z.js",
+     "type": "Script",
+     "bytes": 257729
+    },
+    {
+     "url": "https://biodroneportal.com/assets/vendor-ui-DZJR_ndM.js",
+     "type": "Script",
+     "bytes": 209952
+    },
+    {
+     "url": "https://biodroneportal.com/assets/react-pdf-DTSDwuC4.js",
+     "type": "Script",
+     "bytes": 1408912
+    }
+   ],
+   "links": [
+    "https://biodroneportal.com/",
+    "https://biodroneportal.com/[#DSR_FORM_URL#]",
+    "https://biodroneportal.com/apple-touch-icon",
+    "https://biodroneportal.com/assets/index-CfTnvyKK.css",
+    "https://biodroneportal.com/assets/index-CqwK7TSW.js",
+    "https://biodroneportal.com/assets/ol-C2RRmdta.js",
+    "https://biodroneportal.com/assets/react-pdf-DTSDwuC4.js",
+    "https://biodroneportal.com/assets/vendor-data-N15SsA7z.js",
+    "https://biodroneportal.com/assets/vendor-forms-D8pgTOO8.js",
+    "https://biodroneportal.com/assets/vendor-misc-RdTOoKu7.js",
+    "https://biodroneportal.com/assets/vendor-react-bootstrap-DgvqlKk2.js",
+    "https://biodroneportal.com/assets/vendor-ui-DZJR_ndM.js",
+    "https://biodroneportal.com/contact",
+    "https://biodroneportal.com/eula",
+    "https://biodroneportal.com/favicon.ico",
+    "https://biodroneportal.com/login",
+    "https://biodroneportal.com/manifest.json",
+    "https://biodroneportal.com/privacy-policy",
+    "https://biodroneportal.com/register"
+   ],
+   "accessibility": [
+    {
+     "role": "RootWebArea",
+     "name": "Biodrone Portal"
+    },
+    {
+     "role": "region",
+     "name": "This website uses cookies"
+    },
+    {
+     "role": "tabpanel",
+     "name": "Consent"
+    },
+    {
+     "role": "heading",
+     "name": "Welcome to Biodrone Your Portal to AI Powered Object Detection Tools"
+    },
+    {
+     "role": "button",
+     "name": "Get Access"
+    },
+    {
+     "role": "button",
+     "name": "Log in"
+    },
+    {
+     "role": "link",
+     "name": "Cookiebot by Usercentrics - opens in a new window"
+    },
+    {
+     "role": "tab",
+     "name": "Details"
+    },
+    {
+     "role": "tab",
+     "name": "About"
+    },
+    {
+     "role": "link",
+     "name": "Biodrone logo"
+    },
+    {
+     "role": "StaticText",
+     "name": "Welcome to Biodrone"
+    },
+    {
+     "role": "StaticText",
+     "name": "Your Portal to AI Powered"
+    },
+    {
+     "role": "StaticText",
+     "name": "Object Detection Tools"
+    },
+    {
+     "role": "StaticText",
+     "name": "Identify objects, track alterations, and uncover patterns."
+    },
+    {
+     "role": "StaticText",
+     "name": "A cloud-based software solution for analysing drone images of nature habitats with the help of artificial intelligence."
+    },
+    {
+     "role": "link",
+     "name": "Contact Us"
+    },
+    {
+     "role": "link",
+     "name": "Privacy Policy"
+    },
+    {
+     "role": "link",
+     "name": "EULA"
+    },
+    {
+     "role": "link",
+     "name": "Cookie Preferences"
+    },
+    {
+     "role": "button",
+     "name": "Necessary only"
+    },
+    {
+     "role": "button",
+     "name": "Allow all"
+    },
+    {
+     "role": "StaticText",
+     "name": "We use cookies to enable secure login, provide support chat functionality, and help us identify and resolve errors. We also use cookies with Google Tag Manager, Google Analytics, and Google Ads to analyze traffic and measure the effectiveness of our advertising."
+    },
+    {
+     "role": "group",
+     "name": "Consent Selection"
+    },
+    {
+     "role": "checkbox",
+     "name": "Necessary"
+    },
+    {
+     "role": "switch",
+     "name": "Preferences"
+    },
+    {
+     "role": "switch",
+     "name": "Statistics"
+    },
+    {
+     "role": "switch",
+     "name": "Marketing"
+    }
+   ],
+   "storage": {
+    "local_storage_keys": [],
+    "session_storage_keys": [],
+    "indexed_db_names": [],
+    "usage_bytes": 0
+   },
+   "limitations": [
+    "Artifact identity is unavailable for this observation.",
+    "Observation starts when REA attaches; prior network and console activity is unavailable.",
+    "Raw network headers, bodies, cookies, storage values, console objects, and WebSocket payloads are never retained; explicitly requested primitive console text is retained verbatim, while payload captures retain value-free shapes.",
+    "Source maps are reported only as declarative URLs and are not fetched.",
+    "URL-less scripts and console events without an allowed source URL are excluded because their origin cannot be proven.",
+    "CDP discovery omitted the target attachment state; attached is reported as unknown.",
+    "Browser host platform and architecture were not observed."
+   ]
+  },
+  "register": {
+   "evidence_id": "ev_57355b7323a50bb15a1b44f3edb9f6d239e74ad1eab9845c31a8a2bcc146aa2e",
+   "operation": "inspect_web_page",
+   "provider": {
+    "id": "rea-cdp-browser",
+    "name": "REA Chrome DevTools Protocol observation provider",
+    "version": "2"
+   },
+   "confidence": "observed",
+   "authority": "external-service",
+   "captured_at": "2026-10-14T22:10:32.582Z",
+   "url": "https://biodroneportal.com/register",
+   "title": "Biodrone Portal",
+   "scripts": [
+    {
+     "url": "https://biodroneportal.com/assets/react-pdf-DTSDwuC4.js",
+     "source_map_url": "https://biodroneportal.com/assets/react-pdf-DTSDwuC4.js.map"
+    },
+    {
+     "url": "https://biodroneportal.com/assets/vendor-data-N15SsA7z.js",
+     "source_map_url": "https://biodroneportal.com/assets/vendor-data-N15SsA7z.js.map"
+    },
+    {
+     "url": "https://biodroneportal.com/assets/vendor-ui-DZJR_ndM.js",
+     "source_map_url": "https://biodroneportal.com/assets/vendor-ui-DZJR_ndM.js.map"
+    },
+    {
+     "url": "https://biodroneportal.com/assets/vendor-react-bootstrap-DgvqlKk2.js",
+     "source_map_url": "https://biodroneportal.com/assets/vendor-react-bootstrap-DgvqlKk2.js.map"
+    },
+    {
+     "url": "https://biodroneportal.com/assets/vendor-misc-RdTOoKu7.js",
+     "source_map_url": "https://biodroneportal.com/assets/vendor-misc-RdTOoKu7.js.map"
+    },
+    {
+     "url": "https://biodroneportal.com/assets/vendor-forms-D8pgTOO8.js",
+     "source_map_url": "https://biodroneportal.com/assets/vendor-forms-D8pgTOO8.js.map"
+    },
+    {
+     "url": "https://biodroneportal.com/assets/ol-C2RRmdta.js",
+     "source_map_url": "https://biodroneportal.com/assets/ol-C2RRmdta.js.map"
+    },
+    {
+     "url": "https://biodroneportal.com/assets/index-CqwK7TSW.js",
+     "source_map_url": "https://biodroneportal.com/assets/index-CqwK7TSW.js.map"
+    }
+   ],
+   "resources": [
+    {
+     "url": "https://biodroneportal.com/assets/vendor-misc-RdTOoKu7.js",
+     "type": "Script",
+     "bytes": 125486
+    },
+    {
+     "url": "https://biodroneportal.com/assets/index-CqwK7TSW.js",
+     "type": "Script",
+     "bytes": 2036499
+    },
+    {
+     "url": "https://biodroneportal.com/assets/ol-C2RRmdta.js",
+     "type": "Script",
+     "bytes": 289749
+    },
+    {
+     "url": "https://biodroneportal.com/assets/vendor-forms-D8pgTOO8.js",
+     "type": "Script",
+     "bytes": 38134
+    },
+    {
+     "url": "https://biodroneportal.com/assets/index-CfTnvyKK.css",
+     "type": "Stylesheet",
+     "bytes": 256375
+    },
+    {
+     "url": "https://biodroneportal.com/assets/vendor-react-bootstrap-DgvqlKk2.js",
+     "type": "Script",
+     "bytes": 109044
+    },
+    {
+     "url": "https://biodroneportal.com/assets/vendor-data-N15SsA7z.js",
+     "type": "Script",
+     "bytes": 257729
+    },
+    {
+     "url": "https://biodroneportal.com/assets/vendor-ui-DZJR_ndM.js",
+     "type": "Script",
+     "bytes": 209952
+    },
+    {
+     "url": "https://biodroneportal.com/assets/react-pdf-DTSDwuC4.js",
+     "type": "Script",
+     "bytes": 1408912
+    }
+   ],
+   "links": [
+    "https://biodroneportal.com/",
+    "https://biodroneportal.com/[#DSR_FORM_URL#]",
+    "https://biodroneportal.com/apple-touch-icon",
+    "https://biodroneportal.com/assets/index-CfTnvyKK.css",
+    "https://biodroneportal.com/assets/index-CqwK7TSW.js",
+    "https://biodroneportal.com/assets/ol-C2RRmdta.js",
+    "https://biodroneportal.com/assets/react-pdf-DTSDwuC4.js",
+    "https://biodroneportal.com/assets/vendor-data-N15SsA7z.js",
+    "https://biodroneportal.com/assets/vendor-forms-D8pgTOO8.js",
+    "https://biodroneportal.com/assets/vendor-misc-RdTOoKu7.js",
+    "https://biodroneportal.com/assets/vendor-react-bootstrap-DgvqlKk2.js",
+    "https://biodroneportal.com/assets/vendor-ui-DZJR_ndM.js",
+    "https://biodroneportal.com/contact",
+    "https://biodroneportal.com/eula",
+    "https://biodroneportal.com/favicon.ico",
+    "https://biodroneportal.com/login",
+    "https://biodroneportal.com/manifest.json",
+    "https://biodroneportal.com/privacy-policy"
+   ],
+   "accessibility": [
+    {
+     "role": "RootWebArea",
+     "name": "Biodrone Portal"
+    },
+    {
+     "role": "region",
+     "name": "This website uses cookies"
+    },
+    {
+     "role": "tabpanel",
+     "name": "Consent"
+    },
+    {
+     "role": "heading",
+     "name": "Get access in 3 easy steps"
+    },
+    {
+     "role": "heading",
+     "name": "Available Subscription Plans"
+    },
+    {
+     "role": "link",
+     "name": "Cookiebot by Usercentrics - opens in a new window"
+    },
+    {
+     "role": "tab",
+     "name": "Details"
+    },
+    {
+     "role": "tab",
+     "name": "About"
+    },
+    {
+     "role": "link",
+     "name": "Biodrone logo"
+    },
+    {
+     "role": "button",
+     "name": "Log in"
+    },
+    {
+     "role": "heading",
+     "name": "Create Your Account"
+    },
+    {
+     "role": "StaticText",
+     "name": "Already have an account?"
+    },
+    {
+     "role": "StaticText",
+     "name": "To use the Biodrone Portal, a subscription is required. It provides you with advanced AI training and detection tools for your projects, and also offers secure storage of your files."
+    },
+    {
+     "role": "StaticText",
+     "name": "Billed"
+    },
+    {
+     "role": "StaticText",
+     "name": "monthly"
+    },
+    {
+     "role": "StaticText",
+     "name": "Starter"
+    },
+    {
+     "role": "StaticText",
+     "name": "$59.00"
+    },
+    {
+     "role": "StaticText",
+     "name": "Pro"
+    },
+    {
+     "role": "StaticText",
+     "name": "$129.00"
+    },
+    {
+     "role": "StaticText",
+     "name": "Business"
+    },
+    {
+     "role": "StaticText",
+     "name": "$299.00"
+    },
+    {
+     "role": "link",
+     "name": "Contact Us"
+    },
+    {
+     "role": "link",
+     "name": "Privacy Policy"
+    },
+    {
+     "role": "link",
+     "name": "EULA"
+    },
+    {
+     "role": "link",
+     "name": "Cookie Preferences"
+    },
+    {
+     "role": "button",
+     "name": "Necessary only"
+    },
+    {
+     "role": "button",
+     "name": "Allow all"
+    },
+    {
+     "role": "heading",
+     "name": "Create an account"
+    },
+    {
+     "role": "heading",
+     "name": "Verify your email"
+    },
+    {
+     "role": "heading",
+     "name": "Choose your subscription plan"
+    },
+    {
+     "role": "StaticText",
+     "name": "○"
+    },
+    {
+     "role": "StaticText",
+     "name": "8+ chars"
+    },
+    {
+     "role": "StaticText",
+     "name": "Uppercase"
+    },
+    {
+     "role": "StaticText",
+     "name": "Lowercase"
+    },
+    {
+     "role": "StaticText",
+     "name": "Number"
+    },
+    {
+     "role": "StaticText",
+     "name": "Special char"
+    },
+    {
+     "role": "button",
+     "name": "Register"
+    },
+    {
+     "role": "StaticText",
+     "name": "Embark on your journey with us by using the registration form to set up your new account."
+    },
+    {
+     "role": "StaticText",
+     "name": "Check your inbox for an email. It contains a link to verify your email address and begin using our platform."
+    },
+    {
+     "role": "StaticText",
+     "name": "Log in and unlock the Biodrone portal with a monthly subscription plan. It's your key to a world of advanced features and capabilities."
+    },
+    {
+     "role": "textbox",
+     "name": "Enter name"
+    },
+    {
+     "role": "textbox",
+     "name": "Enter email"
+    },
+    {
+     "role": "textbox",
+     "name": "Password"
+    },
+    {
+     "role": "textbox",
+     "name": "Confirm Password"
+    },
+    {
+     "role": "checkbox",
+     "name": "Yes, I agree to the Biodrone Portal User Agreement (EULA)"
+    },
+    {
+     "role": "checkbox",
+     "name": "Yes, I agree to Biodrones Privacy Policy"
+    },
+    {
+     "role": "StaticText",
+     "name": "15 GB Cloud Storage"
+    },
+    {
+     "role": "StaticText",
+     "name": "2 Projects"
+    },
+    {
+     "role": "StaticText",
+     "name": "Up to 500 images per project"
+    },
+    {
+     "role": "StaticText",
+     "name": "Access to pre-trained AI Models"
+    },
+    {
+     "role": "StaticText",
+     "name": "50 GB Cloud Storage"
+    },
+    {
+     "role": "StaticText",
+     "name": "10 Projects"
+    },
+    {
+     "role": "StaticText",
+     "name": "Up to 1500 images in orthophoto project"
+    },
+    {
+     "role": "StaticText",
+     "name": "Up to 1000 images in single images project"
+    },
+    {
+     "role": "StaticText",
+     "name": "Access to pre-trained AI models"
+    },
+    {
+     "role": "StaticText",
+     "name": "1 TB Cloud Storage"
+    },
+    {
+     "role": "StaticText",
+     "name": "20 Projects"
+    },
+    {
+     "role": "StaticText",
+     "name": "Up to 3000 images in orthophoto project"
+    },
+    {
+     "role": "StaticText",
+     "name": "Name"
+    },
+    {
+     "role": "StaticText",
+     "name": "Email address"
+    },
+    {
+     "role": "StaticText",
+     "name": "Yes, I agree to the"
+    },
+    {
+     "role": "link",
+     "name": "Biodrone Portal User Agreement (EULA)"
+    },
+    {
+     "role": "StaticText",
+     "name": "Yes, I agree to"
+    },
+    {
+     "role": "link",
+     "name": "Biodrones Privacy Policy"
+    },
+    {
+     "role": "StaticText",
+     "name": "We use cookies to enable secure login, provide support chat functionality, and help us identify and resolve errors. We also use cookies with Google Tag Manager, Google Analytics, and Google Ads to analyze traffic and measure the effectiveness of our advertising."
+    },
+    {
+     "role": "group",
+     "name": "Consent Selection"
+    },
+    {
+     "role": "checkbox",
+     "name": "Necessary"
+    },
+    {
+     "role": "switch",
+     "name": "Preferences"
+    },
+    {
+     "role": "switch",
+     "name": "Statistics"
+    },
+    {
+     "role": "switch",
+     "name": "Marketing"
+    }
+   ],
+   "storage": {
+    "local_storage_keys": [],
+    "session_storage_keys": [],
+    "indexed_db_names": [],
+    "usage_bytes": 0
+   },
+   "limitations": [
+    "Artifact identity is unavailable for this observation.",
+    "Observation starts when REA attaches; prior network and console activity is unavailable.",
+    "Raw network headers, bodies, cookies, storage values, console objects, and WebSocket payloads are never retained; explicitly requested primitive console text is retained verbatim, while payload captures retain value-free shapes.",
+    "Source maps are reported only as declarative URLs and are not fetched.",
+    "URL-less scripts and console events without an allowed source URL are excluded because their origin cannot be proven.",
+    "CDP discovery omitted the target attachment state; attached is reported as unknown.",
+    "Browser host platform and architecture were not observed."
+   ]
+  },
+  "eula": {
+   "evidence_id": "ev_da2ebe7b57437dbce589a400c48422322c5b7ae4b01df14f4bac6d22f4a37914",
+   "operation": "inspect_web_page",
+   "provider": {
+    "id": "rea-cdp-browser",
+    "name": "REA Chrome DevTools Protocol observation provider",
+    "version": "2"
+   },
+   "confidence": "observed",
+   "authority": "external-service",
+   "captured_at": "2026-10-14T22:10:35.023Z",
+   "url": "https://biodroneportal.com/eula",
+   "title": "Biodrone Portal",
+   "scripts": [
+    {
+     "url": "https://biodroneportal.com/assets/react-pdf-DTSDwuC4.js",
+     "source_map_url": "https://biodroneportal.com/assets/react-pdf-DTSDwuC4.js.map"
+    },
+    {
+     "url": "https://biodroneportal.com/assets/vendor-data-N15SsA7z.js",
+     "source_map_url": "https://biodroneportal.com/assets/vendor-data-N15SsA7z.js.map"
+    },
+    {
+     "url": "https://biodroneportal.com/assets/vendor-ui-DZJR_ndM.js",
+     "source_map_url": "https://biodroneportal.com/assets/vendor-ui-DZJR_ndM.js.map"
+    },
+    {
+     "url": "https://biodroneportal.com/assets/vendor-react-bootstrap-DgvqlKk2.js",
+     "source_map_url": "https://biodroneportal.com/assets/vendor-react-bootstrap-DgvqlKk2.js.map"
+    },
+    {
+     "url": "https://biodroneportal.com/assets/vendor-misc-RdTOoKu7.js",
+     "source_map_url": "https://biodroneportal.com/assets/vendor-misc-RdTOoKu7.js.map"
+    },
+    {
+     "url": "https://biodroneportal.com/assets/vendor-forms-D8pgTOO8.js",
+     "source_map_url": "https://biodroneportal.com/assets/vendor-forms-D8pgTOO8.js.map"
+    },
+    {
+     "url": "https://biodroneportal.com/assets/ol-C2RRmdta.js",
+     "source_map_url": "https://biodroneportal.com/assets/ol-C2RRmdta.js.map"
+    },
+    {
+     "url": "https://biodroneportal.com/assets/index-CqwK7TSW.js",
+     "source_map_url": "https://biodroneportal.com/assets/index-CqwK7TSW.js.map"
+    }
+   ],
+   "resources": [
+    {
+     "url": "https://biodroneportal.com/assets/vendor-misc-RdTOoKu7.js",
+     "type": "Script",
+     "bytes": 125486
+    },
+    {
+     "url": "https://biodroneportal.com/assets/index-CqwK7TSW.js",
+     "type": "Script",
+     "bytes": 2036499
+    },
+    {
+     "url": "https://biodroneportal.com/assets/ol-C2RRmdta.js",
+     "type": "Script",
+     "bytes": 289749
+    },
+    {
+     "url": "https://biodroneportal.com/assets/vendor-forms-D8pgTOO8.js",
+     "type": "Script",
+     "bytes": 38134
+    },
+    {
+     "url": "https://biodroneportal.com/assets/index-CfTnvyKK.css",
+     "type": "Stylesheet",
+     "bytes": 256375
+    },
+    {
+     "url": "https://biodroneportal.com/assets/vendor-react-bootstrap-DgvqlKk2.js",
+     "type": "Script",
+     "bytes": 109044
+    },
+    {
+     "url": "https://biodroneportal.com/assets/vendor-data-N15SsA7z.js",
+     "type": "Script",
+     "bytes": 257729
+    },
+    {
+     "url": "https://biodroneportal.com/assets/vendor-ui-DZJR_ndM.js",
+     "type": "Script",
+     "bytes": 209952
+    },
+    {
+     "url": "https://biodroneportal.com/assets/react-pdf-DTSDwuC4.js",
+     "type": "Script",
+     "bytes": 1408912
+    }
+   ],
+   "links": [
+    "https://biodroneportal.com/",
+    "https://biodroneportal.com/[#DSR_FORM_URL#]",
+    "https://biodroneportal.com/apple-touch-icon",
+    "https://biodroneportal.com/assets/index-CfTnvyKK.css",
+    "https://biodroneportal.com/assets/index-CqwK7TSW.js",
+    "https://biodroneportal.com/assets/ol-C2RRmdta.js",
+    "https://biodroneportal.com/assets/react-pdf-DTSDwuC4.js",
+    "https://biodroneportal.com/assets/vendor-data-N15SsA7z.js",
+    "https://biodroneportal.com/assets/vendor-forms-D8pgTOO8.js",
+    "https://biodroneportal.com/assets/vendor-misc-RdTOoKu7.js",
+    "https://biodroneportal.com/assets/vendor-react-bootstrap-DgvqlKk2.js",
+    "https://biodroneportal.com/assets/vendor-ui-DZJR_ndM.js",
+    "https://biodroneportal.com/contact",
+    "https://biodroneportal.com/eula",
+    "https://biodroneportal.com/favicon.ico",
+    "https://biodroneportal.com/login",
+    "https://biodroneportal.com/manifest.json",
+    "https://biodroneportal.com/privacy-policy"
+   ],
+   "accessibility": [
+    {
+     "role": "RootWebArea",
+     "name": "Biodrone Portal"
+    },
+    {
+     "role": "region",
+     "name": "This website uses cookies"
+    },
+    {
+     "role": "tabpanel",
+     "name": "Consent"
+    },
+    {
+     "role": "heading",
+     "name": "Biodrone Portal User Agreement"
+    },
+    {
+     "role": "link",
+     "name": "Cookiebot by Usercentrics - opens in a new window"
+    },
+    {
+     "role": "tab",
+     "name": "Details"
+    },
+    {
+     "role": "tab",
+     "name": "About"
+    },
+    {
+     "role": "link",
+     "name": "Biodrone logo"
+    },
+    {
+     "role": "button",
+     "name": "Log in"
+    },
+    {
+     "role": "link",
+     "name": "Contact Us"
+    },
+    {
+     "role": "link",
+     "name": "Privacy Policy"
+    },
+    {
+     "role": "link",
+     "name": "EULA"
+    },
+    {
+     "role": "link",
+     "name": "Cookie Preferences"
+    },
+    {
+     "role": "button",
+     "name": "Necessary only"
+    },
+    {
+     "role": "button",
+     "name": "Allow all"
+    },
+    {
+     "role": "heading",
+     "name": "Definition of Parties"
+    },
+    {
+     "role": "heading",
+     "name": "Account and Organization Management"
+    },
+    {
+     "role": "heading",
+     "name": "Subscription and Licensing Terms"
+    },
+    {
+     "role": "heading",
+     "name": "Cancellation Policy"
+    },
+    {
+     "role": "heading",
+     "name": "Payment Terms and Data Ownership"
+    },
+    {
+     "role": "heading",
+     "name": "Intellectual Property Rights"
+    },
+    {
+     "role": "heading",
+     "name": "Limitation of Liability and Warranties"
+    },
+    {
+     "role": "heading",
+     "name": "User Content and Responsibility"
+    },
+    {
+     "role": "heading",
+     "name": "Data Privacy"
+    },
+    {
+     "role": "heading",
+     "name": "Amendments and Severability"
+    },
+    {
+     "role": "heading",
+     "name": "Jurisdiction and Applicable Law"
+    },
+    {
+     "role": "StaticText",
+     "name": "\"You\" or \"Your\" refers to you personally (the individual who reads and agrees to be bound by these terms) or, if you act on behalf of a corporation or other legal entity, collectively you and such corporation or legal entity on whose behalf you register for an account or use our services."
+    },
+    {
+     "role": "StaticText",
+     "name": "By creating an account with Biodrone, you agree to:"
+    },
+    {
+     "role": "StaticText",
+     "name": "Biodrone offers various subscription plans. By subscribing, you agree to the terms and conditions of your chosen plan, including any limitations and renewal terms."
+    },
+    {
+     "role": "StaticText",
+     "name": "You may cancel your subscription at any time. However, no refunds will be provided for any remaining period of your subscription."
+    },
+    {
+     "role": "StaticText",
+     "name": "All payments are subject to the following:"
+    },
+    {
+     "role": "StaticText",
+     "name": "Data Ownership:"
+    },
+    {
+     "role": "StaticText",
+     "name": "You grant Biodrone the right to use the non-personal data, such as annotations, models, and similar material, for system improvement and marketing purposes. This permission is indefinite."
+    },
+    {
+     "role": "StaticText",
+     "name": "All intellectual property rights in the Biodrone portal, its content, and services are owned by Biodrone. You do not acquire any ownership rights by using our services."
+    },
+    {
+     "role": "StaticText",
+     "name": "Biodrone provides its services \"as is\". Except as expressly stated, we disclaim all warranties and will not be liable for any indirect or consequential damages."
+    },
+    {
+     "role": "StaticText",
+     "name": "You are responsible for the content you upload or generate using Biodrone's services, and for ensuring it complies with all applicable laws and regulations."
+    },
+    {
+     "role": "StaticText",
+     "name": "Biodrone is committed to protecting your privacy. Our data handling practices are outlined in our privacy policy."
+    },
+    {
+     "role": "StaticText",
+     "name": "Biodrone reserves the right to amend this agreement. If any provision is found unenforceable, it will not affect the enforceability of the remaining provisions."
+    },
+    {
+     "role": "StaticText",
+     "name": "Any disputes arising from this agreement will be governed by the laws of Oslo Tingrett and shall be subject to the exclusive jurisdiction of its courts."
+    },
+    {
+     "role": "StaticText",
+     "name": "By creating an account and using the Biodrone portal, you agree to these terms."
+    },
+    {
+     "role": "StaticText",
+     "name": "Provide accurate and complete registration information."
+    },
+    {
+     "role": "StaticText",
+     "name": "Maintain the confidentiality of your account password."
+    },
+    {
+     "role": "StaticText",
+     "name": "Be responsible for all activities that occur under your account."
+    },
+    {
+     "role": "StaticText",
+     "name": "Accepted payment methods are outlined during the purchase process."
+    },
+    {
+     "role": "StaticText",
+     "name": "You are responsible for all applicable taxes and fees."
+    },
+    {
+     "role": "StaticText",
+     "name": "In case of payment failure, your access to Biodrone services may be suspended."
+    },
+    {
+     "role": "StaticText",
+     "name": "Biodrone acknowledges that you retain ownership of any data you upload to the Biodrone portal."
+    },
+    {
+     "role": "StaticText",
+     "name": "Biodrone will use your data solely for the purpose of providing and improving the services, and will not sell your data to third parties.."
+    },
+    {
+     "role": "StaticText",
+     "name": "We use cookies to enable secure login, provide support chat functionality, and help us identify and resolve errors. We also use cookies with Google Tag Manager, Google Analytics, and Google Ads to analyze traffic and measure the effectiveness of our advertising."
+    },
+    {
+     "role": "group",
+     "name": "Consent Selection"
+    },
+    {
+     "role": "checkbox",
+     "name": "Necessary"
+    },
+    {
+     "role": "switch",
+     "name": "Preferences"
+    },
+    {
+     "role": "switch",
+     "name": "Statistics"
+    },
+    {
+     "role": "switch",
+     "name": "Marketing"
+    }
+   ],
+   "storage": {
+    "local_storage_keys": [],
+    "session_storage_keys": [],
+    "indexed_db_names": [],
+    "usage_bytes": 0
+   },
+   "limitations": [
+    "Artifact identity is unavailable for this observation.",
+    "Observation starts when REA attaches; prior network and console activity is unavailable.",
+    "Raw network headers, bodies, cookies, storage values, console objects, and WebSocket payloads are never retained; explicitly requested primitive console text is retained verbatim, while payload captures retain value-free shapes.",
+    "Source maps are reported only as declarative URLs and are not fetched.",
+    "URL-less scripts and console events without an allowed source URL are excluded because their origin cannot be proven.",
+    "CDP discovery omitted the target attachment state; attached is reported as unknown.",
+    "Browser host platform and architecture were not observed."
+   ]
+  },
+  "contact": {
+   "evidence_id": "ev_e4b35f2a942aee3ff8beccc828b1c7c7381acaf9fac23c2cf2334caa5975f570",
+   "operation": "inspect_web_page",
+   "provider": {
+    "id": "rea-cdp-browser",
+    "name": "REA Chrome DevTools Protocol observation provider",
+    "version": "2"
+   },
+   "confidence": "observed",
+   "authority": "external-service",
+   "captured_at": "2026-10-14T22:10:37.417Z",
+   "url": "https://biodroneportal.com/contact",
+   "title": "Biodrone Portal",
+   "scripts": [
+    {
+     "url": "https://biodroneportal.com/assets/react-pdf-DTSDwuC4.js",
+     "source_map_url": "https://biodroneportal.com/assets/react-pdf-DTSDwuC4.js.map"
+    },
+    {
+     "url": "https://biodroneportal.com/assets/vendor-data-N15SsA7z.js",
+     "source_map_url": "https://biodroneportal.com/assets/vendor-data-N15SsA7z.js.map"
+    },
+    {
+     "url": "https://biodroneportal.com/assets/vendor-ui-DZJR_ndM.js",
+     "source_map_url": "https://biodroneportal.com/assets/vendor-ui-DZJR_ndM.js.map"
+    },
+    {
+     "url": "https://biodroneportal.com/assets/vendor-react-bootstrap-DgvqlKk2.js",
+     "source_map_url": "https://biodroneportal.com/assets/vendor-react-bootstrap-DgvqlKk2.js.map"
+    },
+    {
+     "url": "https://biodroneportal.com/assets/vendor-misc-RdTOoKu7.js",
+     "source_map_url": "https://biodroneportal.com/assets/vendor-misc-RdTOoKu7.js.map"
+    },
+    {
+     "url": "https://biodroneportal.com/assets/vendor-forms-D8pgTOO8.js",
+     "source_map_url": "https://biodroneportal.com/assets/vendor-forms-D8pgTOO8.js.map"
+    },
+    {
+     "url": "https://biodroneportal.com/assets/ol-C2RRmdta.js",
+     "source_map_url": "https://biodroneportal.com/assets/ol-C2RRmdta.js.map"
+    },
+    {
+     "url": "https://biodroneportal.com/assets/index-CqwK7TSW.js",
+     "source_map_url": "https://biodroneportal.com/assets/index-CqwK7TSW.js.map"
+    }
+   ],
+   "resources": [
+    {
+     "url": "https://biodroneportal.com/assets/vendor-misc-RdTOoKu7.js",
+     "type": "Script",
+     "bytes": 125486
+    },
+    {
+     "url": "https://biodroneportal.com/assets/index-CqwK7TSW.js",
+     "type": "Script",
+     "bytes": 2036499
+    },
+    {
+     "url": "https://biodroneportal.com/assets/ol-C2RRmdta.js",
+     "type": "Script",
+     "bytes": 289749
+    },
+    {
+     "url": "https://biodroneportal.com/assets/vendor-forms-D8pgTOO8.js",
+     "type": "Script",
+     "bytes": 38134
+    },
+    {
+     "url": "https://biodroneportal.com/assets/index-CfTnvyKK.css",
+     "type": "Stylesheet",
+     "bytes": 256375
+    },
+    {
+     "url": "https://biodroneportal.com/assets/vendor-react-bootstrap-DgvqlKk2.js",
+     "type": "Script",
+     "bytes": 109044
+    },
+    {
+     "url": "https://biodroneportal.com/assets/vendor-data-N15SsA7z.js",
+     "type": "Script",
+     "bytes": 257729
+    },
+    {
+     "url": "https://biodroneportal.com/assets/vendor-ui-DZJR_ndM.js",
+     "type": "Script",
+     "bytes": 209952
+    },
+    {
+     "url": "https://biodroneportal.com/assets/react-pdf-DTSDwuC4.js",
+     "type": "Script",
+     "bytes": 1408912
+    }
+   ],
+   "links": [
+    "https://biodroneportal.com/",
+    "https://biodroneportal.com/[#DSR_FORM_URL#]",
+    "https://biodroneportal.com/apple-touch-icon",
+    "https://biodroneportal.com/assets/index-CfTnvyKK.css",
+    "https://biodroneportal.com/assets/index-CqwK7TSW.js",
+    "https://biodroneportal.com/assets/ol-C2RRmdta.js",
+    "https://biodroneportal.com/assets/react-pdf-DTSDwuC4.js",
+    "https://biodroneportal.com/assets/vendor-data-N15SsA7z.js",
+    "https://biodroneportal.com/assets/vendor-forms-D8pgTOO8.js",
+    "https://biodroneportal.com/assets/vendor-misc-RdTOoKu7.js",
+    "https://biodroneportal.com/assets/vendor-react-bootstrap-DgvqlKk2.js",
+    "https://biodroneportal.com/assets/vendor-ui-DZJR_ndM.js",
+    "https://biodroneportal.com/contact",
+    "https://biodroneportal.com/eula",
+    "https://biodroneportal.com/favicon.ico",
+    "https://biodroneportal.com/login",
+    "https://biodroneportal.com/manifest.json",
+    "https://biodroneportal.com/privacy-policy"
+   ],
+   "accessibility": [
+    {
+     "role": "RootWebArea",
+     "name": "Biodrone Portal"
+    },
+    {
+     "role": "region",
+     "name": "This website uses cookies"
+    },
+    {
+     "role": "tabpanel",
+     "name": "Consent"
+    },
+    {
+     "role": "heading",
+     "name": "Contact"
+    },
+    {
+     "role": "link",
+     "name": "Cookiebot by Usercentrics - opens in a new window"
+    },
+    {
+     "role": "tab",
+     "name": "Details"
+    },
+    {
+     "role": "tab",
+     "name": "About"
+    },
+    {
+     "role": "link",
+     "name": "Biodrone logo"
+    },
+    {
+     "role": "button",
+     "name": "Log in"
+    },
+    {
+     "role": "StaticText",
+     "name": "If you have have any questions or need support, don't hesitate to"
+    },
+    {
+     "role": "link",
+     "name": "shoot us an email at post@biodrone.no"
+    },
+    {
+     "role": "StaticText",
+     "name": "."
+    },
+    {
+     "role": "StaticText",
+     "name": "We're here to assist and are thrilled that you're interested in what we have to offer!"
+    },
+    {
+     "role": "link",
+     "name": "Contact Us"
+    },
+    {
+     "role": "link",
+     "name": "Privacy Policy"
+    },
+    {
+     "role": "link",
+     "name": "EULA"
+    },
+    {
+     "role": "link",
+     "name": "Cookie Preferences"
+    },
+    {
+     "role": "button",
+     "name": "Necessary only"
+    },
+    {
+     "role": "button",
+     "name": "Allow all"
+    },
+    {
+     "role": "StaticText",
+     "name": "We use cookies to enable secure login, provide support chat functionality, and help us identify and resolve errors. We also use cookies with Google Tag Manager, Google Analytics, and Google Ads to analyze traffic and measure the effectiveness of our advertising."
+    },
+    {
+     "role": "group",
+     "name": "Consent Selection"
+    },
+    {
+     "role": "checkbox",
+     "name": "Necessary"
+    },
+    {
+     "role": "switch",
+     "name": "Preferences"
+    },
+    {
+     "role": "switch",
+     "name": "Statistics"
+    },
+    {
+     "role": "switch",
+     "name": "Marketing"
+    }
+   ],
+   "storage": {
+    "local_storage_keys": [],
+    "session_storage_keys": [],
+    "indexed_db_names": [],
+    "usage_bytes": 0
+   },
+   "limitations": [
+    "Artifact identity is unavailable for this observation.",
+    "Observation starts when REA attaches; prior network and console activity is unavailable.",
+    "Raw network headers, bodies, cookies, storage values, console objects, and WebSocket payloads are never retained; explicitly requested primitive console text is retained verbatim, while payload captures retain value-free shapes.",
+    "Source maps are reported only as declarative URLs and are not fetched.",
+    "URL-less scripts and console events without an allowed source URL are excluded because their origin cannot be proven.",
+    "CDP discovery omitted the target attachment state; attached is reported as unknown.",
+    "Browser host platform and architecture were not observed."
+   ]
+  },
+  "screenshot": {
+   "evidence_id": "ev_337a7be4c7c158595ee32613a394cfa55f2bb8f6a83584061d6bfc2accb7f7e4",
+   "operation": "capture_web_screenshot",
+   "viewport": {
+    "width": 1366,
+    "height": 813
+   },
+   "sha256": "535e142aa43f7739b439af0a507f6974465cb20502954e396a5a5e4f98369ebb",
+   "bytes": 76032,
+   "note": "PNG retained locally only (cfharvest/evidence/screenshots/ is gitignored)"
+  },
+  "bundle": {
+   "evidence_id": "ev_ae7d2ea94114a87ce4011561d35c3888a745d1feb4b8ecdeff2b78b56b505bc0",
+   "operation": "analyze_web_bundle",
+   "completeness": {
+    "parse_failures": 0,
+    "parsed_scripts": 8,
+    "status": "partial",
+    "visited_ast_nodes": 1261719
+   },
+   "inferences": [
+    {
+     "basis": [
+      {
+       "artifact_sha256": "e1b8d849fe906ca024f56b1c24078aa54418e6bdf953171d52ba4b62aad1fd49",
+       "column": null,
+       "detector": "react-runtime",
+       "line": null,
+       "script_key": "scr_1c96c58b26b263ad94d8eb18a40c1f54638457e7c0a7d95cbdee3a873186bf7c"
+      }
+     ],
+     "confidence": "medium",
+     "kind": "vendor_fingerprint",
+     "value": "React"
+    },
+    {
+     "basis": [
+      {
+       "artifact_sha256": "8aef38ec76ec1aeb0bc5e09c7e41a677d53c2aaffec869ab96e74fc1b0db23e9",
+       "column": 10333,
+       "detector": "call:e.route",
+       "line": 11,
+       "script_key": "scr_3f8c4069d1e535586a4f2caed9fa501ed5e262dfc8a12fce585914feb698351e"
+      }
+     ],
+     "confidence": "medium",
+     "kind": "route_framework",
+     "value": "Generic route registration API"
+    },
+    {
+     "basis": [
+      {
+       "artifact_sha256": "432044618813d3a2fff8b71f9b9dde028e1444954a9a652ded628662735a8af9",
+       "column": null,
+       "detector": "react-runtime",
+       "line": null,
+       "script_key": "scr_4d3276a6f282d81364c807973d874691bf53ea5dfa433037892c881e676b697b"
+      }
+     ],
+     "confidence": "medium",
+     "kind": "vendor_fingerprint",
+     "value": "React"
+    },
+    {
+     "basis": [
+      {
+       "artifact_sha256": "c8390112ab24fe90dd3b5e25a06dc44c0d0cd83e04442d33360ee3094a2b49e2",
+       "column": null,
+       "detector": "vite-runtime",
+       "line": null,
+       "script_key": "scr_fa7b4bc65dc6e65a8784b3e9630cdebe48f409ba7c3c95316b29b13e78588b72"
+      }
+     ],
+     "confidence": "medium",
+     "kind": "bundle_runtime",
+     "value": "Vite"
+    },
+    {
+     "basis": [
+      {
+       "artifact_sha256": "c8390112ab24fe90dd3b5e25a06dc44c0d0cd83e04442d33360ee3094a2b49e2",
+       "column": null,
+       "detector": "react-runtime",
+       "line": null,
+       "script_key": "scr_fa7b4bc65dc6e65a8784b3e9630cdebe48f409ba7c3c95316b29b13e78588b72"
+      }
+     ],
+     "confidence": "medium",
+     "kind": "vendor_fingerprint",
+     "value": "React"
+    }
+   ],
+   "endpoint_candidates": 145,
+   "scripts": [
+    {
+     "sha256": "e1b8d849fe906ca024f56b1c24078aa54418e6bdf953171d52ba4b62aad1fd49",
+     "bytes": 1408912
+    },
+    {
+     "sha256": "8aef38ec76ec1aeb0bc5e09c7e41a677d53c2aaffec869ab96e74fc1b0db23e9",
+     "bytes": 257729
+    },
+    {
+     "sha256": "2cf68eefbec00409d2e85fca9c1d038e54cee21b005fd630338827ebca1c4065",
+     "bytes": 209952
+    },
+    {
+     "sha256": "432044618813d3a2fff8b71f9b9dde028e1444954a9a652ded628662735a8af9",
+     "bytes": 109044
+    },
+    {
+     "sha256": "b13fd732bff9195cda2806928917417043d6470ae32f393cefe7f5a092a1bc5b",
+     "bytes": 125486
+    },
+    {
+     "sha256": "54bec55e89ebe408d5a640c302c4795586096ac24d6ef423676905e9408df2a5",
+     "bytes": 38134
+    },
+    {
+     "sha256": "c16cf98eac3c3ab34b512d69dd649439e3cd2302daa45421eb736517d0528c67",
+     "bytes": 289749
+    },
+    {
+     "sha256": "c8390112ab24fe90dd3b5e25a06dc44c0d0cd83e04442d33360ee3094a2b49e2",
+     "bytes": 2036499
+    }
+   ],
+   "limitations": [
+    "Static bundle findings are observations or bounded inferences; REA does not execute captured JavaScript.",
+    "Bare string arguments of unbound HTTP-method-named calls are low-confidence endpoint candidates; form, translation, storage and other APIs can use the same syntax. URL-shaped findings still do not prove network execution.",
+    "Endpoint candidates are deduplicated by script, value and detector; basis retains only the first matching source coordinate. They are not a complete call-site inventory or a runtime occurrence count. completeness.status=\"complete\" describes examination of captured source, not a call-site census.",
+    "String-built routes and endpoints, encrypted configuration, and server-side behavior may remain unknown.",
+    "Page-declared WebMCP metadata is untrusted and is never registered or invoked as an REA tool."
+   ]
+  }
+ },
+ "source_map": {
+  "url": "https://biodroneportal.com/assets/index-CqwK7TSW.js.map",
+  "bytes": 27410566,
+  "sources": 712,
+  "app_sources": 381,
+  "sha256": "dcd898e71bf190002ad6edaf9f989e1b77e4a75e0fb5351f3c39db43d3ee2519",
+  "tree": [
+   "src/App.jsx",
+   "src/assets/arrow.svg",
+   "src/assets/logo/logo_white.svg",
+   "src/assets/map_pin_icon.svg",
+   "src/components/Badge.jsx",
+   "src/components/RequireAuth.jsx",
+   "src/components/alert/Alert.jsx",
+   "src/components/archiveProject/ArchiveProject.jsx",
+   "src/components/booleanValue/BooleanValue.jsx",
+   "src/components/breadcrumbs/Breadcrumbs.jsx",
+   "src/components/collapsibleContent/CollapsibleContent.jsx",
+   "src/components/dateFormatted/DateFormatted.jsx",
+   "src/components/dialogue/Dialogue.jsx",
+   "src/components/filters/DateRange.jsx",
+   "src/components/filters/SearchField.jsx",
+   "src/components/filters/selectField.jsx",
+   "src/components/form/Check.jsx",
+   "src/components/form/CommonStyles.jsx",
+   "src/components/form/ControlledInput.jsx",
+   "src/components/form/HelperText.jsx",
+   "src/components/form/Input.jsx",
+   "src/components/form/Select.jsx",
+   "src/components/form/Toggle.jsx",
+   "src/components/forms/OrganizationDetailsFormFields.jsx",
+   "src/components/forms/PasswordRequirements.jsx",
+   "src/components/forms/RegisterForm.jsx",
+   "src/components/hexagonSize/HexagonSize.jsx",
+   "src/components/histogramRangeSlider/RangeSliderWithHistorgram.jsx",
+   "src/components/imageLightbox/ImageLightbox.jsx",
+   "src/components/infoTooltip/InfoTooltip.jsx",
+   "src/components/layerSettings/StyledLayerSettings.jsx",
+   "src/components/layout/Footer.jsx",
+   "src/components/layout/MaintenanceAlert.jsx",
+   "src/components/layout/Root.jsx",
+   "src/components/layout/navigation/AdminNavigation.jsx",
+   "src/components/layout/navigation/Navigation.jsx",
+   "src/components/layout/navigation/TrialBanner.jsx",
+   "src/components/layout/views/AdminView.jsx",
+   "src/components/layout/views/SplitView.jsx",
+   "src/components/layout/views/View.jsx",
+   "src/components/loading/Loader.jsx",
+   "src/components/loading/LoadingDots.jsx",
+   "src/components/mapScaleBar/MapScaleBar.jsx",
+   "src/components/modal/ConfirmModal.jsx",
+   "src/components/modal/ErrorModal.jsx",
+   "src/components/modal/ModalStyle.jsx",
+   "src/components/modal/ProductsModal.jsx",
+   "src/components/modal/createModelModal/CreateModelModal.jsx",
+   "src/components/modal/createModelModal/components/ClassesFields.jsx",
+   "src/components/modal/createModelModal/components/ModelTypeField.jsx",
+   "src/components/modal/createModelModal/components/ObjectSizeSelect.jsx",
+   "src/components/models/ModelTypesTabs.jsx",
+   "src/components/notifictions/Notification.jsx",
+   "src/components/notifictions/Notifications.jsx",
+   "src/components/notifictions/components/CircularProgress.jsx",
+   "src/components/notifictions/components/DeleteNotificationButton.jsx",
+   "src/components/notifictions/components/GeneralNotification.jsx",
+   "src/components/notifictions/components/JobNotification.jsx",
+   "src/components/notifictions/components/Layout.jsx",
+   "src/components/notifictions/components/NotificationContent.jsx",
+   "src/components/notifictions/components/NotificationDate.jsx",
+   "src/components/notifictions/components/NotificationLink.jsx",
+   "src/components/organization/organizationSwitch.jsx",
+   "src/components/popover/LabelWithPopover.jsx",
+   "src/components/popover/Popover.jsx",
+   "src/components/popoverPicker/PopoverPicker.jsx",
+   "src/components/products/ProductsFooter.jsx",
+   "src/components/products/StripeProducts.jsx",
+   "src/components/projectComponents/ProjectCard.jsx",
+   "src/components/projectComponents/ProjectProgress.jsx",
+   "src/components/projectComponents/ProjectThumbnail.jsx",
+   "src/components/projectComponents/projectFilters/ProjectsFilterAdmin.jsx",
+   "src/components/projectComponents/projectTags/ProjectTags.jsx",
+   "src/components/projectComponents/projectTags/ProjectTagsSelect.jsx",
+   "src/components/projectComponents/projectTags/ProjectTagsWrapper.jsx",
+   "src/components/projectComponents/projectTags/projectTagsModal.jsx",
+   "src/components/rangeSlider/Range.jsx",
+   "src/components/rangeSlider/RangeSlider.jsx",
+   "src/components/singleModel/SingleModel.jsx",
+   "src/components/singleModel/components/Annotations.jsx",
+   "src/components/singleModel/components/Chart.jsx",
+   "src/components/singleModel/components/DeleteModel.jsx",
+   "src/components/singleModel/components/Detections.jsx",
+   "src/components/singleModel/components/modelTrainings/DetailsList.jsx",
+   "src/components/singleModel/components/modelTrainings/EvaluationDetailsList.jsx",
+   "src/components/singleModel/components/modelTrainings/ModelTrainings.jsx",
+   "src/components/singleModel/components/modelTrainings/RollBackModelVersion.jsx",
+   "src/components/singleModel/components/modelTrainings/Train.jsx",
+   "src/components/singleModel/components/modelTrainings/TrainingDescription.jsx",
+   "src/components/singleModel/components/modelTrainings/TrainingImages.jsx",
+   "src/components/singleModel/components/modelTrainings/TrainingdataDetailsList.jsx",
+   "src/components/singleModel/hooks/useOngoingModelJobs.jsx",
+   "src/components/singleModel/utils/trainingDetailsExplanations.jsx",
+   "src/components/sortableLayer/SortableLayerGroup.jsx",
+   "src/components/sortableLayer/SortableLayerItem.jsx",
+   "src/components/storage/StorageStatus.jsx",
+   "src/components/storage/StorageStatusProgress.jsx",
+   "src/components/subscription/BillingPortal.jsx",
+   "src/components/subscription/IncludedSubscriptionItems.jsx",
+   "src/components/subscription/LimitInfo.jsx",
+   "src/components/subscription/SubscriptionsAvailableForUser.jsx",
+   "src/components/taskTypeIcon/TaskTypeIcon.jsx",
+   "src/components/toggleSlideContent/ToggleSlideContent.jsx",
+   "src/components/toolbar/Toolbar.jsx",
+   "src/config/contoursLayerConfig.js",
+   "src/config/droneImagesLayerConfig.js",
+   "src/contexts/Confirm.context.jsx",
+   "src/contexts/Model.context.jsx",
+   "src/contexts/NewProject.context.jsx",
+   "src/contexts/Project.context.jsx",
+   "src/contexts/Theme.context.jsx",
+   "src/contexts/Toast.context.jsx",
+   "src/contexts/Token.context.jsx",
+   "src/contexts/User.context.jsx",
+   "src/hooks/useClickAway.jsx",
+   "src/hooks/useDebounce.jsx",
+   "src/hooks/useKeyboardShortcut.hook.jsx",
+   "src/hooks/useLayerReorder.js",
+   "src/hooks/useLayerSettingsPortal.jsx",
+   "src/hooks/useMapLayer.js",
+   "src/hooks/useNotify.jsx",
+   "src/hooks/useSetSearchParams.hook.jsx",
+   "src/hooks/useWebGLVectorLayer.js",
+   "src/index.jsx",
+   "src/routes/adminRoutes/models/ModelsView.jsx",
+   "src/routes/adminRoutes/models/components/Model.jsx",
+   "src/routes/adminRoutes/models/components/Models.jsx",
+   "src/routes/adminRoutes/models/components/ModelsTable.jsx",
+   "src/routes/adminRoutes/organizations/Organization.jsx",
+   "src/routes/adminRoutes/organizations/Organizations.jsx",
+   "src/routes/adminRoutes/organizations/components/OrganizationsTable.jsx",
+   "src/routes/adminRoutes/organizations/components/modify/DropdownMenu.jsx",
+   "src/routes/adminRoutes/projects/DemoProjects.jsx",
+   "src/routes/adminRoutes/projects/ProjectsView.jsx",
+   "src/routes/adminRoutes/projects/components/Projects.jsx",
+   "src/routes/adminRoutes/projects/components/ProjectsTable.jsx",
+   "src/routes/adminRoutes/projects/components/modify/CopyModal.jsx",
+   "src/routes/adminRoutes/projects/components/modify/DemoProjectModal.jsx",
+   "src/routes/adminRoutes/projects/components/modify/DetailsModal.jsx",
+   "src/routes/adminRoutes/projects/components/modify/DropdownMenu.jsx",
+   "src/routes/adminRoutes/projects/components/modify/EditModal.jsx",
+   "src/routes/adminRoutes/projects/components/modify/OdmPostprocessModal.jsx",
+   "src/routes/adminRoutes/projects/components/modify/ReportModal.jsx",
+   "src/routes/adminRoutes/projects/components/modify/SagemakerDownloadModal.jsx",
+   "src/routes/adminRoutes/sharedComponents/CellContent.jsx",
+   "src/routes/adminRoutes/sharedComponents/CopyButton.jsx",
+   "src/routes/adminRoutes/sharedComponents/SharedStyledComponents.jsx",
+   "src/routes/adminRoutes/users/Users.jsx",
+   "src/routes/adminRoutes/users/components/UsersFilter.jsx",
+   "src/routes/adminRoutes/users/components/UsersTable.jsx",
+   "src/routes/adminRoutes/users/components/cells/ApproveUser.jsx",
+   "src/routes/adminRoutes/users/components/cells/EmailVerify.jsx",
+   "src/routes/adminRoutes/users/components/modify/DeleteModal.jsx",
+   "src/routes/adminRoutes/users/components/modify/DropdownMenu.jsx",
+   "src/routes/adminRoutes/users/components/modify/EditModal.jsx",
+   "src/routes/adminRoutes/utils/helpers.js",
+   "src/routes/unprotectedRoutes/BiodroneEULA.jsx",
+   "src/routes/unprotectedRoutes/Contact.jsx",
+   "src/routes/unprotectedRoutes/Login.jsx",
+   "src/routes/unprotectedRoutes/MaintenanceMode.jsx",
+   "src/routes/unprotectedRoutes/Missing404.jsx",
+   "src/routes/unprotectedRoutes/PrivacyPolicy.jsx",
+   "src/routes/unprotectedRoutes/RegisterAccount.jsx",
+   "src/routes/unprotectedRoutes/RegisterTrialAccount.jsx",
+   "src/routes/unprotectedRoutes/RequestPasswordReset.jsx",
+   "src/routes/unprotectedRoutes/Unauthorized.jsx",
+   "src/routes/unprotectedRoutes/Verify.jsx",
+   "src/routes/unprotectedRoutes/home/Home.jsx",
+   "src/routes/unprotectedRoutes/home/components/DemoProjects.jsx",
+   "src/routes/unprotectedRoutes/resetPassword/components/ResetPassword.jsx",
+   "src/routes/unprotectedRoutes/resetPassword/utils/helpers.js",
+   "src/routes/userRoutes/Checkout.jsx",
+   "src/routes/userRoutes/OrganizationProfile.jsx",
+   "src/routes/userRoutes/OrganizationProjects.jsx",
+   "src/routes/userRoutes/Profile.jsx",
+   "src/routes/userRoutes/Subscribe.jsx",
+   "src/routes/userRoutes/Subscription.jsx",
+   "src/routes/userRoutes/models/modelsArchive/Models.jsx",
+   "src/routes/userRoutes/models/modelsArchive/components/CellComponents.jsx",
+   "src/routes/userRoutes/models/modelsArchive/components/CreateModel.jsx",
+   "src/routes/userRoutes/models/modelsArchive/components/HeaderComponents.jsx",
+   "src/routes/userRoutes/models/modelsArchive/components/ModelsTable.jsx",
+   "src/routes/userRoutes/projects/EditProject.jsx",
+   "src/routes/userRoutes/projects/newProject/NewProject.jsx",
+   "src/routes/userRoutes/projects/newProject/components/AddProjectDetails.jsx",
+   "src/routes/userRoutes/projects/newProject/components/ProjectLimitWarning.jsx",
+   "src/routes/userRoutes/projects/newProject/components/SelectProjectType.jsx",
+   "src/routes/userRoutes/projects/newProject/components/Step.jsx",
+   "src/routes/userRoutes/projects/newProject/components/UploadProgressModal.jsx",
+   "src/routes/userRoutes/projects/newProject/components/map/Map.jsx",
+   "src/routes/userRoutes/projects/newProject/components/map/layers.js",
+   "src/routes/userRoutes/projects/newProject/components/uploadProjectFiles/UploadProjectFiles.jsx",
+   "src/routes/userRoutes/projects/newProject/components/uploadProjectFiles/components/AdvancedActions.jsx",
+   "src/routes/userRoutes/projects/newProject/components/uploadProjectFiles/components/CreateProjectWithModelModal.jsx",
+   "src/routes/userRoutes/projects/newProject/components/uploadProjectFiles/components/FileStorage.jsx",
+   "src/routes/userRoutes/projects/newProject/components/uploadProjectFiles/components/FormActions.jsx",
+   "src/routes/userRoutes/projects/newProject/components/uploadProjectFiles/components/UpgradeStoragePlan.jsx",
+   "src/routes/userRoutes/projects/newProject/components/uploadProjectFiles/components/uploadField/UploadField.jsx",
+   "src/routes/userRoutes/projects/newProject/components/uploadProjectFiles/components/uploadField/components/FileItem.jsx",
+   "src/routes/userRoutes/projects/newProject/components/uploadProjectFiles/components/uploadField/components/UploadButton.jsx",
+   "src/routes/userRoutes/projects/newProject/utils/exif.js",
+   "src/routes/userRoutes/projects/newProject/utils/helpers.js",
+   "src/routes/userRoutes/projects/newProject/utils/hooks/useDragActive.jsx",
+   "src/routes/userRoutes/projects/newProject/utils/hooks/useSubmitProject.jsx",
+   "src/routes/userRoutes/projects/singleProject/ProjectMapView.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/CHMColorBar.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/Map.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/MapLegend.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/MapLoader.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/MapLoadingIndicator.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/SharedStyles.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/ai/AnnotateOrthophoto.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/ai/AnnotateSingleImages.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/ai/AnnotateSingleImagesMap.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/ai/AnnotationCrosshair.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/ai/utilityButtons/AnnotationDrawTools.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/ai/utilityButtons/UtilityButton.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/layers/AoiLayer.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/layers/HexagonColorFilterLayer.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/layers/HexagonLayer.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/layers/MeasurementLayer.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/layers/PhotoLayer.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/layers/TrainingDataGridLayer.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/layers/TrainingDataLayer.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/layers/baseMap/BaseMapSelector.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/layers/baseMap/StyledBaseMapComponents.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/layers/baseMap/constants.js",
+   "src/routes/userRoutes/projects/singleProject/components/layers/contours/ContoursLayer.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/layers/contours/ContoursSettings.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/layers/contours/IntervalSelector.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/layers/contours/hooks/useContoursData.js",
+   "src/routes/userRoutes/projects/singleProject/components/layers/detectionResults/Details.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/layers/detectionResults/DetectionResults.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/layers/detectionResults/components/Chart.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/layers/detectionResults/components/DetectionsPalette.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/layers/detectionResults/components/FilterDetections.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/layers/droneImages/DroneImagesLayer.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/layers/droneImages/hooks/useGeoJSONData.js",
+   "src/routes/userRoutes/projects/singleProject/components/layers/singleImage/DspDetailsPanel.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/layers/singleImage/EstimateWarning.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/layers/singleImage/OverlayTooltips.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/layers/singleImage/SelectedSingleImageLayer.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/layers/singleImage/SingleImageAnnotationPointLayer.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/layers/singleImage/SingleImageFootprintsLayers.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/layers/singleImage/SingleImagePointsLayer.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/layers/singleImage/helpers.js",
+   "src/routes/userRoutes/projects/singleProject/components/modifyLayers/FilterHexagon.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/modifyLayers/ModifyHexagon.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/modifyLayers/ModifyTrainingData.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/modifyLayers/dspColorFilter/DspColorFilter.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/modifyLayers/dspColorFilter/DspMatrixFilterMode.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/modifyLayers/dspColorFilter/buildClassificationStyle.js",
+   "src/routes/userRoutes/projects/singleProject/components/modifyLayers/dspColorFilter/dspExportUtils.js",
+   "src/routes/userRoutes/projects/singleProject/components/modifyLayers/dspColorFilter/useDspClassification.js",
+   "src/routes/userRoutes/projects/singleProject/components/modifyLayers/dspColorFilter/useDspEnrichment.js",
+   "src/routes/userRoutes/projects/singleProject/components/modifyLayers/hexagonColorFilter/FilterTemplates.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/modifyLayers/hexagonColorFilter/HexagonColorFilter.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/modifyLayers/hexagonColorFilter/HexagonDataFields.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/modifyLayers/hexagonColorFilter/PDFExportButton.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/modifyLayers/hexagonColorFilter/PDFModal.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/modifyLayers/hexagonColorFilter/Summary.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/modifyLayers/hexagonColorFilter/filterBox/FilterBox.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/modifyLayers/hexagonColorFilter/filterBox/parts/FormInputs.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/modifyLayers/hexagonColorFilter/filterBox/parts/RangeSliders.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/modifyLayers/hexagonColorFilter/filterBox/parts/Results.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/modifyLayers/hexagonColorFilter/matrixFilter/DebouncedColorInput.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/modifyLayers/hexagonColorFilter/matrixFilter/ExportReportModal.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/modifyLayers/hexagonColorFilter/matrixFilter/MatrixEditor.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/modifyLayers/hexagonColorFilter/matrixFilter/MatrixFilterMode.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/modifyLayers/hexagonColorFilter/matrixFilter/SaveTemplateModal.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/modifyLayers/hexagonColorFilter/matrixFilter/SimpleEditor.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/modifyLayers/hexagonColorFilter/matrixFilter/StyledMatrixFilterComponents.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/modifyLayers/hexagonColorFilter/matrixFilter/matrixClassification.js",
+   "src/routes/userRoutes/projects/singleProject/components/modifyLayers/hexagonColorFilter/matrixFilter/useAvailableProperties.js",
+   "src/routes/userRoutes/projects/singleProject/components/modifyLayers/hexagonColorFilter/matrixFilter/useCurrencies.js",
+   "src/routes/userRoutes/projects/singleProject/components/modifyLayers/hexagonColorFilter/matrixFilter/useMatrixClassification.js",
+   "src/routes/userRoutes/projects/singleProject/components/modifyLayers/hexagonColorFilter/matrixFilter/useMatrixTemplates.js",
+   "src/routes/userRoutes/projects/singleProject/components/modifyLayers/hexagonColorFilter/matrixFilter/usePerBandPropertyRanges.js",
+   "src/routes/userRoutes/projects/singleProject/components/modifyLayers/hexagonColorFilter/matrixFilter/usePropertyRanges.js",
+   "src/routes/userRoutes/projects/singleProject/components/modifyLayers/hexagonColorFilter/matrixFilter/utils.js",
+   "src/routes/userRoutes/projects/singleProject/components/modifyLayers/points/ModifyPoints.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/sidebars/AnnotationSidebar.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/sidebars/DspDetectionsPerPlotSidebar.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/sidebars/HexagonInfo.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/sidebars/LayerView.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/sidebars/ToggleBtnTrainingDataSingleImg.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/sidebars/sidebarElements/HexagonAccordion.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/sidebars/sidebarElements/LayerCheckbox.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/sidebars/sidebarElements/LayerSettings.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/sidebars/sidebarElements/MeasurementSection.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/sidebars/sidebarElements/ModelResultDropdown.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/sidebars/sidebarElements/NoAnalyzesResult.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/sidebars/sidebarElements/SidebarTemplate.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/sidebars/summary/HexagonSummarySidebar.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/sidebars/summary/SidebarSummary.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/singleImageSlider/CarouselSlider.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/singleImageSlider/FilterSingleImage.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/singleImageSlider/IndexSlider.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/singleImageSlider/SliderImage.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/singleImageSlider/SliderTool.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/singleImageSlider/SortSingleImage.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/toolBar/MapToolbar.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/toolBar/modelPicker/ModelList.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/toolBar/modelPicker/ModelPicker.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/toolBar/modelPicker/Models.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/utilityButtons/Annotate.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/utilityButtons/DetectInArea.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/utilityButtons/EditDetections.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/utilityButtons/NewModel.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/utilityButtons/measurementTools/MeasurementTools.jsx",
+   "src/routes/userRoutes/projects/singleProject/components/utilityButtons/measurementTools/utils/helpers.js",
+   "src/routes/userRoutes/projects/singleProject/components/utilityButtons/measurementTools/utils/selectTool.js",
+   "src/routes/userRoutes/projects/userProjects/Projects.jsx",
+   "src/routes/userRoutes/projects/userProjects/components/filters/SearchFilter.jsx",
+   "src/routes/userRoutes/projects/userProjects/components/filters/TagsFilter.jsx",
+   "src/routes/userRoutes/projects/userProjects/components/filters/helpers.js",
+   "src/routes/userRoutes/projects/userProjects/components/views/ProjectsGridView.jsx",
+   "src/routes/userRoutes/projects/userProjects/components/views/projectsMapView/ProjectCardComponents.jsx",
+   "src/routes/userRoutes/projects/userProjects/components/views/projectsMapView/ProjectsMapView.jsx",
+   "src/routes/userRoutes/projects/userProjects/components/views/projectsMapView/list/List.jsx",
+   "src/routes/userRoutes/projects/userProjects/components/views/projectsMapView/list/ListItem.jsx",
+   "src/routes/userRoutes/projects/userProjects/components/views/projectsMapView/map/Map.jsx",
+   "src/routes/userRoutes/projects/userProjects/components/views/projectsMapView/map/OverlayInfo.jsx",
+   "src/routes/userRoutes/projects/userProjects/components/views/projectsMapView/utils/createLayers.js",
+   "src/routes/userRoutes/projects/userProjects/components/views/projectsMapView/utils/handleMapClick.js",
+   "src/routes/userRoutes/projects/userProjects/components/views/projectsMapView/utils/handleMapMouseMove.js",
+   "src/routes/userRoutes/projects/userProjects/components/views/projectsMapView/utils/helpers.js",
+   "src/utils/api/admin.js",
+   "src/utils/api/annotations.js",
+   "src/utils/api/auth.js",
+   "src/utils/api/biodroneai.js",
+   "src/utils/api/evaluation.js",
+   "src/utils/api/files.js",
+   "src/utils/api/filterTemplates.js",
+   "src/utils/api/grid.js",
+   "src/utils/api/helpers.js",
+   "src/utils/api/index.js",
+   "src/utils/api/jobs.js",
+   "src/utils/api/maptiler.js",
+   "src/utils/api/models.js",
+   "src/utils/api/notifications.js",
+   "src/utils/api/organizations.js",
+   "src/utils/api/projects.js",
+   "src/utils/api/stripe.js",
+   "src/utils/api/subscriptions.js",
+   "src/utils/api/tasks.js",
+   "src/utils/api/training.js",
+   "src/utils/api/users.js",
+   "src/utils/constants.js",
+   "src/utils/downloads.js",
+   "src/utils/files.js",
+   "src/utils/helpers.js",
+   "src/utils/httpClient.js",
+   "src/utils/map/annotation/annotation.interaction.js",
+   "src/utils/map/annotation/copyPaste.interaction.js",
+   "src/utils/map/annotation/modify.interaction.js",
+   "src/utils/map/annotation/translate.interaction.js",
+   "src/utils/map/erasor.interaction.js",
+   "src/utils/map/erasorPointer.js",
+   "src/utils/map/freeHand.draw.js",
+   "src/utils/map/helpers.js",
+   "src/utils/map/hexagonTransform.js",
+   "src/utils/map/layer/classificationStyles.js",
+   "src/utils/map/layer/hexagon.js",
+   "src/utils/map/layer/photo.js",
+   "src/utils/map/layer/singleImage.js",
+   "src/utils/map/object.draw.js",
+   "src/utils/map/polygon.draw.js",
+   "src/utils/map/scaleBar.js",
+   "src/utils/map/singleImage.draw.js",
+   "src/utils/map/square.draw.js",
+   "src/utils/map/stemEnrichment.js",
+   "src/utils/map/styles/contoursStyles.js",
+   "src/utils/map/styles/droneImagesStyles.js",
+   "src/utils/map/tooltip.overlay.js",
+   "src/utils/measurementSystem.js",
+   "src/utils/notifications.js",
+   "src/utils/passwordResetErrorCopy.js",
+   "src/utils/sentryConfig.js",
+   "src/utils/stemEstimates.js",
+   "src/utils/validation/passwordRules.js"
+  ]
+ }
+}

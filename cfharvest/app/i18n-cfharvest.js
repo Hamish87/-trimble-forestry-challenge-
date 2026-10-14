@@ -652,6 +652,10 @@ const phrases={
   'Die Replik ist deutsch. CFHarvest selbst ist schwedisch; die Originalbegriffe stehen klein in Klammern oder im Tooltip.':['The replica is in German. CFHarvest itself is Swedish; the original terms appear small in brackets or in the tooltip.','La réplique est en allemand. CFHarvest lui-même est en suédois ; les termes d’origine figurent en petit entre parenthèses ou dans l’infobulle.'],
   'Schwedisch (Produkt)':['Swedish (product)','Suédois (produit)'],
   'Demo-Replik für die Messe. Kein Produktbildschirm; alle Mengen stammen aus dem Spielstand.':['Trade fair demo replica. Not a product screen; all volumes come from the game state.','Réplique de démonstration pour le salon. Pas un écran du produit ; tous les volumes proviennent de la partie.'],
+  // Drone site check integration (cfharvest/sitecheck) in the order detail
+  'Hiebsprüfung (Drohne)':['Site check (drone)','Contrôle de coupe (drone)'],'Drohnen-Hiebsprüfung':['Drone site check','Contrôle de coupe par drone'],'Drohnen-Vorprüfung':['Drone pre-harvest check','Contrôle préalable par drone'],'Drohnen-Nachprüfung':['Drone post-harvest check','Contrôle final par drone'],
+  'noch nicht übergeben':['not handed over yet','pas encore transmis'],'Hiebsgrenze digital bestätigt':['Harvest boundary digitally confirmed','Limite de coupe confirmée numériquement'],'Hiebsprüfung öffnen':['Open site check','Ouvrir le contrôle de coupe'],
+  'Schlussbewertung aus der Drohnen-Nachprüfung':['Final evaluation from the drone post-harvest check','Évaluation finale issue du contrôle par drone'],'Habitatbäume erhalten / beschädigt':['Habitat trees retained / damaged','Arbres-habitats conservés / endommagés'],'Tiefe Fahrspuren (m)':['Deep ruts (m)','Ornières profondes (m)'],
   // Game link (duplicated in dist/cfharvest-link.js)
   'CFHarvest Planung':['CFHarvest Planning','Planification CFHarvest'],
   'Arbeitsplanung in der CFHarvest-Demo-Replik öffnen':['Open work planning in the CFHarvest demo replica','Ouvrir la planification dans la réplique de démonstration CFHarvest'],

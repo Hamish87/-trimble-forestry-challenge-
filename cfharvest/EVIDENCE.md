@@ -95,6 +95,22 @@ Also: "Trimble Forestry's WoodForce – the solution for smarter wood harvesting
 - AppAgg mirror of Play listing: https://appagg.com/android/business/cfharvest-39232794.html?hl=en
 - Uptodown WoodForce APK mirror (do **not** use third-party APK mirrors as analysis input — obtain the APK from your own Play-licensed device; see PLAN.md §2)
 
+## H. Biodrone Portal — drone-image analysis portal reviewed with REA (15 Oct 2026)
+
+Reference application for the drone pre-/post-harvest site check (`cfharvest/sitecheck/`, spec `SPEC_SITECHECK.md`). Biodrone Portal (Biodrone AS, Norway, built with Sopra Steria) is a cloud portal that turns drone images into orthomosaics, runs pre-trained or custom AI detection models and reports hexagon statistics; biodrone.ai lists "post-harvest documentation & control" (AI-detected tree stubs → harvest boundary polygons, buffer-zone checks) as a use case. Everything below is public and was observed passively; no account, login or tenant data was used (PLAN.md §2).
+
+| Item | URL / id | Use |
+|---|---|---|
+| Landing page | https://biodroneportal.com/ — REA `inspect_web_page` ev_40f01fc14d49474187ea203cb85beaa9057bc8000303585ae5aa0a15c3bea199, `capture_web_screenshot` ev_337a7be4c7c158595ee32613a394cfa55f2bb8f6a83584061d6bfc2accb7f7e4 | Product claim ("AI powered object detection tools … analysing drone images of nature habitats"), shell (Log in / Get Access), Vite + React + OpenLayers bundle, Cookiebot/GTM |
+| Register page | https://biodroneportal.com/register — ev_57355b7323a50bb15a1b44f3edb9f6d239e74ad1eab9845c31a8a2bcc146aa2e | The three public plans (Starter 59 $ · Pro 129 $ · Business 299 $, storage/project/image limits, digital sample plots on Business) used for the demo tenant's Abonnement page |
+| EULA / Contact | https://biodroneportal.com/eula — ev_da2ebe7b57437dbce589a400c48422322c5b7ae4b01df14f4bac6d22f4a37914 · https://biodroneportal.com/contact — ev_e4b35f2a942aee3ff8beccc828b1c7c7381acaf9fac23c2cf2334caa5975f570 | Data-ownership and licensing terms (users keep their data; annotations/models may be reused by the vendor), support address |
+| Script bundle | REA `analyze_web_bundle` ev_ae7d2ea94114a87ce4011561d35c3888a745d1feb4b8ecdeff2b78b56b505bc0 (8 scripts, 1.26 M AST nodes, vendor fingerprints React/Vite) | Confirms the SPA stack; endpoint candidates are mostly OpenLayers getters (low confidence) |
+| Public source map | https://biodroneportal.com/assets/index-CqwK7TSW.js.map (27.4 MB, 712 sources, 381 application files; sha256 in `findings/biodrone/rea-evidence-2026-10-15.json`) | Served publicly with the bundle; read for the functional inventory `findings/biodrone/FUNCTIONAL_INVENTORY.md` (routes, entities, API shape, screens, forestry vocabulary). Not stored in the repo. |
+| biodrone.ai | https://biodrone.ai/ · /use-cases/post-harvest · /use-cases/damage-assessment · /use-cases/sapling-monitor | Use cases: post-harvest documentation (tree stubs → boundary polygons, buffer zones, GeoTIFF/GeoJSON exports "ready for certification"), storm-damage change assessment with hexagon density maps, Digital Sample Plots |
+| Partner/press | https://soprasteria.com/newsroom/client-stories/details/biodrone-specialised-in-drone-services-revolutionises-forestry · https://enterprise-insights.dji.com/user-stories/biodrone-ai-forestry-in-norway · https://agritechobservatory.review.fao.org/en/the-biodrone-portal | Windthrow mapping workflow (orthomosaic → AI → GeoJSON into the harvester terminal, WMS/WFS/WMTS layers), user roles (owners, contractors, managers, insurers), "driving damage" and "documentation of completed work" as stated capabilities |
+
+What we did not do: no login, no tenant pages, no API calls beyond the page loads, no copying of vendor code, text or images. The site check reproduces the **workflow and vocabulary** (projects, orthomosaic, base/custom models, detect in area, hexagon statistics, measurements, annotations, notifications, plans, exports) with our own implementation fed by the game state.
+
 ## What we did not find
 
 - No public CFHarvest API documentation, OpenAPI spec, or SDK.

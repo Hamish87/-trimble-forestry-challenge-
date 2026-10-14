@@ -21,6 +21,7 @@ cfharvest/
   PLAN.md             this file
   EVIDENCE.md         index of every public source, with what each is good for
   SPEC_PLANNING.md    functional spec of the Planning app (evidence-tagged)
+  SPEC_SITECHECK.md   functional spec of the drone site check (evidence-tagged)
   README.md           how to run, how it hooks into the game
   evidence/
     specs/            downloaded PDFs (spec sheet, solution overview)
@@ -28,7 +29,8 @@ cfharvest/
     video-notes/      one markdown per video: screen, controls, statuses, flow
     apk/              REA evidence bundles from inspecting the CFHarvest APK you obtained from your own device (never the APK itself — gitignored)
   findings/           REA outputs and analysis notes (JSON evidence + md)
-  app/                the replica (buildless HTML/CSS/JS, like the game)
+  app/                the planning replica (buildless HTML/CSS/JS, like the game)
+  sitecheck/          the drone pre-/post-harvest site check (SPEC_SITECHECK.md)
   scripts/            setup-rea.sh, capture helpers
 ```
 
@@ -74,6 +76,9 @@ Built by an Opus coder from this plan and `SPEC_PLANNING.md`, reviewed and verif
 
 ### Milestone 2 status (2026-10-14, branch of the Opus coder)
 Built from `SPEC_PLANNING.md` v2: German-first UI with Swedish product terms as captions/tooltips, newer product shell with the 17-item Administration menu, view selector with splitters, the 14-column Uppdragslista, Kalender with bands/mirrored chain bars/staged Återställ + Spara, map controls, drag and drop (HTML5 + Pointer Events) incl. Flytta/Kopiera, insert-between and reorder, the Välj datum / Skicka / Avplanera / Komprimera / quick-edit dialogs, order detail page with 13 tabs and Funktioner, Beställningar §5, Administration §6 (Resurser form with Pflichtangabe markers, Produktionsdata, Veckoarbetstid, Veckokalender grid, Drivningskedjor), Meddelanden, Integrationslogg, Rapporter, Hjälp. `[DEMO]` decisions are listed in `SPEC_PLANNING.md §7a`. Verified by `npm test` (jsdom) and a Chromium/Playwright run at 1280, 1024 and 360 px with real mouse drags.
+
+### Drone site check (done 2026-10-15, branch of the Fable architect)
+`cfharvest/sitecheck/`: a separate app for the pre-/post-harvest site check, modelled on the public Biodrone Portal after a REA review of https://biodroneportal.com/ (evidence `EVIDENCE.md §H`, `findings/biodrone/`). Projects per work order and phase, simulated flights, eight base detection models derived from the game state, hexagon statistics, contours, measurements, annotations, custom models, checklists (Vorprüfung → Hänsyn/Säkerhet/Område/Avlägg, Nachprüfung → Slutvärdering), before/after comparison, report and GeoJSON, handover into the planning replica's order detail, drone-confirmed boundary → `boundary:'digital'` in the game. Spec `SPEC_SITECHECK.md`; test `tests/cfharvest-sitecheck.cjs`.
 
 ### Phase 1 — Evidence capture (parallel with Phase 2; feeds its polish)
 1. Download the two PDFs to `evidence/specs/`.

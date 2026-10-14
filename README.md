@@ -14,6 +14,10 @@ The scene panel covers forest planning, contract signing, office order entry, ha
 
 The six images are AI-generated illustrations, not real machine photography, animation or CFHarvest screenshots. They were generated with the built-in image-generation tool and saved as optimised WebP files in `dist/assets/scenes/`. Exact prompts and final asset paths are recorded in `docs/scene-prompts.json`. The shipped scene code embeds those images as data URLs so cards and enlarged views do not depend on separate image requests. Edit scene behaviour in `src/scenes.js`, then run `python scripts/build-scene-images.py` to rebuild `dist/scenes.js`.
 
+## CFHarvest replica and drone site check
+
+`cfharvest/app/` is a demo replica of CFHarvest planning (`cfharvest/README.md`); `cfharvest/sitecheck/` is a drone pre-/post-harvest site check in the style of a drone-image analysis portal (`cfharvest/SPEC_SITECHECK.md`). Both share the game state and are reachable from the game header ("CFHarvest Planung") and the replica's order detail ("Hiebsprüfung (Drohne)"). Serve them with `npm run dev:cfharvest` on port 3001.
+
 ## Checks
 
 - `node tests/ui-smoke.cjs` checks the full journey and handover gates using a lightweight DOM contract model.
