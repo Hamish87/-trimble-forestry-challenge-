@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0063a3">
+<title>CFHarvest Planung · Demo-Replik | Trimble Forestry</title>
+<meta name="description" content="Demonstration einer CFHarvest-Planungsoberfläche, gespeist aus dem Spielstand der Forst Challenge.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23003f6b'/%3E%3Cpath d='M7 8h18v5h-6v13h-6V13H7' fill='%23a5dcf6'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="cfh-header">
+  <a class="cfh-brand" href="./" aria-label="CFHarvest Planung · Demo-Replik"><img src="../../dist/assets/trimble-logo.svg" alt="Trimble" width="131" height="30"><span>CFHarvest<small>Planung · Demo</small></span></a>
+  <nav class="cfh-nav" aria-label="Hauptnavigation">
+    <button data-nav="planning"><span class="sv" lang="sv" data-no-translate>Arbetsplanering</span></button>
+    <button data-nav="orders"><span class="sv" lang="sv" data-no-translate>Beställningar</span></button>
+    <button data-nav="admin"><span class="sv" lang="sv" data-no-translate>Administration</span></button>
+  </nav>
+  <label class="language-picker"><span>Sprache</span><select data-language-select aria-label="Sprache wählen"><option data-no-translate value="de" lang="de">Deutsch</option><option data-no-translate value="en" lang="en">English</option><option data-no-translate value="fr" lang="fr">Français</option></select></label>
+  <button class="cfh-return" id="cfhReturn" data-action="return">Zurück zum Spiel</button>
+</header>
+<div id="cfhBanner" class="cfh-banner"></div>
+<main id="cfhMain"></main>
+<aside id="cfhPanel" class="cfh-panel" aria-label="Arbeitsauftrag" hidden></aside>
+<dialog id="cfhDialog" class="cfh-dialog"></dialog>
+<div id="cfhToast" class="cfh-toast" role="status" aria-live="polite"></div>
+<footer class="cfh-footer"><span>Demo-Replik der CFHarvest-Planung für die Messe · keine CFHarvest-Produktoberfläche · alle Werte stammen aus dem Spielstand</span><span>PLANEN. ERNTEN. VERBINDEN.</span></footer>
+<script src="../../dist/i18n-catalog.js"></script>
+<script src="i18n-cfharvest.js"></script>
+<script src="../../dist/i18n.js"></script>
+<script src="../../dist/game.js"></script>
+<script src="../../dist/journey.js"></script>
+<script src="../../dist/routes.js"></script>
+<script src="model.js"></script>
+<script src="bridge.js"></script>
+<script src="ui.js"></script>
+<script src="views/uppdragslista.js"></script>
+<script src="views/kalender.js"></script>
+<script src="views/karta.js"></script>
+<script src="views/order-panel.js"></script>
+<script src="views/bestallningar.js"></script>
+<script src="views/admin.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
