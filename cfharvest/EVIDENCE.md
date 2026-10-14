@@ -66,6 +66,10 @@ Also: "Trimble Forestry's WoodForce – the solution for smarter wood harvesting
 | Connected Forest overview | https://forestx.se/en/connected-forest-en/ | CFH alongside CF Forest (LRM), CF Procurement (SilvaPro), CF Business |
 | Contact / support | https://forestx.se/en/contact-support/ | Support channels |
 
+## A2. Captured UI evidence (14 Oct 2026)
+
+`evidence/CAPTURE_LOG.md` indexes 60+ real product screenshots embedded in the Web manual (URLs `docs.forestx.se/sv/assets/images/screen/manual_webb/<n>.png`) and frames from the training video "Översikt – Arbetsplanering del 1" (https://www.youtube.com/watch?v=kAa8RpLtyKM), which is a screen recording of the live test tenant **`https://test-cfharvest-eu.forestry.trimble.com/planning/index.html#/reserve`** (build 1.24, "AWS test"). That tenant is the closest thing to a demo environment: it requires a login (Trimble/ForestX internal); no public sandbox exists. The production planning app is presumably the same path without `test-`.
+
 ## E. The shipped applications (artifacts you can lawfully inspect)
 
 | Artifact | Identifier | Notes |
