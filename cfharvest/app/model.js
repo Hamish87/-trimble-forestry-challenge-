@@ -116,15 +116,16 @@ function rowItems(snapshot,plan,row){
 function newItem(plan,orderId,rowId,startHour,extra={}){const id='A'+(++plan.seq);return{id,orderId,rowId,startHour,sent:false,sentRound:null,sentVersion:0,seq:plan.seq,manualHours:null,...extra};}
 const pinnedSet=p=>p instanceof Set?p:new Set(p==null?[]:Array.isArray(p)?p:[p]);
 /** Later items shift so a row never overlaps ("later items shift on save" [MW][M68]). Pinned items (by item or order id)
-    are anchors: they keep their start (only resolving overlaps among themselves); every other item keeps its order and
-    moves right past the anchors. */
+    are the planner's latest drops: they form anchor blocks (contiguous pinned items). An unpinned item that starts inside
+    a block is queued behind the whole block; one that started earlier keeps its place, so a bar dropped into a gap lands
+    after the bar it overlaps and before the bars that follow. Then one sequential pass removes all overlaps. */
 function normalizeRow(plan,snapshot,rowId,pinned){
   const row=rows(snapshot,plan).find(r=>r.id===rowId);if(!row)return plan;const pin=pinnedSet(pinned),isPin=it=>pin.has(it.id)||pin.has(it.orderId);
-  const items=rowItems(snapshot,plan,row),set=(it,start)=>{plan.assignments.find(x=>x.id===it.id).startHour=start;it.start=start;it.end=start+it.duration;};
-  const anchors=items.filter(isPin).sort((x,y)=>x.start-y.start||(y.touched||0)-(x.touched||0));let cursor=-Infinity;
-  for(const it of anchors){if(it.start<cursor-1e-9)set(it,cursor);cursor=it.end;}
-  cursor=-Infinity;
-  for(const it of items.filter(x=>!isPin(x))){let s=Math.max(it.start,cursor),moved=true;while(moved){moved=false;for(const p of anchors)if(s<p.end-1e-9&&s+it.duration>p.start+1e-9){s=p.end;moved=true;}}if(Math.abs(s-it.start)>1e-12)set(it,s);cursor=it.end;}
+  const items=rowItems(snapshot,plan,row),anchors=items.filter(isPin).sort((x,y)=>x.start-y.start||(y.touched||0)-(x.touched||0)),blocks=[];
+  for(const a of anchors){const b=blocks.at(-1);if(b&&a.start<=b.end+1e-9)b.end+=a.duration;else blocks.push({start:a.start,end:a.start+a.duration});}
+  const key=it=>{if(isPin(it))return[it.start,0,-(it.touched||0)];const b=blocks.find(b=>it.start>=b.start-1e-9&&it.start<b.end-1e-9);return[b?b.end:it.start,1,it.seq];};
+  const sorted=items.map(it=>({it,k:key(it)})).sort((x,y)=>x.k[0]-y.k[0]||x.k[1]-y.k[1]||x.k[2]-y.k[2]||x.it.start-y.it.start);
+  let cursor=-Infinity;for(const{it}of sorted){const a=plan.assignments.find(x=>x.id===it.id);if(a.startHour<cursor-1e-9)a.startHour=cursor;cursor=a.startHour+it.duration;}
   return plan;
 }
 /** Spara: resolve every staged overlap (staged items keep their slot, later items shift right) and drop the stage marks. */

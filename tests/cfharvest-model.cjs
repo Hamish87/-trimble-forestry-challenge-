@@ -110,6 +110,10 @@ st=M.insertAt(st,snap,'H-B01','K-01',1,{stage:true});assert(M.hasOverlap(snap,st
 const vmStaged=M.viewModel(snap,st).rows.find(r=>r.id==='K-01');assert(vmStaged.overlap&&vmStaged.lanes===2,'overlap shown in a second lane');
 st=M.commit(st,snap);items=M.rowItems(snap,st,K);assert.deepEqual(ids(items),['H-A01','H-B01','H-C01']);close(items[1].start,20);close(items[2].start,20+600/32,1e-9,'Spara shifts later bars');
 assert(!st.assignments.some(a=>a.staged),'Spara clears the stage marks');
+// Drop into a running bar's day (gap drop): the dropped bar lands after the bar it overlaps, later bars shift.
+let gd=M.assign(M.emptyPlan(),snap,['H-A01','H-C01'],'K-01',{mode:'day',day:0});gd=M.assign(gd,snap,['H-B01'],'K-01',{mode:'day',day:2,stage:true});
+assert.deepEqual(ids(M.rowItems(snap,gd,K)),['H-A01','H-B01','H-C01']);gd=M.commit(gd,snap);items=M.rowItems(snap,gd,K);
+assert.deepEqual(ids(items),['H-A01','H-B01','H-C01']);close(items[0].start,0,1e-9,'earlier bar keeps its start');close(items[1].start,20);close(items[2].start,20+600/32);
 // Reorder within a row: move the first bar behind the last one.
 let ro=M.insertAt(st,snap,null,'K-01',3,{itemId:st.assignments.find(a=>a.orderId==='H-A01').id,stage:true});ro=M.commit(ro,snap);assert.deepEqual(ids(M.rowItems(snap,ro,K)),['H-B01','H-C01','H-A01']);
 // Drop from the list onto an occupied day, staged: the dropped orders keep their slot, existing ones move behind them.
