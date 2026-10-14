@@ -1,0 +1,31 @@
+# Trimble Forestry challenge
+
+Static four-stage demonstration: forest planning, harvesting, logistics and contract settlement.
+
+## Languages
+
+German is the default. The language selector offers German, English and French and remembers the choice in local storage. A selector is also available inside the rules and worksite-handover dialogs. Language changes update presentation without resetting the simulation, forms, map controls or open dialogs. English/French display the same solid timber volume as m³ instead of fm; currency remains EUR.
+
+`translations.tsv` contains the German source phrases and English/French translations. Rebuild the shipped catalogue with `python scripts/build-translations.py`. The localisation layer retains original text nodes and accessibility attributes, then applies the selected catalogue to dynamic content. Machine IDs, form values, simulation state and calculations remain unchanged. Canvas labels use the same catalogue.
+
+## Illustrated workflow
+
+The scene panel covers forest planning, contract signing, office order entry, harvester processing, forwarder loading and truck loading. Choose a scene, explore its three process steps, or open the enlarged illustration. The panel reads existing game state, including stocks, delivered quantities and waiting time, without changing the simulation. Stage changes choose the appropriate scene automatically. All text and image descriptions support German, English and French.
+
+The six images are AI-generated illustrations, not real machine photography, animation or CFHarvest screenshots. They were generated with the built-in image-generation tool and saved as optimised WebP files in `dist/assets/scenes/`. Exact prompts and final asset paths are recorded in `docs/scene-prompts.json`. The shipped scene code embeds those images as data URLs so cards and enlarged views do not depend on separate image requests. Edit scene behaviour in `src/scenes.js`, then run `python scripts/build-scene-images.py` to rebuild `dist/scenes.js`.
+
+## Checks
+
+- `node tests/ui-smoke.cjs` checks the full journey and handover gates using a lightweight DOM contract model.
+- `node tests/journey.cjs`, `node tests/simulation.cjs` and `node tests/boundaries.cjs` check simulation invariants.
+- `tests/i18n.cjs` requires jsdom 26 in the Node module search path. Install it in a temporary test directory with `npm install --prefix /tmp/forestry-qa jsdom@26 --no-audit --no-fund`, then run `NODE_PATH=/tmp/forestry-qa/node_modules node tests/i18n.cjs`. It checks all three languages across the journey, text coverage, state preservation, handover checkboxes, map controls, stored language preference and canvas label translation. It does not test browser layout.
+
+The economics remain explicitly labelled scenario assumptions; adding languages does not validate market rates or imply CFHarvest product-language availability. The reference PDF is omitted from the GitHub import; the app retains its public Trimble product-page link.
+
+## GitHub and Codex development
+
+Run `npm ci`, `npm run dev` and `npm test`. Read `CODEX_HANDOFF.md` for repository import and the first task prompt. Read `docs/CFHARVEST_PLANNING_PLAN.md` for the planned workspace. This export includes the playable app and all assets; it does not include credentials or Git history.
+
+## Generated files and reference material
+
+`npm ci` runs the prepare step to build the embedded scene bundle. `dist/scenes.js` is generated from `src/scenes.js` and the six original WebP files, which are included. Run `npm run build` after changing those sources. Python 3 is required. The reference PDF was excluded from this GitHub import after automatic approval review rejected uploading that document; the app retains the public product-page link instead.

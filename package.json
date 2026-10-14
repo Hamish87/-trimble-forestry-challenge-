@@ -1,0 +1,18 @@
+{
+  "name": "trimble-forestry-challenge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "INTERFORST forestry management demonstration in German, English and French",
+  "scripts": {
+    "dev": "python3 -m http.server 3000 --directory dist",
+    "build": "python3 scripts/build-translations.py && python3 scripts/build-scene-images.py",
+    "test": "node tests/simulation.cjs && node tests/boundaries.cjs && node tests/journey.cjs && node tests/ui-smoke.cjs && node tests/i18n.cjs",
+    "prepare": "npm run build"
+  },
+  "devDependencies": {
+    "jsdom": "26.1.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
