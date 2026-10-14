@@ -43,6 +43,8 @@ Längenvorgabe am Harvester
 
 ## 3. The euro model — one honest number per option
 
+> **Implemented 2026-10-14 (see commits on `main`).** Badge convention as built: each option's euro badge is the difference in the stage's *planned cost* between that option and a fixed **reference option** in its row (the one showing `+0 €`), with every other decision as currently set — computed by diffing `ForestGame.previewCost` / `ForestJourney.planPreview|haulPreview|settlementPreview`, never hard-coded. The live total therefore moves by exactly the badge difference when you switch. Corrections the implementation found against the tables below: forwarder start and production reporting **do** change booked forwarder hours (e.g. "Ab Stunde 4" saves 560 € vs "Sofort"); manual handover and paper-map boundary costs depend on what else is planned (the 180 € call-out is charged once per shift, so paper map shows −75 € or −255 €); haul-by-stock also changes the number of trips, so it can show a large saving; "Als erledigt melden" is booked as a certain 350 € whenever open items exist (shown as direct cost then, +0 € otherwise); risk badges appear only when the scenario can actually trigger (boundary only with the harvester on Nordhang and unchecked, biotope only with a survey gap, downgrade only with a stale length setting, as a computed estimate). The harvester/forwarder site pickers remain dropdowns — they are assignments, not cost decisions.
+
 The single most important design rule: **be explicit about which euros are certain and which are at risk.** Mixing a guaranteed −80 € with a possible −5.200 € into one number would mislead. We use three badge types:
 
 - **Direct €** (certain this shift/stage): shown as the primary badge. Drives the live total.

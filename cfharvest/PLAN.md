@@ -63,10 +63,14 @@ Every REA call returns an Evidence record; export bundles with `export_evidence_
 
 ## 4. Phases
 
-### Phase 0 — Foundations (this pass)
+### Phase 0 — Foundations (done 2026-10-14)
 - [x] Folder, plan, evidence index, Planning spec
 - [x] REA registered in the dev environment (`.mcp.json`, `scripts/setup-rea.sh`)
-- [ ] Push to GitHub; `AGENTS.md` points agents at this folder
+- [x] `AGENTS.md` points agents at this folder
+- [ ] Push to GitHub (blocked from the agent session: repository not in the session's authorised sources — push from a local checkout or add the repo to the session)
+
+### Phase 2 status (done 2026-10-14, milestone 1 merged on `main`)
+Built by an Opus coder from this plan and `SPEC_PLANNING.md`, reviewed and verified in real Chromium at 360 px and 1024 px by the architect. All acceptance items pass in `tests/cfharvest-ui.cjs`. Handoff: `dist/cfharvest-link.js` wraps `render()`, exposes `window.ForestChallenge`, and exchanges a nonce-protected envelope via `sessionStorage` (same origin) or a URL fragment (two-server setup). Known limitations and `[DEMO]` decisions are listed in `README.md` and the coder's notes in the merge commit; chief follow-ups: "Kopiera" (one order on several machines), StanForD field names to be checked against the Skogforsk schema, the "not sent" warning repeats once per machine of a chain, calendar capacity assumptions (Mon 19 Oct 2026 = shift 1, Mon–Fri 8 h) to be confirmed against video 5.
 
 ### Phase 1 — Evidence capture (parallel with Phase 2; feeds its polish)
 1. Download the two PDFs to `evidence/specs/`.
