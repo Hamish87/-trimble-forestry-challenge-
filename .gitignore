@@ -7,3 +7,9 @@ node_modules/
 *.log
 dist/scenes.js
 dist/assets/CFHarvest-SpecSheet.pdf
+
+# CFHarvest replica evidence: vendor binaries and PDFs stay local
+cfharvest/evidence/apk/*
+!cfharvest/evidence/apk/.gitkeep
+cfharvest/evidence/specs/*.pdf
+cfharvest/evidence/screenshots/*.png
