@@ -1,0 +1,16 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "echo 'static site: no install step'",
+  "buildCommand": "python3 scripts/build-translations.py && python3 scripts/build-scene-images.py && bash scripts/assemble-site.sh",
+  "outputDirectory": "site",
+  "cleanUrls": false,
+  "trailingSlash": true,
+  "redirects": [
+    { "source": "/cfharvest", "destination": "/cfharvest/app/", "permanent": false },
+    { "source": "/cfharvest/", "destination": "/cfharvest/app/", "permanent": false }
+  ],
+  "headers": [
+    { "source": "/(.*)", "headers": [{ "key": "X-Content-Type-Options", "value": "nosniff" }] }
+  ]
+}

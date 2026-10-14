@@ -1,0 +1,8 @@
+node_modules
+.claude
+site
+cfharvest/evidence
+cfharvest/findings
+tests
+docs
+*.bundle
