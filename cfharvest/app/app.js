@@ -310,7 +310,9 @@ function highlight(track,info){
 function clearHighlight(){if(!hl)return;hl.track.classList.remove('drop-hover');hl.track.closest('.cal-row')?.classList.remove('drop-hover');hl.marker.remove();hl=null;}
 function ghost(text,x,y){const g=$('cfhGhost');if(!g)return null;g.textContent=text;g.classList.add('show');if(x!=null){g.style.left=(x+14)+'px';g.style.top=(y+10)+'px';}return g;}
 function hideGhost(){const g=$('cfhGhost');if(g){g.classList.remove('show');g.style.left='-9999px';}}
-const targetDay=(p,info)=>p?.kind==='item'?Math.max(S.vm.calendar.currentDay,info.day-(p.grab||0)):info.day;
+/** First day with working hours on a row from `day` on (a bar dropped on a weekend starts on Monday). */
+function firstWorkDay(rowId,day){const row=rowById(rowId);if(!row||!M.hasCapacity(row))return day;let d=day;for(let i=0;i<60&&M.hoursOn(row,d)===0;i++)d++;return d;}
+const targetDay=(p,info)=>firstWorkDay(info.rowId,p?.kind==='item'?Math.max(S.vm.calendar.currentDay,info.day-(p.grab||0)):info.day);
 function performDrop(p,info){
   if(!p||!info?.rowId||!rowById(info.rowId))return;
   if(p.kind==='orders'){planOrders(p.ids,info.rowId,{mode:'day',day:info.day},tr('Speichern nicht vergessen'));return;}
