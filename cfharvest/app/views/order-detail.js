@@ -67,7 +67,8 @@ CFHViews.orderDetail=(vm,v,ui)=>{
     let w=Math.max(Math.max(...xs)-Math.min(...xs)+2*pad,(Math.max(...ys)-Math.min(...ys)+2*pad)*R);w=Math.min(w,620,350*R);const h=w/R;
     const cx=(Math.min(...xs)+Math.max(...xs))/2,cy=(Math.min(...ys)+Math.max(...ys))/2,box=[Math.max(0,Math.min(620-w,cx-w/2)),Math.max(0,Math.min(350-h,cy-h/2)),w,h];
     const tool=v.mapToolScope==='detail'?v.mapTool:null;
-    return `<div class="map-wrap detail-map-wrap" data-map-tool="${esc(tool||'')}"><svg class="cfh-map detail-map" viewBox="${box.join(' ')}" role="group" aria-label="${esc('Echtes Luftbild mit fiktiven Hieben')}" data-map-scope="detail" data-order="${esc(o.id)}">${CFHViews.mapBody(vm,v,ui,{orders:[o],box,scope:'detail'})}</svg>${CFHViews.mapChrome(vm,v,ui,{scope:'detail'})}</div>`;})():'';
+    const chrome=CFHViews.mapChrome(vm,v,ui,{scope:'detail'});
+    return `<div class="detail-map-block">${chrome.bar}<div class="map-wrap detail-map-wrap" data-map-tool="${esc(tool||'')}"><svg class="cfh-map detail-map" viewBox="${box.join(' ')}" role="group" aria-label="${esc('Echtes Luftbild mit fiktiven Hieben')}" data-map-scope="detail" data-order="${esc(o.id)}">${CFHViews.mapBody(vm,v,ui,{orders:[o],box,scope:'detail'})}</svg>${chrome.overlay}</div></div>`;})():'';
   const funcs=CFHViews.DETAIL_FUNCS(o);
   return `<section class="cfh-view wide detail" data-view="order" data-order="${esc(o.id)}" aria-labelledby="detailTitle">
   <div class="detail-top"><button type="button" class="link" data-action="detail-back">‹ ${esc('Zurück zur Arbeitsplanung')}</button></div>

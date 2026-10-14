@@ -421,8 +421,8 @@ async function cycle(p){collect(p);const snapshot=p.js('JSON.stringify(CFHApp.st
  await click(mp,'.map-symbol[data-obj="S1"]');await click(mp,'[data-obj-pop] [data-action="map-obj-close"]');assert(!mp.d.querySelector('[data-obj-pop]'));
  // Order detail: same layers/legend/tools on its map; the Avlägg tab lists landing and symbol and previews the OIN.
  await click(mp,'tr[data-row-order="H-A01"] [data-action="open-order"]');await click(mp,'[data-action="detail-tab"][data-tab="landings"]');
- assert(mp.d.querySelector('.detail-map-wrap [data-action="map-layers"]')&&mp.d.querySelector('.detail-map-wrap [data-action="map-legend"]')&&mp.d.querySelector('.detail-map-wrap [data-tool="landing"][data-scope="detail"]')&&mp.d.querySelector('.detail-map-wrap [data-tool="symbol"]'));
- assert(!mp.d.querySelector('.detail-map-wrap [data-tool="lasso"]'),'no lasso on the single-order map');assert(mp.d.querySelector('.detail-map .map-landing.extra[data-landing="P-A01-2"]'));
+ assert(mp.d.querySelector('.detail-map-wrap [data-action="map-layers"]')&&mp.d.querySelector('.detail-map-wrap [data-action="map-legend"]')&&mp.d.querySelector('.detail-map-block [data-tool="landing"][data-scope="detail"]')&&mp.d.querySelector('.detail-map-block [data-tool="symbol"]'));
+ assert(!mp.d.querySelector('.detail-map-block [data-tool="lasso"]'),'no lasso on the single-order map');assert(mp.d.querySelector('.detail-map .map-landing.extra[data-landing="P-A01-2"]'));
  assert(mp.d.querySelector('tr[data-landing-row="P-A01-2"]'),'landing in the Avlägg tab');assert(mp.d.querySelector('tr[data-symbol-row="H-A01-S1"]'));
  let oin=mp.d.querySelector('[data-oin-preview]').textContent;assert(oin.includes('"LandingKey": "P-A01-2"')&&oin.includes('"SymbolKey": "H-A01-S1"')&&oin.includes('"Type": "unload"'));await cycle(mp);
  await click(mp,'.detail-map-wrap [data-action="map-layers"]');await click(mp,'.detail-map-wrap [data-action="map-legend"]');assert(mp.d.querySelector('.detail-map-wrap [data-map-legend]'));await cycle(mp);await click(mp,'[data-action="map-layers"]');await click(mp,'[data-action="map-legend"]');

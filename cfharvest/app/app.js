@@ -14,7 +14,7 @@ const NAV=[['orders','🛒','Bestellungen','Beställningar'],['planning','📋',
 /** ?basemap=osm switches the map to the OpenStreetMap raster basemap (only meaningful with georeferenced orders). */
 function basemapFlag(){try{return new URLSearchParams(location.search).get('basemap')==='osm'?'osm':'photo';}catch{return 'photo';}}
 function savedViews(){try{const x=JSON.parse(local.get('cfharvest-views-v1')||'null');if(Array.isArray(x)&&x.length&&x.every(k=>VIEW_KEYS.includes(k)))return x;}catch{}return ['list','calendar'];}
-const defaultView=()=>({nav:'planning',views:savedViews(),viewMenu:false,widths:{list:1.3,map:1,calendar:1.5,resources:1},opFilter:'drivning',pickRow:'',checked:[],selected:null,selItem:null,search:'',filtersOpen:false,filters:{},columns:{},colMenu:false,sort:{key:'seq',dir:1},page:0,pageSize:12,
+const defaultView=()=>({nav:'planning',views:basemapFlag()==='osm'?VIEW_KEYS.filter(k=>k==='map'||savedViews().includes(k)):savedViews(),viewMenu:false,widths:{list:1.3,map:1,calendar:1.5,resources:1},opFilter:'drivning',pickRow:'',checked:[],selected:null,selItem:null,search:'',filtersOpen:false,filters:{},columns:{},colMenu:false,sort:{key:'seq',dir:1},page:0,pageSize:12,
   zoom:'week',calStart:null,rowChecked:[],rowsShown:null,resMenuOpen:false,resSearch:'',plannedOnly:false,insertMode:false,mapZoom:2,mapPan:[0,0],mapLayers:{},mapLegend:false,mapLayerMenu:false,mapTool:null,mapToolScope:null,symbolKind:'warning',mapObj:null,measure:null,seqStarted:false,basemap:basemapFlag(),dialog:null,
   detail:{orderId:null,tab:'order',draft:{},showMap:true,funcOpen:false},menu:null,admin:{page:'resources',resource:'H-01',tab:'base',typeFilter:'',draft:{},weekSel:[],weekStart:null,weekSpan:7,chainDraft:{}},
   book:{},bookDraft:{},bookMessage:'',msgTo:'K-01',msgText:'',canUndo:false});
@@ -207,7 +207,7 @@ function lassoMove(e){
 }
 function lassoEnd(cancel){
   const x=LS;LS=null;try{x.svg.releasePointerCapture?.(x.id);}catch{}x.rect?.remove();if(!x.moved)return; // no drag: the click selects as usual
-  S.suppressClick=true;setTimeout(()=>{S.suppressClick=false;},400);if(cancel)return;
+  S.mapGestureAt=Date.now();if(cancel)return; // the click that ends the drag on the map is swallowed (onClick), other clicks are not
   const v=S.view,ids=V.ordersInRect(S.vm.orders,x.a,x.b).filter(o=>!o.closed).map(o=>o.id);
   v.checked=x.add?[...new Set([...v.checked,...ids])]:ids;if(ids.length)v.selected=ids[0];render();toast(`${tr('Auswahlrechteck')}: ${UI.num(v.checked.length,0)} ${tr('ausgewählt')}`);
 }
@@ -431,7 +431,7 @@ function onPointerUp(e){
   if(SP)return splitEnd();
   if(LS)return e.pointerId===LS.id?lassoEnd():undefined;
   if(!P||e.pointerId!==P.id)return;clearTimeout(P.timer);const was=P;P=null;
-  if(was.active){const track=hitTrack(e.clientX,e.clientY),info=track?dropInfo(track,e.clientX):null;clearHighlight();hideGhost();document.body.classList.remove('dragging');S.suppressClick=true;setTimeout(()=>{S.suppressClick=false;},400);if(info)performDrop(was.payload,info);}
+  if(was.active){const track=hitTrack(e.clientX,e.clientY),info=track?dropInfo(track,e.clientX):null;clearHighlight();hideGhost();document.body.classList.remove('dragging');if(was.mouse)S.mapGestureAt=Date.now();else{S.suppressClick=true;setTimeout(()=>{S.suppressClick=false;},400);}if(info)performDrop(was.payload,info);}
 }
 function onPointerCancel(){if(R)return resizeEnd(true);if(SP)return splitEnd();if(LS)return lassoEnd(true);if(P){clearTimeout(P.timer);P=null;}clearHighlight();hideGhost();document.body.classList.remove('dragging');}
 /* ---------- Bar resize: right-edge handle (Pointer Events for mouse, touch and pen) ---------- */
@@ -482,6 +482,7 @@ function splitKey(e,split){const [a,b]=split.dataset.split.split('|'),w=S.view.w
 /* ---------- Events ---------- */
 function onClick(e){
   if(S.suppressClick){S.suppressClick=false;e.preventDefault();return;}
+  if(S.mapGestureAt&&Date.now()-S.mapGestureAt<400&&e.target.closest?.("svg.cfh-map")){S.mapGestureAt=0;e.preventDefault();return;}
   const v=S.view;
   const mapSvg=e.target.closest?.('svg.cfh-map');
   if(mapSvg&&v.mapTool&&mapSvg.dataset.mapScope===v.mapToolScope&&mapToolClick(e,mapSvg))return;

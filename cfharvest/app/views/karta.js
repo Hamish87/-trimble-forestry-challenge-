@@ -57,8 +57,8 @@ CFHViews.symbolSvg=(s,ui,{u=1,orderId,interactive=true,selected=false}={})=>{
 };
 /** Scale bar in map units (bottom left of the view box): a round length in metres from the orthophoto scale. */
 CFHViews.scaleBar=(box,ui)=>{
-  const u=box[2]/620,target=box[2]*.22*CFHViews.M_PER_UNIT,nice=[5,10,20,50,100,200,500,1000,2000].filter(n=>n<=target).pop()||5,len=nice/CFHViews.M_PER_UNIT,x=box[0]+box[2]*.03,y=box[1]+box[3]*.9;
-  return `<g class="map-scalebar" aria-hidden="true" data-scale-m="${nice}"><rect x="${x-4*u}" y="${y-14*u}" width="${len+8*u+40*u}" height="${20*u}" rx="${2*u}"/><path d="M${x},${y-6*u} V${y} H${x+len} V${y-6*u}" stroke-width="${2*u}"/><text x="${x+len+5*u}" y="${y}" font-size="${10*u}" data-no-translate>${ui.num(nice,0)} m</text></g>`;
+  const u=box[2]/620,target=box[2]*.15*CFHViews.M_PER_UNIT,nice=[5,10,20,50,100,200,500,1000,2000].filter(n=>n<=target).pop()||5,len=nice/CFHViews.M_PER_UNIT,x=box[0]+box[2]*.98-len-34*u,y=box[1]+box[3]-9*u; // bottom right (status line sits bottom left)
+  return `<g class="map-scalebar" aria-hidden="true" data-scale-m="${nice}"><rect x="${x-3*u}" y="${y-11*u}" width="${len+36*u}" height="${15*u}" rx="${2*u}"/><path d="M${x},${y-5*u} V${y} H${x+len} V${y-5*u}" stroke-width="${1.5*u}"/><text x="${x+len+4*u}" y="${y}" font-size="${8*u}" data-no-translate>${ui.num(nice,0)} m</text></g>`;
 };
 /** Map content for a set of orders. scope 'main' = planning map (stands select and drag), 'detail' = order detail. */
 CFHViews.mapBody=(vm,v,ui,{orders,box,L,level=2,scope='main',layers=CFHViews.mapLayerState(v)})=>{
@@ -117,22 +117,24 @@ CFHViews.mapLegend=ui=>{
 };
 /** Layer switcher (🗂). */
 CFHViews.mapLayerPop=(v,ui)=>{const L=CFHViews.mapLayerState(v);return `<div class="map-pop layer-pop" data-map-layers><b>${ui.esc('Kartenebenen')}</b>${CFHViews.MAP_LAYERS.map(l=>`<label><input type="checkbox" data-change="map-layer" value="${l.key}" ${L[l.key]?'checked':''}> ${ui.term(l.de,l.sv)}</label>`).join('')}</div>`;};
-/** Tool row, popovers, hint and status line around a map (scope main or detail). */
+/** Tool bar above a map (tools, hint line with the symbol palette, editor line for a picked landing/symbol) and the
+    overlay inside it (layers 🗂, legend 💡, status line with scale, coordinates and the measured distance).
+    The tool bar sits outside the picture so it stays usable when the map pane is narrow. Returns {bar, overlay}. */
 CFHViews.mapChrome=(vm,v,ui,{scope,L,level=2})=>{
   const{esc,num,ibtn}=ui,main=scope==='main',tool=v.mapToolScope===scope?v.mapTool:null,tb=(t,icon,de,svTerm,dis=false)=>ibtn('map-tool',icon,de,svTerm,{attrs:`data-tool="${t}" data-scope="${scope}" aria-pressed="${tool===t}"`,disabled:dis,cls:'tool-'+t});
   const poly=!L||L.polygons;
-  const tools=`<div class="map-ctrl tools" role="toolbar" aria-label="${esc('Kartenwerkzeuge')}">${main?tb('lasso','⬚','Auswahlrechteck (Lasso)'):''}${tb('measure','📏','Strecke messen',null,!poly)}${tb('landing','📍','Polterplatz setzen','Avlägg',!poly)}${tb('symbol','⚑','Kartensymbol setzen',null,!poly)}${main?tb('seq','⤭','Löpnummer auf der Karte ordnen','Ordna om löpande nummer',level===0):''}${ibtn('','⬠','Polygon zeichnen ist nicht Teil der Demo',null,{disabled:true})}${main?ibtn('map-print','🖨','Drucken'):''}</div>`;
-  const corner=`<div class="map-ctrl corner">${ibtn('map-layers','🗂','Kartenebenen',null,{attrs:`aria-expanded="${!!v.mapLayerMenu}"`})}${ibtn('map-legend','💡','Legende',null,{attrs:`aria-expanded="${!!v.mapLegend}"`})}</div>`;
-  const palette=tool==='symbol'?`<div class="map-pop symbol-pop" role="group" aria-label="${esc('Kartensymbol wählen')}"><b>${esc('Kartensymbol wählen')}</b>${CFHViews.MAP_SYMBOLS.map(s=>`<button type="button" data-action="map-symbol-kind" data-kind="${s.key}" aria-pressed="${(v.symbolKind||'warning')===s.key}"><b class="map-key-sym sym-${s.key}" aria-hidden="true">${esc(s.icon)}</b> ${esc(s.de)}</button>`).join('')}</div>`:'';
-  const hint=tool?`<div class="map-hint" role="status" data-map-hint><span>${esc(CFHViews.MAP_TOOL_HINTS[tool]||'')}</span><button type="button" class="small" data-action="map-tool-off">${esc('Fertig')}</button></div>`:'';
+  const tools=`<div class="toolbar map-toolbar" role="toolbar" aria-label="${esc('Kartenwerkzeuge')}">${main?tb('lasso','⬚','Auswahlrechteck (Lasso)'):''}${tb('measure','📏','Strecke messen',null,!poly)}${tb('landing','📍','Polterplatz setzen','Avlägg',!poly)}${tb('symbol','⚑','Kartensymbol setzen',null,!poly)}${main?tb('seq','⤭','Löpnummer auf der Karte ordnen','Ordna om löpande nummer',level===0):''}${ibtn('','⬠','Polygon zeichnen ist nicht Teil der Demo',null,{disabled:true})}${main?ibtn('map-print','🖨','Drucken'):''}</div>`;
+  const palette=tool==='symbol'?`<span class="symbol-pop" role="group" aria-label="${esc('Kartensymbol wählen')}">${CFHViews.MAP_SYMBOLS.map(s=>`<button type="button" class="small" data-action="map-symbol-kind" data-kind="${s.key}" aria-pressed="${(v.symbolKind||'warning')===s.key}"><b class="map-key-sym sym-${s.key}" aria-hidden="true">${esc(s.icon)}</b>${esc(s.de)}</button>`).join('')}</span>`:'';
+  const hint=tool?`<div class="map-hint" role="status" data-map-hint><span>${esc(CFHViews.MAP_TOOL_HINTS[tool]||'')}</span>${palette}<button type="button" class="small" data-action="map-tool-off">${esc('Fertig')}</button></div>`:'';
   let objPop='';const ob=v.mapObj;
   if(ob&&ob.scope===scope){const o=vm.orders.find(x=>x.id===ob.orderId),item=o&&(ob.kind==='symbol'?CFHModel.orderSymbols(o,vm.plan):CFHModel.orderLandings(o,vm.plan)).find(x=>x.key===ob.id);
-    if(item)objPop=`<div class="map-pop obj-pop" data-obj-pop><b>${esc(ob.kind==='symbol'?'Kartensymbol':'Polterplatz')} <span data-no-translate>${esc(ob.kind==='symbol'?item.code:item.id)}</span></b><small>${esc(o.name)}</small>
+    if(item)objPop=`<div class="map-obj-bar" data-obj-pop><b>${esc(ob.kind==='symbol'?'Kartensymbol':'Polterplatz')} <span data-no-translate>${esc(ob.kind==='symbol'?item.code:item.id)}</span></b><small>${esc(o.name)}</small>
       ${ob.kind==='symbol'?`<label>${esc('Art')} <select data-change="map-obj-kind">${CFHViews.MAP_SYMBOLS.map(s=>`<option value="${s.key}" ${item.kind===s.key?'selected':''}>${esc(s.de)}</option>`).join('')}</select></label>`:''}
-      <span class="pop-actions"><button type="button" class="small" data-action="map-obj-move">${esc('Verschieben')}</button><button type="button" class="small" data-action="map-obj-delete">🗑 ${esc('Löschen')}</button><button type="button" class="small ghost" data-action="map-obj-close">${esc('Schließen')}</button></span></div>`;}
+      <button type="button" class="small" data-action="map-obj-move">✥ ${esc('Verschieben')}</button><button type="button" class="small" data-action="map-obj-delete">🗑 ${esc('Löschen')}</button><button type="button" class="small ghost" data-action="map-obj-close">${esc('Schließen')}</button></div>`;}
+  const corner=`<div class="map-ctrl corner">${ibtn('map-layers','🗂','Kartenebenen',null,{attrs:`aria-expanded="${!!v.mapLayerMenu}"`})}${ibtn('map-legend','💡','Legende',null,{attrs:`aria-expanded="${!!v.mapLegend}"`})}</div>`;
   const m=v.measure&&v.measure.scope===scope&&v.measure.b?`<span data-measure>${esc('Strecke')}: ${num(CFHViews.distanceM(v.measure.a,v.measure.b),0)} m</span>`:'';
   const status=`<div class="map-status"><span title="${esc('Näherung, das Luftbild ist nicht georeferenziert')}">${esc('Maßstab')} ${L?`${esc(L.scale)} · ${esc(L.name)}`:`1 ${esc('Bildpunkt')} ≈ ${num(CFHViews.M_PER_UNIT,2)} m`}</span><span data-map-coords>${esc('Bildkoordinaten')}: –</span>${m}</div>`;
-  return tools+corner+palette+hint+objPop+(v.mapLayerMenu?CFHViews.mapLayerPop(v,ui):'')+(v.mapLegend?CFHViews.mapLegend(ui):'')+status;
+  return{bar:tools+hint+objPop,overlay:corner+(v.mapLayerMenu?CFHViews.mapLayerPop(v,ui):'')+(v.mapLegend?CFHViews.mapLegend(ui):'')+status};
 };
 /* ---------- OpenStreetMap basemap behind ?basemap=osm (Web Mercator raster tiles) ---------- */
 CFHViews.osmProject=(lat,lng,z)=>{const n=2**z*256,s=Math.sin(lat*Math.PI/180);return[(lng+180)/360*n,(.5-Math.log((1+s)/(1-s))/(4*Math.PI))*n];};
@@ -155,13 +157,15 @@ CFHViews.karta=(vm,v,ui)=>{
   if(v.basemap==='osm')return CFHViews.kartaOsm(vm,v,ui);
   const{esc,term,ibtn}=ui,R=WorksiteRoutes,{level,L,box}=CFHViews.mapBox(vm,v),tool=v.mapToolScope==='main'?v.mapTool:null;
   const body=CFHViews.mapBody(vm,v,ui,{orders:vm.orders,box,L,level,scope:'main'});
+  const chrome=CFHViews.mapChrome(vm,v,ui,{scope:'main',L,level});
   return `<section class="cfh-view" data-view="map" aria-labelledby="mapTitle">
   <div class="view-head"><h2 id="mapTitle">${term('Aufträge auf der Karte','Uppdrag på kartan')}</h2><button class="ghost small" data-action="hide-view" data-view-key="map" title="${esc('Ansicht ausblenden')}" aria-label="${esc('Ansicht ausblenden')}">✕</button></div>
+  ${chrome.bar}
   <div class="map-wrap" data-map-tool="${esc(tool||'')}">
   <svg class="cfh-map" viewBox="${box.join(' ')}" role="group" aria-label="${esc('Echtes Luftbild mit fiktiven Hieben')}" data-map-level="${level}" data-map-scope="main">${body}</svg>
   <div class="map-ctrl pan" role="group" aria-label="${esc('Karte verschieben')}"><span></span>${ibtn('map-pan','▲','Nach Norden verschieben',null,{attrs:'data-dx="0" data-dy="-1"'})}<span></span>${ibtn('map-pan','◀','Nach Westen verschieben',null,{attrs:'data-dx="-1" data-dy="0"'})}${ibtn('map-pan-reset','•','Karte zentrieren')}${ibtn('map-pan','▶','Nach Osten verschieben',null,{attrs:'data-dx="1" data-dy="0"'})}<span></span>${ibtn('map-pan','▼','Nach Süden verschieben',null,{attrs:'data-dx="0" data-dy="1"'})}<span></span></div>
   <div class="map-ctrl zoom">${ibtn('map-zoom-in','+','Vergrößern',null,{disabled:level>=3})}${ibtn('map-zoom-out','−','Verkleinern',null,{disabled:!level})}</div>
-  ${CFHViews.mapChrome(vm,v,ui,{scope:'main',L,level})}
+  ${chrome.overlay}
   </div>
   <p class="note map-note">${esc('Klick wählt einen Auftrag, Umschalt+Klick fügt hinzu, das Auswahlrechteck wählt alle darin. Ausgewählte Bestände in den Kalender ziehen.')}</p>
   ${R.attribution()}
