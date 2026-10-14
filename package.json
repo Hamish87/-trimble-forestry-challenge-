@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "python3 -m http.server 3000 --directory dist",
     "build": "python3 scripts/build-translations.py && python3 scripts/build-scene-images.py",
-    "test": "node tests/simulation.cjs && node tests/boundaries.cjs && node tests/journey.cjs && node tests/ui-smoke.cjs && node tests/i18n.cjs",
+    "test": "node tests/simulation.cjs && node tests/boundaries.cjs && node tests/journey.cjs && node tests/ui-smoke.cjs && node tests/toggle-contract.cjs && node tests/i18n.cjs",
     "prepare": "npm run build"
   },
   "devDependencies": {
