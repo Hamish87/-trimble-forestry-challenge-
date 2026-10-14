@@ -73,6 +73,20 @@ function hourAt(row,day,minutes=START_CLOCK*60){const cap=hoursOn(row,day),into=
 /** Working hours between two calendar positions (used by "Lås start- och slutdatumen"). */
 function hourAtPosition(row,pos){const d=Math.floor(pos),f=pos-d;return startHourOfDay(row,d)+f*hoursOn(row,d);}
 function overlapOnDay(row,item,day){const s=startHourOfDay(row,day),cap=hoursOn(row,day);return Math.max(0,Math.min(item.end,s+cap)-Math.max(item.start,s));}
+/** Working days a span of working hours occupies on a row ("2,5 Tage"): sum per day of hours used / that day's hours. */
+function workDays(row,start,end){
+  if(!(end>start)||!hasCapacity(row))return 0;let cum=0,days=0;
+  for(let d=0;d<MAX_DAYS&&cum<end;d++){const cap=hoursOn(row,d);if(cap>0){const used=Math.max(0,Math.min(end,cum+cap)-Math.max(start,cum));days+=used/cap;}cum+=cap;}
+  return days;
+}
+/** Working hour shifted by n working days on a row (same share of the day; 0-hour days do not count) [DEMO: chain lag]. */
+function addWorkingDays(row,hour,n){
+  const pos=positionOf(row,hour);if(pos==null||!(n>0))return hour;let d=Math.floor(pos),left=Math.round(n);const f=pos-d;
+  for(let guard=0;left>0&&guard<MAX_DAYS;guard++){d++;if(hoursOn(row,d)>0)left--;}
+  return startHourOfDay(row,d)+f*hoursOn(row,d);
+}
+/** Working hour at the end of the day column before `boundary` (bar end snapped to a day column). */
+const hourAtBoundary=(row,boundary)=>startHourOfDay(row,Math.max(0,boundary|0));
 /** Production rate of a resource for a Maßnahme (Produktionsdata [M22]); falls back to the general rate. */
 function rateFor(m,op){const v=Number(m?.production?.[op]);return v>0?v:Number(m?.rate)||0;}
 /** Arbetsmängd of a member for an order: the forwarder also moves the opening forest stock. */
@@ -91,9 +105,12 @@ function resources(snapshot,plan={}){
   return [...snapshot.resources,...(plan.extraResources||[])].map(r=>{const e=edits[r.id]||{};return{...r,...e,weekly:{...r.weekly,...(e.weekly||{})},production:{...(r.production||{}),...(e.production||{})},days:{...(r.days||{}),...(e.days||{})},manual:{...(e.manual||{})}};});
 }
 function chains(snapshot,plan={}){return plan.chains||snapshot.chains;}
+/** "Vorlauf Harvester -> Forwarder" of a chain in working days (product: the forwarder is planned a few days after the harvester) [DEMO default 1]. */
+const DEFAULT_LAG=1;
+function chainLag(c){const v=c?.lag==null||c.lag===''?NaN:Number(c.lag);return Number.isFinite(v)&&v>=0?Math.min(30,Math.round(v)):DEFAULT_LAG;}
 function rows(snapshot,plan={}){
   const res=resources(snapshot,plan),plannable=res.filter(r=>r.active!==false&&r.plannable!==false);
-  const chainRows=chains(snapshot,plan).map(c=>{const memberResources=c.members.map(id=>res.find(r=>r.id===id)).filter(Boolean),weekly={};for(const k of WEEKDAYS)weekly[k]=memberResources.length?Math.min(...memberResources.map(m=>Number(m.weekly[k])||0)):0;return{id:c.id,kind:'chain',name:c.name,members:c.members,memberResources,weekly,rate:memberResources.length?Math.min(...memberResources.map(m=>m.rate)):0};});
+  const chainRows=chains(snapshot,plan).map(c=>{const memberResources=c.members.map(id=>res.find(r=>r.id===id)).filter(Boolean),weekly={};for(const k of WEEKDAYS)weekly[k]=memberResources.length?Math.min(...memberResources.map(m=>Number(m.weekly[k])||0)):0;return{id:c.id,kind:'chain',name:c.name,members:c.members,memberResources,weekly,lag:chainLag(c),rate:memberResources.length?Math.min(...memberResources.map(m=>m.rate)):0};});
   return [...chainRows,...plannable.map(r=>({id:r.id,kind:'resource',name:r.name,type:r.type,stanford:r.stanford,members:[r.id],memberResources:[r],weekly:r.weekly,rate:r.rate,gameKey:r.gameKey}))];
 }
 
@@ -163,7 +180,9 @@ function removeItems(planIn,itemIds){const plan=normalizePlan(clone(planIn));pla
 function moveItem(planIn,snapshot,itemId,rowId,opts={}){
   const plan=normalizePlan(clone(planIn)),src=plan.assignments.find(a=>a.id===itemId),all=rows(snapshot,plan),target=all.find(r=>r.id===rowId);
   if(!src||!target)return plan;const order=snapshot.orders.find(o=>o.id===src.orderId);if(!order||order.closed)return plan;
-  const from=all.find(r=>r.id===src.rowId),today=currentDayStart(snapshot,target);let start,manual=src.manualHours||null;
+  // Without the lock the duration is recomputed from the target's rates (manual working time dropped); with the lock the
+  // calendar dates are kept and the matching working time is set manually.
+  const from=all.find(r=>r.id===src.rowId),today=currentDayStart(snapshot,target);let start,manual=null;
   if(opts.lock&&from){const it=rowItems(snapshot,plan,from).find(i=>i.id===itemId),s=positionOf(from,it.start),e=positionOf(from,it.end,true);
     start=s==null?today:hourAtPosition(target,s);const end=e==null?null:hourAtPosition(target,e);if(end!=null&&end>start)manual=end-start;start=Math.max(today,start);}
   else start=opts.day!=null?Math.max(today,hourAt(target,Math.max(0,opts.day|0),opts.minutes)):Math.max(today,lastEnd(snapshot,plan,target));
@@ -212,6 +231,41 @@ function updateItem(planIn,snapshot,itemId,{day,minutes,manualHours,stage}={}){
   if(day!=null)a.startHour=Math.max(currentDayStart(snapshot,row),hourAt(row,day,minutes));
   if(manualHours!==undefined)a.manualHours=Number(manualHours)>0?Number(manualHours):null;
   touch(plan,a,stage);if(!stage)normalizeRow(plan,snapshot,a.rowId,a.id);return plan;
+}
+/** Bar right edge dragged to a day column: the end snaps to the end of day `endDay-1` (whole days), and the resulting working
+    time becomes the manual working time (same field as the quick edit's "Manuelle Arbeitszeit") [M72]. Days without hours
+    add nothing, so snapping onto a weekend keeps Friday's end. At least the rest of the start day stays. */
+function resizeHours(row,item,endDay){
+  let b=Math.max(Math.floor(positionOf(row,item.start)??0)+1,endDay|0),h=hourAtBoundary(row,b)-item.start;
+  for(let guard=0;h<=1e-9&&guard<MAX_DAYS;guard++){b++;h=hourAtBoundary(row,b)-item.start;}
+  return +h.toFixed(4);
+}
+function resizeItem(planIn,snapshot,itemId,endDay,{stage}={}){
+  const plan=normalizePlan(clone(planIn)),a=plan.assignments.find(x=>x.id===itemId);if(!a)return plan;const row=rows(snapshot,plan).find(r=>r.id===a.rowId);if(!row)return plan;
+  const it=rowItems(snapshot,plan,row).find(i=>i.id===itemId);if(!it)return plan;a.manualHours=resizeHours(row,it,endDay);
+  touch(plan,a,stage);if(!stage)normalizeRow(plan,snapshot,a.rowId,a.id);return plan;
+}
+/** Bar dragged horizontally within its row: new start day (09:00), duration kept (incl. a manual working time). */
+function shiftItem(planIn,snapshot,itemId,day,{stage}={}){return updateItem(planIn,snapshot,itemId,{day:Math.max(0,day|0),stage});}
+/** Rate or working-time change of a resource: bars on every row that uses it are re-flowed. Unsent bars that followed their
+    predecessor directly keep following it; others keep their start unless the predecessor now runs into them. Sent bars
+    stay where they are. before = plan with the old master data. Returns the plan (moved bars staged) and plan.reflowed =
+    ids of bars whose start or duration changed. */
+function reflow(before,planIn,snapshot,resourceIds,{stage=true}={}){
+  const plan=normalizePlan(clone(planIn)),old=normalizePlan(before),ids=new Set([].concat(resourceIds)),changed=new Set();
+  const oldRows=rows(snapshot,old);
+  for(const row of rows(snapshot,plan)){
+    if(!row.members.some(m=>ids.has(m)))continue;const oldRow=oldRows.find(r=>r.id===row.id);if(!oldRow)continue;
+    const prevItems=rowItems(snapshot,old,oldRow),items=rowItems(snapshot,plan,row);let prevOldEnd=null,cursor=-Infinity;
+    for(const it of items){
+      const o=prevItems.find(x=>x.id===it.id),a=plan.assignments.find(x=>x.id===it.id),attached=!!o&&prevOldEnd!=null&&Math.abs(o.start-prevOldEnd)<1e-6;
+      let start=a.startHour;if(!a.sent)start=attached?cursor:Math.max(start,cursor);
+      if(Math.abs(start-a.startHour)>1e-9){a.startHour=start;touch(plan,a,stage);changed.add(a.id);}
+      if(!o||Math.abs(o.duration-it.duration)>1e-9)changed.add(a.id);
+      prevOldEnd=o?o.end:null;cursor=start+it.duration;
+    }
+  }
+  plan.reflowed=[...changed];return plan;
 }
 /** Skicka till resurs [M53]: mark sent and generate OIN/PIN (+FOI/FDI). Selection by row, order or single item. */
 function send(planIn,snapshot,{rowIds=[],orderIds=[],itemIds=[]}){
@@ -299,12 +353,50 @@ function pillOf(status,items,rowsOut,o){
   if(status==='sent')return{cls:items.some(it=>it.sent&&rowsOut.find(r=>r.id===it.rowId)?.kind==='chain')?'team':'sent',text:names.join(', '),sv:'Skickad'};
   return{cls:'planned',text:names.join(', '),sv:'Tilldelad'};
 }
+/** Member bars of a chain item [M59][DEMO]: greyed projections on each member row. The harvester starts with the chain; a
+    forwarder starts `lag` working days later; each member runs its own estimate (own rate, own volume), scaled by a manual
+    working time on the chain bar. Hours are on the member's own calendar. */
+function memberSpans(chainRow,item,memberRows){
+  const out=[];if(item.startPos==null)return out;
+  const est=estimate(item.order,chainRow),scale=item.manualHours>0&&item.estimated>0&&Number.isFinite(item.estimated)?item.duration/item.estimated:1;
+  for(const m of chainRow.memberResources){
+    const row=memberRows.find(r=>r.id===m.id);if(!row)continue;const line=est.lines.find(l=>l.resourceId===m.id);if(!line||!Number.isFinite(line.hours)||!hasCapacity(row))continue;
+    let start=hourAtPosition(row,item.startPos);const lag=m.type==='forwarder'?chainRow.lag:0;if(lag>0)start=addWorkingDays(row,start,lag);
+    const duration=line.hours*scale,end=start+duration;
+    out.push({id:item.id+'@'+m.id,itemId:item.id,orderId:item.orderId,order:item.order,chainId:chainRow.id,resourceId:m.id,ghost:true,lag,volume:line.volume,rate:line.rate,
+      start,end,duration,manualHours:item.manualHours,sent:item.sent,sentVersion:item.sentVersion,staged:item.staged,
+      startPos:positionOf(row,start),endPos:positionOf(row,end,true),startTime:timeOf(row,start),endTime:timeOf(row,end,true),workDays:workDays(row,start,end)});
+  }
+  return out;
+}
+/** Double booking on a member row [DEMO]: a direct bar overlapping a chain's member bar, or member bars of two different
+    chain bars overlapping. Warning only; planning stays possible. day = first calendar day of the overlap. */
+function conflictsOf(rowsOut){
+  const out=[],seen=new Set(),chainItems=rowsOut.filter(c=>c.kind==='chain').flatMap(c=>c.items);
+  for(const r of rowsOut){
+    if(r.kind!=='resource')continue;const entries=[...r.items.map(it=>({it,ghost:false})),...(r.ghosts||[]).map(it=>({it,ghost:true}))];
+    for(let i=0;i<entries.length;i++)for(let j=i+1;j<entries.length;j++){
+      const x=entries[i],y=entries[j];if(!x.ghost&&!y.ghost)continue;if(x.ghost&&y.ghost&&x.it.chainId===y.it.chainId)continue;
+      const s=Math.max(x.it.start,y.it.start),e=Math.min(x.it.end,y.it.end);if(e-s<=1e-6)continue;
+      const pos=positionOf(r,s),day=pos==null?null:Math.floor(pos);
+      for(const z of [x,y]){z.it.conflict=true;if(z.ghost)for(const ci of chainItems)if(ci.id===z.it.itemId)ci.conflict=true;}
+      const key=r.id+':'+day;if(seen.has(key))continue;seen.add(key);
+      out.push({resourceId:r.id,resource:r.name,day,iso:day==null?null:dayISO(day),items:[x.ghost?x.it.itemId:x.it.id,y.ghost?y.it.itemId:y.it.id]});
+    }
+  }
+  return out.sort((a,b)=>(a.day??0)-(b.day??0)||a.resourceId.localeCompare(b.resourceId));
+}
 function lanes(entries){const ends=[];for(const e of entries.sort((a,b)=>a.startPos-b.startPos)){let l=ends.findIndex(x=>x<=e.startPos+1e-9);if(l<0){l=ends.length;ends.push(0);}ends[l]=e.endPos;e.lane=l;}return Math.max(1,ends.length);}
 function viewModel(snapshot,planIn){
   const plan=normalizePlan(planIn),allRows=rows(snapshot,plan),hpr=fromHPR(snapshot.production.messages);
-  const rowsOut=allRows.map(row=>({...row,items:rowItems(snapshot,plan,row).map(it=>({...it,startPos:positionOf(row,it.start),endPos:positionOf(row,it.end,true),startTime:timeOf(row,it.start),endTime:timeOf(row,it.end,true),outdated:it.sent&&it.sentVersion<snapshot.meta.requiredVersion}))}));
-  for(const r of rowsOut){r.overlap=r.items.some((x,i)=>i&&x.start<r.items[i-1].end-1e-9);r.mirrors=r.kind==='resource'?rowsOut.filter(c=>c.kind==='chain'&&c.members.includes(r.id)).flatMap(c=>c.items.map(it=>({...it,chainId:c.id,mirror:true}))):[];
-    const placed=[...r.items,...r.mirrors].filter(e=>e.startPos!=null).map(e=>({e,startPos:e.startPos,endPos:Math.max(e.endPos,e.startPos+.02)}));r.lanes=lanes(placed);for(const p of placed)p.e.lane=p.lane;}
+  const driving=(order,row)=>{const est=estimate(order,row);return est.lines.reduce((x,y)=>y.hours>x.hours?y:x,est.lines[0]);};
+  const rowsOut=allRows.map(row=>({...row,items:rowItems(snapshot,plan,row).map(it=>({...it,volume:driving(it.order,row)?.volume??it.order.estimatedVolume,workDays:workDays(row,it.start,it.end),startPos:positionOf(row,it.start),endPos:positionOf(row,it.end,true),startTime:timeOf(row,it.start),endTime:timeOf(row,it.end,true),outdated:it.sent&&it.sentVersion<snapshot.meta.requiredVersion}))}));
+  for(const r of rowsOut){r.overlap=r.items.some((x,i)=>i&&x.start<r.items[i-1].end-1e-9);r.ghosts=[];}
+  const memberRows=rowsOut.filter(r=>r.kind==='resource');
+  for(const c of rowsOut)if(c.kind==='chain')for(const it of c.items)for(const g of memberSpans(c,it,memberRows)){g.outdated=it.outdated;memberRows.find(x=>x.id===g.resourceId).ghosts.push(g);}
+  const conflicts=conflictsOf(rowsOut);
+  for(const r of rowsOut){r.mirrors=r.ghosts; // milestone-2 name kept for callers
+    const placed=[...r.items,...r.ghosts].filter(e=>e.startPos!=null).map(e=>({e,startPos:e.startPos,endPos:Math.max(e.endPos,e.startPos+.02)}));r.lanes=lanes(placed);for(const p of placed)p.e.lane=p.lane;}
   const orders=snapshot.orders.map(o=>{
     const items=rowsOut.flatMap(r=>r.items.filter(i=>i.orderId===o.id)).sort((x,y)=>(x.startPos??1e9)-(y.startPos??1e9)),a=items[0]?plan.assignments.find(x=>x.id===items[0].id):null,row=a&&rowsOut.find(r=>r.id===a.rowId),item=items[0]||null;
     const p=hpr.byObject[o.id]||{felled:0,felledByShifts:0,opening:0,forwarded:0,forestStock:0,reports:[]};
@@ -319,8 +411,8 @@ function viewModel(snapshot,planIn){
   });
   const dispatch=dispatchPlan(snapshot,plan,allRows);
   const orderBook=snapshot.orderBook.map(b=>({...b,confirmed:!!plan.orderBook[b.id]?.confirmed,limits:{min:plan.orderBook[b.id]?.min??90,max:plan.orderBook[b.id]?.max??110},comment:plan.orderBook[b.id]?.comment||'',planned:orders.filter(o=>o.assignment&&o.status!=='completed').reduce((s,o)=>s+(o.assortments.find(x=>x.key===b.assortment)?.estimatedVolume||0),0)}));
-  return{...snapshot,plan,rows:rowsOut,orders,dispatch,orderBook,followUp:hpr,resourcesAll:resources(snapshot,plan),chainsAll:chains(snapshot,plan),staged:plan.assignments.filter(a=>a.staged).length};
+  return{...snapshot,plan,rows:rowsOut,orders,dispatch,orderBook,followUp:hpr,conflicts,resourcesAll:resources(snapshot,plan),chainsAll:chains(snapshot,plan).map(c=>({...c,lag:chainLag(c)})),staged:plan.assignments.filter(a=>a.staged).length};
 }
-return{STATUSES,STATUS_INFO,OPERATIONS,opLabel,PLANNER_TRANSITIONS,canTransition,deriveStatus,WEEKDAYS,CALENDAR_START,START_CLOCK,dayISO,dayIndexOf,weekday,mondayOf,hoursOn,weeklyTotal,hasCapacity,startHourOfDay,positionOf,timeOf,hourAt,hourAtPosition,overlapOnDay,rateFor,estimate,durationHours,resources,chains,rows,emptyPlan,normalizePlan,rowItems,normalizeRow,commit,hasOverlap,assign,unassign,removeItems,moveItem,insertAt,compressPreview,compress,setEstimatedStart,updateItem,send,toOIN,toPIN,toFOI,toFDI,instructionsFor,pinStatus,pinFileName,fromHPR,dispatchPlan,viewModel};
+return{STATUSES,STATUS_INFO,OPERATIONS,opLabel,PLANNER_TRANSITIONS,canTransition,deriveStatus,WEEKDAYS,CALENDAR_START,START_CLOCK,dayISO,dayIndexOf,weekday,mondayOf,hoursOn,weeklyTotal,hasCapacity,startHourOfDay,positionOf,timeOf,hourAt,hourAtPosition,overlapOnDay,workDays,addWorkingDays,hourAtBoundary,rateFor,estimate,durationHours,resources,chains,chainLag,DEFAULT_LAG,rows,emptyPlan,normalizePlan,rowItems,normalizeRow,commit,hasOverlap,assign,unassign,removeItems,moveItem,insertAt,compressPreview,compress,setEstimatedStart,updateItem,resizeHours,resizeItem,shiftItem,reflow,memberSpans,conflictsOf,send,toOIN,toPIN,toFOI,toFDI,instructionsFor,pinStatus,pinFileName,fromHPR,dispatchPlan,viewModel};
 })();
 if(typeof module!=='undefined')module.exports=CFHModel;

@@ -23,7 +23,7 @@ const MASTER=[
     base:{manufacturer:'Demo-Hersteller',year:2021,bearingClass:'B',plateWeight:18900,extinguisherChecked:'',aggregate:'',phone:'',email:'f-01@demo.invalid',servicePackages:[],woodforceStart:'2026-01-05'}},
   {id:'L-01',type:'truck',name:'Lkw L-01',model:'Holz-Lkw · Demo',stanford:'',operation:'Abfuhr',rate:25,unit:'fm/Tour',weekly:{...WEEK},active:true,plannable:false,subcontractor:true,base:{manufacturer:'',year:null,bearingClass:'',plateWeight:null,extinguisherChecked:'',aggregate:'',phone:'',email:'',servicePackages:[],woodforceStart:''}},
   {id:'L-02',type:'truck',name:'Lkw L-02',model:'Holz-Lkw · Demo',stanford:'',operation:'Abfuhr',rate:25,unit:'fm/Tour',weekly:{...WEEK},active:true,plannable:false,subcontractor:true,base:{manufacturer:'',year:null,bearingClass:'',plateWeight:null,extinguisherChecked:'',aggregate:'',phone:'',email:'',servicePackages:[],woodforceStart:''}}];
-const CHAINS=[{id:'K-01',name:'H-01/F-01',kind:'drivningskedja',members:['H-01','F-01']}];
+const CHAINS=[{id:'K-01',name:'H-01/F-01',kind:'drivningskedja',members:['H-01','F-01'],lag:1}]; // lag = Vorlauf Harvester -> Forwarder in working days [DEMO]
 const CLIENT='Auftraggeber (Spielszenario)',CLIENT_CODE='TRI';
 /* [DEMO] stand facts the game does not model: area (ha). All three game stands are planned as final fellings
    (Slutavverkning / Endnutzung), so the game's 28/32 fm/h rates apply unchanged. */

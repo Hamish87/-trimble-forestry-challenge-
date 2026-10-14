@@ -144,4 +144,71 @@ assert.deepEqual(M.compressPreview(snap,cz,'K-01',{from:8,to:20}).map(p=>p.order
 // PIN status: removing a PIN file makes the assortment "missing" [M53].
 const ps=M.pinStatus(a,M.emptyPlan());assert.deepEqual(ps.missing,[]);assert.equal(ps.files.length,2);assert.match(ps.files[0],/^SAG_Nordhang_5-1m_v1$/);
 assert.deepEqual(M.pinStatus(a,{pinRemoved:{'H-A01':{saw:true}}}).missing,['saw']);
+/* ---------- Calendar fidelity (PLAN_OVERNIGHT §1) ---------- */
+// Working days of a span ("560 fm · 20 h · 2,5 Tage"); weekends count nothing.
+close(M.workDays(K,0,20),2.5);close(M.workDays(K,32,52),2.5,1e-9,'Friday + Monday half: weekend not counted');
+let fv=M.viewModel(snap,M.assign(M.emptyPlan(),snap,['H-A01'],'K-01',{mode:'day',day:0}));let fvIt=fv.rows.find(r=>r.id==='K-01').items[0];
+assert.equal(fvIt.volume,560);close(fvIt.duration,20);close(fvIt.workDays,2.5);
+assert.equal(M.viewModel(snap,M.assign(M.emptyPlan(),snap,['H-B01'],'K-01',{mode:'day',day:0})).rows[0].items[0].volume,600,'chain bar shows the volume of its slowest member (forwarder incl. opening stock)');
+// "1 h + 1 m³" product rule on the real rows: H-01 at 1 fm/h and 1 h per weekday blocks the calendar for years.
+const tiny={...M.emptyPlan(),resources:{'H-01':{production:{Slutavverkning:1},rate:1,weekly:{mon:1,tue:1,wed:1,thu:1,fri:1,sat:0,sun:0}}}};
+const tinyRow=M.rows(snap,tiny).find(r=>r.id==='H-01'),tinyIt=M.viewModel(snap,M.assign(tiny,snap,['H-C01'],'H-01',{mode:'day',day:0})).rows.find(r=>r.id==='H-01').items[0];
+close(tinyIt.duration,420);close(tinyIt.workDays,420);assert(tinyIt.endPos>500,'420 working days ≈ 84 weeks');assert.equal(M.weeklyTotal(tinyRow),5);
+// Edge drag: the end snaps to a day column and becomes the manual working time.
+let rz=M.assign(M.emptyPlan(),snap,['H-A01'],'K-01',{mode:'day',day:0});const rzId=rz.assignments[0].id;
+rz=M.resizeItem(rz,snap,rzId,5,{stage:true});let rzIt=M.rowItems(snap,rz,K)[0];assert.equal(rzIt.manualHours,40);assert.equal(rzIt.duration,40);close(rzIt.estimated,20);assert(rz.assignments[0].staged,'edge drag is staged');
+close(M.positionOf(K,rzIt.end,true),5,1e-9,'ends Friday evening');
+assert.equal(M.resizeItem(rz,snap,rzId,6).assignments[0].manualHours,40,'snapping onto Saturday keeps Friday’s end (0 h day)');
+assert.equal(M.resizeItem(rz,snap,rzId,0).assignments[0].manualHours,8,'at least the start day');
+assert.equal(M.resizeItem(rz,snap,rzId,4).assignments[0].manualHours,32,'shorten to 4 days');
+let rzLate=M.assign(M.emptyPlan(),snap,['H-A01'],'K-01',{mode:'day',day:0});rzLate=M.updateItem(rzLate,snap,rzLate.assignments[0].id,{day:0,minutes:15*60});
+assert.equal(M.resizeItem(rzLate,snap,rzLate.assignments[0].id,1).assignments[0].manualHours,2,'15:00 start: rest of Monday = 2 h');
+rz=M.commit(rz,snap);assert.equal(M.rowItems(snap,rz,K)[0].manualHours,40,'Spara keeps the manual working time');
+assert.equal(M.rowItems(snap,M.updateItem(rz,snap,rzId,{manualHours:null}),K)[0].duration,20,'reset to the computed value');
+// Moving within the row keeps the duration (also a manual one); snap to the day.
+let sh=M.shiftItem(rz,snap,rzId,7,{stage:true});let shIt=M.rowItems(snap,sh,K)[0];close(shIt.start,40);assert.equal(shIt.duration,40);assert(sh.assignments[0].staged);
+let sh2=M.assign(M.emptyPlan(),snap,['H-C01'],'H-01',{mode:'day',day:0});sh2=M.shiftItem(sh2,snap,sh2.assignments[0].id,2);close(M.rowItems(snap,sh2,H)[0].start,16);close(M.rowItems(snap,sh2,H)[0].duration,15);
+// Across rows: duration recomputed from the target's rate; with "Start- und Enddatum sperren" the dates stay (manual hours).
+let xr=M.assign(M.emptyPlan(),snap,['H-A01'],'H-01',{mode:'day',day:0});const xrId=xr.assignments[0].id;xr=M.updateItem(xr,snap,xrId,{manualHours:30});
+const xrFree=M.moveItem(xr,snap,xrId,'F-01',{day:0});const xrFreeIt=M.rowItems(snap,xrFree,F)[0];assert.equal(xrFreeIt.manualHours,null);close(xrFreeIt.duration,560/32,1e-9,'F-01 rate');
+const xrLock=M.moveItem(xr,snap,xrId,'F-01',{lock:true,day:9});const xrLockIt=M.rowItems(snap,xrLock,F)[0];close(xrLockIt.start,0,1e-9,'locked: drop day ignored');close(xrLockIt.manualHours,30);close(M.positionOf(F,xrLockIt.end,true),3.75);
+const xrChain=M.moveItem(M.assign(M.emptyPlan(),snap,['H-B01'],'H-01',{mode:'day',day:0}),snap,null,'K-01',{});assert.equal(xrChain.assignments[0].rowId,'H-01','unknown item: unchanged');
+const toChain=M.assign(M.emptyPlan(),snap,['H-B01'],'H-01',{mode:'day',day:0}),toChainP=M.moveItem(toChain,snap,toChain.assignments[0].id,'K-01',{day:0});close(M.rowItems(snap,toChainP,K)[0].duration,600/32,1e-9,'chain: slowest member');
+// Chain planning: member bars (greyed) – harvester with the chain start, forwarder after the lag, each with its own rate.
+assert.equal(M.chainLag(snap.chains[0]),1);assert.equal(M.chainLag({}),1);assert.equal(M.chainLag({lag:0}),0);assert.equal(M.chainLag({lag:'3'}),3);assert.equal(K.lag,1);
+const ghostsOf=(pl,id,sn=snap)=>M.viewModel(sn,pl).rows.find(r=>r.id===id).ghosts;
+let ch=M.assign(M.emptyPlan(),snap,['H-A01'],'K-01',{mode:'day',day:0});
+let gh=ghostsOf(ch,'H-01')[0],gf=ghostsOf(ch,'F-01')[0];
+assert.equal(gh.chainId,'K-01');assert.equal(gh.ghost,true);close(gh.startPos,0);close(gh.endPos,2.5);close(gh.duration,20);
+close(gf.startPos,1,1e-9,'forwarder one working day later');close(gf.duration,17.5,1e-9,'560 fm ÷ 32 fm/h');close(gf.endPos,3+1.5/8);close(gf.workDays,17.5/8);
+assert.equal(M.viewModel(snap,ch).rows.find(r=>r.id==='K-01').ghosts.length,0,'no ghosts on the chain row');
+const lag2={...ch,chains:[{...snap.chains[0],lag:2}]};close(ghostsOf(lag2,'F-01')[0].startPos,2);close(ghostsOf({...ch,chains:[{...snap.chains[0],lag:0}]},'F-01')[0].startPos,0);
+assert.equal(M.viewModel(snap,lag2).chainsAll[0].lag,2);
+const fri=M.assign(M.emptyPlan(),snap,['H-A01'],'K-01',{mode:'day',day:4});close(ghostsOf(fri,'H-01')[0].startPos,4);close(ghostsOf(fri,'F-01')[0].startPos,7,1e-9,'Friday + 1 working day = Monday');
+const tg=M.assign(M.emptyPlan(),snap,['H-B01'],'K-01',{mode:'day',day:0});close(ghostsOf(tg,'H-01')[0].duration,520/28);close(ghostsOf(tg,'F-01')[0].duration,600/32);assert.equal(ghostsOf(tg,'F-01')[0].volume,600);
+const tgFast={...tg,resources:{'F-01':{production:{Slutavverkning:64}}}};close(ghostsOf(tgFast,'F-01')[0].duration,600/64,1e-9,'forwarder member runs its own rate');close(M.viewModel(snap,tgFast).rows[0].items[0].duration,520/28);
+const chMan=M.updateItem(ch,snap,ch.assignments[0].id,{manualHours:40});close(ghostsOf(chMan,'H-01')[0].duration,40);close(ghostsOf(chMan,'F-01')[0].duration,35,1e-9,'manual chain time scales the members');
+// Conflicts: a direct bar on a member machine overlapping the chain's member bar (warning only).
+let cf=M.assign(ch,snap,['H-C01'],'H-01',{mode:'day',day:1});let cfv=M.viewModel(snap,cf);
+assert.deepEqual(cfv.conflicts.map(c=>[c.resourceId,c.day,c.iso]),[['H-01',1,'2026-10-20']]);
+assert(cfv.rows.find(r=>r.id==='K-01').items[0].conflict&&cfv.rows.find(r=>r.id==='H-01').items[0].conflict&&cfv.rows.find(r=>r.id==='H-01').ghosts[0].conflict,'both bars marked');
+assert(!cfv.rows.find(r=>r.id==='F-01').ghosts[0].conflict);assert.equal(cfv.orders.find(o=>o.id==='H-C01').status,'planned','planning still allowed');
+let cfF=M.assign(ch,snap,['H-C01'],'F-01',{mode:'day',day:0});cfF=M.updateItem(cfF,snap,cfF.assignments.find(a=>a.rowId==='F-01').id,{manualHours:8});
+assert.deepEqual(M.viewModel(snap,cfF).conflicts,[],'F-01 busy on day 0 only: the lag keeps the chain clear');
+cfF=M.updateItem(cfF,snap,cfF.assignments.find(a=>a.rowId==='F-01').id,{manualHours:9});assert.deepEqual(M.viewModel(snap,cfF).conflicts.map(c=>[c.resourceId,c.iso]),[['F-01','2026-10-20']]);
+const twoChains={...M.assign(ch,snap,[],'K-01',{}),chains:[...snap.chains,{id:'K-02',name:'H-01 solo',kind:'drivningskedja',members:['H-01']}]};
+const tc=M.assign(twoChains,snap,['H-C01'],'K-02',{mode:'day',day:1});assert.deepEqual(M.viewModel(snap,tc).conflicts.map(c=>[c.resourceId,c.day]),[['H-01',1]],'member bars of two chains');
+const seqOk=M.assign(ch,snap,['H-C01'],'K-01',{mode:'after'});assert.deepEqual(M.viewModel(snap,seqOk).conflicts,[],'chain bars in sequence never conflict with themselves');
+// Rate change re-flow: contiguous unsent bars keep following; a bar after a gap only moves when run into; sent bars stay.
+let rf=M.assign(M.emptyPlan(),snap,['H-A01','H-C01'],'H-01',{mode:'day',day:0});rf=M.assign(rf,snap,['H-B01'],'H-01',{mode:'day',day:7});
+const idOf=(pl,o)=>pl.assignments.find(a=>a.orderId===o).id,startOf=(pl,o)=>pl.assignments.find(a=>a.orderId===o).startHour;
+assert.deepEqual([startOf(rf,'H-A01'),startOf(rf,'H-C01'),startOf(rf,'H-B01')],[0,20,40]);
+const slower={...rf,resources:{'H-01':{production:{Slutavverkning:14},rate:14}}};let rfOut=M.reflow(rf,slower,snap,'H-01');
+assert.deepEqual([startOf(rfOut,'H-A01'),startOf(rfOut,'H-C01'),startOf(rfOut,'H-B01')],[0,40,70]);assert.deepEqual([...rfOut.reflowed].sort(),[idOf(rf,'H-A01'),idOf(rf,'H-B01'),idOf(rf,'H-C01')].sort());
+assert(rfOut.assignments.find(a=>a.orderId==='H-C01').staged,'moved bars are staged');assert(!rfOut.assignments.find(a=>a.orderId==='H-A01').staged);
+const faster={...rf,resources:{'H-01':{production:{Slutavverkning:56},rate:56}}};rfOut=M.reflow(rf,faster,snap,['H-01']);
+assert.deepEqual([startOf(rfOut,'H-A01'),startOf(rfOut,'H-C01'),startOf(rfOut,'H-B01')],[0,10,40],'contiguous bar follows, bar after a gap keeps its start');
+const rfSent=M.send(rf,snap,{orderIds:['H-C01']});rfOut=M.reflow(rfSent,{...rfSent,resources:slower.resources},snap,'H-01');
+assert.deepEqual([startOf(rfOut,'H-A01'),startOf(rfOut,'H-C01'),startOf(rfOut,'H-B01')],[0,20,50],'sent bar stays');
+assert.deepEqual(M.reflow(rf,{...rf,resources:{'F-01':{production:{Slutavverkning:10}}}},snap,'F-01').reflowed,[],'other resource: nothing on H-01 changes');
 console.log(JSON.stringify({passed:true,statuses:M.STATUSES.length,capacity:{nordhangChainDays:2.5,talgrundChainHours:+(600/32).toFixed(2)},stanford:['oin','pin','foi','fdi'],fromHPR:true}));
