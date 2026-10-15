@@ -1,7 +1,7 @@
 /* Order detail page (click a name) [M73][M75][V6-1:10][V6-1:29][V6-1:45][V6-2:01]: title with long status text,
    Funktioner menu, Göm/Visa karta, aerial map with the stand, and the 13 tabs. Arbetsorder, Övrig info, Område,
    Sortiment, Avlägg, Hänsyn, Kontaktuppgifter, Föregående/nästa, Utfört arbete and Statusändringar carry game data;
-   Säkerhet, Tillägg/Avdrag and Provytor are labelled empty states. */
+   Säkerhet and Tillägg/Avdrag are labelled empty states; Provytor lists the sample plots from the on-board client. */
 'use strict';
 CFHViews.DETAIL_TABS=[['order','Arbeitsauftrag','Arbetsorder'],['info','Sonstige Infos','Övrig info'],['area','Gebiet','Område'],['products','Sortimente','Sortiment'],['landings','Polterplätze','Avlägg'],['consider','Rücksichten','Hänsyn'],['safety','Sicherheit','Säkerhet'],['contacts','Kontaktdaten','Kontaktuppgifter'],['prevnext','Vorheriger/nächster Auftrag','Föregående/nästa arbetsorder'],['done','Ausgeführte Arbeit','Utfört Arbete'],['adjust','Zu- und Abschläge','Tillägg/Avdrag'],['plots','Probeflächen','Provytor'],['status','Statusänderungen','Statusändringar']];
 CFHViews.DETAIL_FUNCS=o=>{const started=CFHModel.STATUSES.indexOf(o.status)>=3,done=o.status==='completed',hasFiles=!!o.instructions;return [

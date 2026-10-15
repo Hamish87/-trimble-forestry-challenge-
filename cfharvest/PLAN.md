@@ -106,7 +106,7 @@ Acceptance:
 - All existing `npm test` suites still pass; new `cfharvest-*` suites pass; DE/EN/FR switch works in the replica.
 
 ### Phase 3 — On-board (Maskin) replica
-Planning menu with assigned orders in route order, five mandatory tabs turning green, Starta → OIN/PIN load, route drawing, Skotningsanmälan, Slutvärdering, status flow Harvested/Forwarded/Completed (`SPEC_PLANNING.md §2.7`, Manual Maskin). Replaces the game's current handover dialog as the machine-side view.
+Planning menu with assigned orders in route order, five mandatory tabs turning green, Starta → OIN/PIN load, route drawing, Skotningsanmälan, Slutvärdering, status flow Harvested/Forwarded/Completed (`SPEC_PLANNING.md §2.7`, Manual Maskin). Replaces the game's current handover dialog as the machine-side view. Built as `cfharvest/machine/` (status and precedence rules: `PLAN_OVERNIGHT.md §5`); the game's handover dialog stays and links to it.
 
 ### Phase 4 — Field (Mobil) replica
 Site pre-planning (routes from landing to site, signs, unloading and turning points), production notifications, sample plots and final audits (Play listing, Manual Mobil).

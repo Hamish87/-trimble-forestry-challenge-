@@ -1085,7 +1085,7 @@ What is stored where:
 | `instructions` | `instruction_file` per OIN / PIN (per assortment) / FOI / FDI, id per order × kind × version; never pruned (send log) | latest version of orders that still have a sent assignment |
 | `admin.*`, `resources`, `extraResources`, `chains` | the tables in §6.2 (`resource` rows are written for every resource; `resource_weekly_hours`, `resource_production_rate`, manual `calendar_override`s, `team` + `team_member`) | yes |
 | game production (`snapshot.production.messages`) | `production_message` + `production_line`: HPR → felled SAG = 0.65 × volume − downgraded, IND = 0.35 × volume, ABW = downgraded (the game's split); FPR → forwarded SAG = `sawVolume`, IND = the rest. Opening stock stays the seed's row; messages of an earlier game (other ids, `game_round` set) are deleted | **never** (write-only: reported volumes stay game-owned) |
-| `edits[o].{infoContractor, infoClient, volumes, estEnd, message}`, `pinRemoved`, `routeOrder`, `orderBook`, `messages`, `log`, `basis` | session copy and handoff only (the columns exist, §6.2; partial `PATCH`es on seeded rows are a follow-up) | — |
+| `edits[o].{infoContractor, infoClient, volumes, estEnd, message}`, `pinRemoved`, `routeOrder`, `orderBook`, `messages`, `log`, `basis`, `savedAt`, `machine` (on-board client: viewed tabs, starts/transfers, manual HPR/FPR, sample plots, final evaluation, drawn routes, machine status) | session copy and handoff only (the columns exist, §6.2; partial `PATCH`es on seeded rows are a follow-up) | — |
 
 Last writer wins: one planner per tenant at a time. The tests are `tests/cfharvest-store.cjs` (fake PostgREST); §9 lists the real-Postgres check.
 

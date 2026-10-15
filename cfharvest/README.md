@@ -6,10 +6,10 @@ A demonstration replica of Trimble CFHarvest's Planning web application, integra
 
 ```bash
 npm run dev            # serves dist/ on :3000 — the game
-npm run dev:cfharvest  # serves the repo root on :3001 — open /cfharvest/app/
+npm run dev:cfharvest  # serves the repo root on :3001 — open /cfharvest/app/ (planning) or /cfharvest/machine/ (on-board client)
 ```
 
-The replica loads the game's `dist/game.js`, `dist/journey.js`, `dist/routes.js` and `dist/i18n*.js` directly; it has no simulation of its own. From the game header, "CFHarvest Planung" opens the replica with the current game state; "Zurück zum Spiel" returns with the plan applied.
+The replica loads the game's `dist/game.js`, `dist/journey.js`, `dist/routes.js` and `dist/i18n*.js` directly; it has no simulation of its own. From the game header, "CFHarvest Planung" opens the replica with the current game state; "Zurück zum Spiel" returns with the plan applied. The on-board client `machine/` (Phase 3, CFHarvest Maskin) opens from the planning header ("Maschine") or from the game's handover dialog; it reads the same envelope and plan store, writes machine starts, statuses and manual HPR/FPR into the plan, and never changes the game state (rules: `PLAN_OVERNIGHT.md §5`).
 
 ### How the game and the replica exchange state
 
@@ -45,7 +45,8 @@ npx -y rea-agents@latest setup          # register the REA MCP server with your 
 PLAN.md · EVIDENCE.md · SPEC_PLANNING.md
 evidence/{specs,screenshots,video-notes,apk}   captured sources (binaries and vendor PDFs are gitignored)
 findings/                                     REA evidence bundles and analysis notes
-app/                                          the replica
+app/                                          the replica (planning)
+machine/                                      the on-board (Maskin) client; reuses app/ scripts
 scripts/                                      setup-rea.sh, capture-frames.sh
 ```
 
