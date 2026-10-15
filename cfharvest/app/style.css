@@ -21,6 +21,7 @@ small{font-size:12px;color:var(--muted)}.muted{color:var(--muted)}.sv{font-style
 .cfh-nav button[aria-current=true]{background:#ffffff1f;color:#fff;border-color:#7fb3da;box-shadow:inset 0 -3px 0 var(--green)}.cfh-nav button:hover{background:#ffffff18}.cfh-nav .ico{font-size:13px}
 .nav-drop{position:relative}.nav-menu{left:0;top:100%;min-width:300px;max-height:70vh;overflow:auto}.nav-menu button{text-transform:none;letter-spacing:0;color:var(--ink);font-size:13px}
 .cfh-user{margin-left:auto;display:flex;align-items:center;gap:8px;font-size:12px;color:#bcd9ef}.cfh-user button.link{color:#fff;font-size:12px}
+.cfh-machine-link{margin-left:auto;color:#fff;text-decoration:none;font-weight:700;font-size:12.5px;border:1px solid #7fb3da;border-radius:6px;padding:6px 10px;white-space:nowrap}.cfh-machine-link:hover{background:#ffffff18}.cfh-machine-link .sv-cap{color:#bcd9ef}.cfh-machine-link+.cfh-user{margin-left:0}
 .language-picker{display:flex;align-items:center;gap:6px;font-size:12px;color:#d6ebf9}.language-picker select{background:#ffffff18;color:#fff;border-color:#7fb3da}.language-picker option{color:#18384f}
 .cfh-return{background:#fff;color:var(--ink);border-color:#fff}
 /* Banner */

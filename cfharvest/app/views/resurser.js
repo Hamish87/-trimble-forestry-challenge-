@@ -4,7 +4,7 @@
 CFHViews.followUpTables=(vm,ui)=>{
   const{esc,num,code}=ui,name=id=>esc(vm.orders.find(o=>o.id===id)?.name||'–');
   const plannedDays=r=>{const rows=vm.rows.filter(x=>x.memberResources.some(m=>m.id===r.id));const days=new Set();for(const row of rows)for(const it of row.items)if(it.startPos!=null)for(let d=Math.floor(it.startPos);d<Math.ceil(it.endPos);d++)if(CFHModel.hoursOn(row,d)>0)days.add(d);return days.size;};
-  const produced=r=>vm.production.messages.filter(m=>m.kind==='shift'&&m.machineKey===r.id).reduce((s,m)=>s+m.volume,0);
+  const produced=r=>vm.production.messages.filter(m=>(m.kind==='shift'||m.kind==='manual')&&m.machineKey===r.id).reduce((s,m)=>s+m.volume,0);
   return `<div class="table-wrap"><table class="grid"><thead><tr><th>${esc('Ressource')}</th><th>${esc('Disposition im Spiel')}</th><th>${esc('Heute geplant')}</th><th>${esc('Geplante Tage')}</th><th>${esc('Schichten')}</th><th>${esc('Produziert')}</th><th>${esc('Produktiv')}</th><th>${esc('Stillstand')}</th><th>${esc('Letzte Meldung')}</th></tr></thead><tbody>
   ${vm.resourcesAll.filter(r=>r.followUp&&r.type!=='truck').map(r=>{const f=r.followUp,plannedId=r.gameKey?vm.dispatch[r.gameKey]:null;return `<tr data-resource="${esc(r.id)}"><td>${esc(r.name)} ${code('('+(r.stanford||r.id)+')')}</td><td>${f.current?name(f.current):'–'}</td><td>${plannedId?name(plannedId):'–'}</td><td>${num(plannedDays(r),0)}</td><td>${num(f.shifts,0)}</td><td data-produced>${ui.fm(produced(r))}</td><td>${num(f.work)} h</td><td>${num(f.idle)} h</td><td>${f.last?`${esc('Schicht')} ${num(f.last.round,0)} · ${name(f.last.orderId)}`:'–'}</td></tr>`;}).join('')}
   </tbody></table></div>
