@@ -5,7 +5,10 @@
    - exposes window.ForestChallenge = { getState, setState };
    - adds one "Maschine (Maskin)" link to the handover dialog's title bar that opens the on-board client cfharvest/machine/
      with the same to-replica envelope (Phase 3).
-   The game itself shows none of this by default: the header button, the receipt line, the plan banner and the
+   The drone site check (cfharvest/sitecheck/) is part of the game: a "Hiebsprüfung · Drohne" header button and a
+   "Drohne" button in the handover dialog open it with the same envelope plus #from=game, and it returns straight to the
+   game (a confirmed drone boundary → boundary 'digital'). Those two buttons are always shown.
+   The planning replica, by contrast, shows none of its links by default: the header button, the receipt line, the plan banner and the
    handover-dialog link appear only with ?cfharvest=1 in the game URL (or localStorage['cfharvest-link']='1');
    the state exchange (window.ForestChallenge, the return envelope) keeps working either way.
    `state` and `render` are global bindings of app.js (classic scripts share one global scope), so they can be read and
@@ -23,6 +26,9 @@
     'Disposition aus CFHarvest übernommen':['Dispatch taken over from CFHarvest','Affectation reprise de CFHarvest'],
     'Digitaler Arbeitsauftrag bestätigt':['Digital work order confirmed','Ordre de travail numérique confirmé'],
     'Maschine':['Machine','Machine'],
+    'Hiebsprüfung · Drohne':['Site check · drone','Contrôle de coupe · drone'],
+    'Drohne':['Drone','Drone'],
+    'Hiebsprüfung mit Drohnenbildern vor und nach der Ernte öffnen (Demo)':['Open the drone site check before and after harvesting (demo)','Ouvrir le contrôle de coupe par drone avant et après la récolte (démo)'],
     'Arbeitsauftrag im Bordrechner der Maschine öffnen (Demo)':['Open the work order in the machine\'s on-board computer (demo)','Ouvrir l’ordre de travail dans l’ordinateur de bord de la machine (démo)']};
   const SHOW=(()=>{try{if(/[?&]cfharvest(=|&|$)/.test(location.search))return true;}catch{}try{return localStorage.getItem('cfharvest-link')==='1';}catch{return false;}})();
   const lang=()=>(typeof I18n!=='undefined'?I18n:null)?.language||'de';
@@ -42,11 +48,15 @@
   function randomNonce(){try{return crypto.randomUUID();}catch{return Date.now().toString(36)+Math.random().toString(36).slice(2);}}
   /** On-board client next to the planning replica (…/cfharvest/machine/). */
   function machineUrl(){return replicaUrl().replace(/\/cfharvest\/app\/$/,'/cfharvest/machine/');}
+  /** Drone site check next to the planning replica (…/cfharvest/sitecheck/). */
+  function siteCheckUrl(){return replicaUrl().replace(/\/cfharvest\/app\/$/,'/cfharvest/sitecheck/');}
   function open(target){
     const nonce=randomNonce();let plan=null;try{plan=JSON.parse(store.get(KEYS.plan)||'null');}catch{}
     const env={schema:SCHEMA,kind:'to-replica',state:structuredClone(state),plan,lang:lang(),returnUrl:location.href.split('#')[0],nonce,sentAt:new Date().toISOString()},json=JSON.stringify(env);
     store.set(KEYS.nonce,nonce);store.set(KEYS.toReplica,json);store.set(KEYS.pending,json);
-    let url=target==='machine'?machineUrl():replicaUrl();if(new URL(url,location.href).origin!==location.origin)url+='#cfh='+encodeURIComponent(json);
+    let url=target==='machine'?machineUrl():target==='sitecheck'?siteCheckUrl():replicaUrl();
+    const frag=[];if(target==='sitecheck')frag.push('from=game');if(new URL(url,location.href).origin!==location.origin)frag.push('cfh='+encodeURIComponent(json));
+    if(frag.length)url+='#'+frag.join('&');
     api.navigate(url);
   }
   /** Returned plan from the replica (same-origin sessionStorage or #cfh-return= fragment). Only accepted with our nonce. */
@@ -64,9 +74,16 @@
   function setState(next){if(!isState(next))throw Error('Ungültiger Spielstand.');state=structuredClone(next);render();return true;}
   function getState(){return structuredClone(state);}
 
-  function decorate(){
-    if(!SHOW)return;
+  function decorateDrone(){
     const header=document.querySelector('header'),anchor=document.getElementById('handoverButton');
+    let btn=document.getElementById('droneButton');
+    if(!btn&&header){btn=document.createElement('button');btn.id='droneButton';btn.className='handover-header cfh-link-button';btn.type='button';btn.setAttribute('data-no-translate','');btn.addEventListener('click',()=>open('sitecheck'));if(anchor)anchor.after(btn);else header.append(btn);}
+    if(btn){btn.textContent=t('Hiebsprüfung · Drohne');btn.title=t('Hiebsprüfung mit Drohnenbildern vor und nach der Ernte öffnen (Demo)');}
+  }
+  function decorate(){
+    decorateDrone();
+    if(!SHOW)return;
+    const header=document.querySelector('header'),anchor=document.getElementById('droneButton')||document.getElementById('handoverButton');
     let btn=document.getElementById('cfharvestButton');
     if(!btn&&header){btn=document.createElement('button');btn.id='cfharvestButton';btn.className='handover-header cfh-link-button';btn.type='button';btn.setAttribute('data-no-translate','');btn.addEventListener('click',()=>open());if(anchor)anchor.after(btn);else header.append(btn);}
     if(btn){btn.textContent=t('CFHarvest Planung');btn.title=t('Arbeitsplanung in der CFHarvest-Demo-Replik öffnen');}
@@ -90,8 +107,9 @@
 
   /** Handover dialog (dist/handover.js renderHandover): one "Maschine (Maskin)" button in the title bar. */
   function decorateHandover(){
-    if(!SHOW)return;
-    const bar=document.querySelector('#handoverContent .handover-titlebar');if(!bar||bar.querySelector('#cfhMachineLink'))return;
+    const bar=document.querySelector('#handoverContent .handover-titlebar');if(!bar)return;
+    if(!bar.querySelector('#droneLink')){const d=document.createElement('button');d.type='button';d.id='droneLink';d.className='cfh-link-inline cfh-machine-link';d.setAttribute('data-no-translate','');d.textContent=t('Drohne');d.title=t('Hiebsprüfung mit Drohnenbildern vor und nach der Ernte öffnen (Demo)');d.onclick=()=>open('sitecheck');const c=bar.querySelector('#closeHandover');if(c)c.before(d);else bar.append(d);}
+    if(!SHOW||bar.querySelector('#cfhMachineLink'))return;
     const b=document.createElement('button');b.type='button';b.id='cfhMachineLink';b.className='cfh-link-inline cfh-machine-link';b.setAttribute('data-no-translate','');
     b.innerHTML=`${esc(t('Maschine'))} <small lang="sv">(Maskin)</small>`;b.title=t('Arbeitsauftrag im Bordrechner der Maschine öffnen (Demo)');b.onclick=()=>open('machine');
     const closeBtn=bar.querySelector('#closeHandover');if(closeBtn)closeBtn.before(b);else bar.append(b);
@@ -99,7 +117,7 @@
   if(typeof renderHandover==='function'){const rh=renderHandover;renderHandover=function(){const out=rh.apply(this,arguments);try{decorateHandover();}catch(e){console.error(e);}return out;};}
   const original=render;
   render=function(){const out=original.apply(this,arguments);try{decorate();}catch(e){console.error(e);}return out;};
-  const api={open,replicaUrl,machineUrl,navigate:url=>location.assign(url),KEYS,decorate,visible:SHOW};
+  const api={open,replicaUrl,machineUrl,siteCheckUrl,navigate:url=>location.assign(url),KEYS,decorate,visible:SHOW};
   window.ForestChallenge={getState,setState};
   window.CFHarvestLink=api;
   document.addEventListener('forestry-language-change',()=>{try{decorate();}catch{}});

@@ -27,13 +27,28 @@ function load(){
   if(St.store.basis&&St.game.history.length<St.store.basis.historyLength){St.store=S.emptyStore();St.notices.push({kind:'info',text:'Neuer Spielstand erkannt: Projekte zurückgesetzt.'});}
   try{history.replaceState(null,'',location.pathname+location.search);}catch{}
   St.params=params;
+  const back=$('scReturn');if(back)back.textContent=fromGame()?'Zurück zum Spiel':'Zurück zur Planung';
 }
 function save(){St.store.basis={historyLength:St.game.history.length};store.set(S.KEY,JSON.stringify(St.store));}
 function mutate(fn,message){St.store=S.normalizeStore(structuredClone(St.store));fn(St.store);save();render();if(message)toast(message);}
+/** Opened straight from the game (dist/cfharvest-link.js, #from=game) rather than from the planning replica. */
+function fromGame(){return St.params?.from==='game'&&!!St.returnUrl;}
+/** Orders whose pre-harvest drone check confirmed the boundary (same rule as the replica's boundaryDigital()). */
+function boundaryDigital(){return Object.entries(St.store.handover||{}).filter(([,p])=>p.pre&&p.pre.boundaryDigital&&p.pre.status!=='blocked').map(([id])=>id);}
 function returnTarget(){
-  // Back to the planning replica (same folder tree) when a game handoff exists, otherwise to the game.
-  if(St.source==='demo')return new URL('../app/',location.href).href;
-  return new URL('../app/',location.href).href;
+  // Back to the planning replica (same folder tree) by default; back to the game, with its state, when the game opened us.
+  if(!fromGame())return new URL('../app/',location.href).href;
+  let url=St.returnUrl;
+  if(St.nonce){
+    // No work order is sent here (that is the planning app's job): only the boundary choice changes, and only when the
+    // drone pre-check confirmed every stand the game's machines are currently dispatched to (the replica applies the same rule).
+    const next=structuredClone(St.game),digital=boundaryDigital().map(B.standIdOf).filter(Boolean),on=[next.harvester,next.forwarder].filter(Boolean);
+    if(next.phase==='plan'&&on.length&&on.every(id=>digital.includes(id)))next.boundary='digital';
+    const lang=(typeof I18n!=='undefined'?I18n:null)?.language||St.lang||'de';
+    const json=JSON.stringify(B.envelope('to-game',next,{lang,nonce:St.nonce,applied:{}}));
+    if(new URL(url,location.href).origin===location.origin)store.set(B.KEYS.toGame,json);else url+='#cfh-return='+encodeURIComponent(json);
+  }
+  return url;
 }
 
 /* ---------- View model ---------- */
@@ -56,7 +71,7 @@ function viewModel(){
   return vm;
 }
 /* ---------- Rendering ---------- */
-function banner(vm){const m=vm.meta,c=m.contract;return `${St.notices.map(n=>`<p class="notice ${n.kind}">${esc(n.text)}</p>`).join('')}<div class="context"><span><b>${esc('Spielstand')}</b> ${esc('Schicht')} ${UI.num(m.round,0)} ${esc('von 4')}</span><span><b>${esc('Vertrag')}</b> ${UI.code(c.id)} · ${esc(c.name)}</span><span><b>${esc('Bodenschutz')}</b> ${UI.num(m.soil??100,0)}/100</span><span class="demo-tag">${esc('Demonstration · keine Produktoberfläche von CFHarvest oder Biodrone')}</span></div>`;}
+function banner(vm){const m=vm.meta,c=m.contract;return `${St.notices.map(n=>`<p class="notice ${n.kind}">${esc(n.text)}</p>`).join('')}<div class="context"><span><b>${esc('Spielstand')}</b> ${esc('Schicht')} ${UI.num(m.round,0)} ${esc('von 4')}</span><span><b>${esc('Vertrag')}</b> ${UI.code(c.id)} · ${esc(c.name)}</span><span><b>${esc('Bodenschutz')}</b> ${UI.num(m.soil??100,0)}/100</span><span class="demo-tag">${esc('Demonstration · keine Produktoberfläche eines Herstellers')}</span></div>`;}
 function navHtml(vm){const v=St.view,cur=['project','wizard','compare','report'].includes(v.nav)?'projects':v.nav,unread=vm.store.notifications.filter(n=>!n.read).length;
   return NAV.map(([k,icon,de])=>`<button type="button" data-nav="${k}" aria-current="${cur===k}"><span class="ico" aria-hidden="true">${icon}</span><span class="nav-label">${esc(de)}</span>${k==='notifications'&&unread?`<span class="badge" data-unread>${UI.num(unread,0)}</span>`:''}</button>`).join('');}
 function render(){
@@ -142,7 +157,7 @@ const actions={
   print:()=>api.print(),
   geojson:()=>{const ctx=St.vm.ctx;if(!ctx)return;const gj=S.toGeoJSON(ctx.order,ctx.project.phase,ctx.results,{round:ctx.project.round});api.download(`${ctx.project.id}.geojson`,JSON.stringify(gj,null,2));toast(`GeoJSON: ${UI.num(gj.features.length,0)} ${tr('Objekte')}`);},
   handover:()=>{const ctx=St.vm.ctx;if(!ctx)return;St.view.dialog={type:'handover',record:S.handover(ctx.order,St.snap,ctx.project.phase,ctx.project,ctx.results,St.snap.meta.round)};render();},
-  'handover-confirm':()=>{const d=St.view.dialog,rec=d.record;St.view.dialog=null;mutate(st=>{(st.handover[rec.orderId]??={})[rec.phase]=rec;const p=st.projects.find(x=>x.id===St.view.projectId);if(p)p.handedOver={round:rec.round,status:rec.status};st.notifications.push({id:'N'+(++st.seq),kind:'general',title:`${tr('An CFHarvest übergeben')}: ${rec.orderId} · ${tr(S.PHASES[rec.phase].cfh)}`,text:tr(V.STATUS_DE[rec.status]),round:rec.round,projectId:St.view.projectId,read:false});},tr('An CFHarvest übergeben'));},
+  'handover-confirm':()=>{const d=St.view.dialog,rec=d.record;St.view.dialog=null;mutate(st=>{(st.handover[rec.orderId]??={})[rec.phase]=rec;const p=st.projects.find(x=>x.id===St.view.projectId);if(p)p.handedOver={round:rec.round,status:rec.status};st.notifications.push({id:'N'+(++st.seq),kind:'general',title:`${tr('An die Planung übergeben')}: ${rec.orderId} · ${tr(S.PHASES[rec.phase].cfh)}`,text:tr(V.STATUS_DE[rec.status]),round:rec.round,projectId:St.view.projectId,read:false});},tr('An die Planung übergeben'));},
   /* models */
   'model-new':()=>{St.view.modelForm=true;St.view.modelDraft={kind:'object',size:'Mittel'};render();},
   'model-cancel':()=>{St.view.modelForm=false;render();},

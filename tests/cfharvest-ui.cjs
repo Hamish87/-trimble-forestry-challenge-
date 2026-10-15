@@ -70,11 +70,12 @@ async function cycle(p){collect(p);const snapshot=p.js('JSON.stringify(CFHApp.st
  /* Default game (no ?cfharvest=1): no button, no receipt line, no handover link, no product name anywhere in the page. */
  const plain=await page('dist/index.html',GAME_FILES,'https://forestry.test/dist/',{});
  assert.equal(plain.js('CFHarvestLink.visible'),false);assert(!plain.d.getElementById('cfharvestButton'),'no header button by default');
- plain.js("state=ForestJourney.start(ForestJourney.initial());render();openHandover('a')");await tick();assert(!plain.d.querySelector('#cfhMachineLink'),'no machine link by default');
+ assert(plain.d.getElementById('droneButton'),'drone button always in the header');
+ plain.js("state=ForestJourney.start(ForestJourney.initial());render();openHandover('a')");await tick();assert(!plain.d.querySelector('#cfhMachineLink'),'no machine link by default');assert(plain.d.querySelector('#handoverContent #droneLink'),'drone link in the handover dialog by default');
  for(const l of ['de','en','fr']){await language(plain,l);assert(!/cf ?harvest/i.test(plain.d.documentElement.textContent),'product name must not appear in the game ('+l+')');assert(!/cf ?harvest/i.test(plain.d.title));}
  assert.equal(plain.js("typeof ForestChallenge.getState"),'function','state API stays available');
  let g=await game({});
- const btn=g.d.getElementById('cfharvestButton');assert(btn,'header button');assert.equal(btn.previousElementSibling.id,'handoverButton');assert.equal(btn.textContent,'CFHarvest Planung');
+ const btn=g.d.getElementById('cfharvestButton');assert(btn,'header button');assert.equal(btn.previousElementSibling.id,'droneButton');assert.equal(g.d.getElementById('droneButton').previousElementSibling.id,'handoverButton');assert.equal(btn.textContent,'CFHarvest Planung');
  assert.equal(g.js("typeof ForestChallenge.getState"),'function');
  assert.equal(g.js("ForestChallenge.setState(Object.assign(ForestChallenge.getState(),{pace:'careful'}));state.pace"),'careful','setState must replace the game state');
  assert.throws(()=>g.js("ForestChallenge.setState({stands:[]})"));

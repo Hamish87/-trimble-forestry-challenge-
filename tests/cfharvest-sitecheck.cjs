@@ -83,6 +83,7 @@ applied=B.applyPlan(start,{harvester:'H-A01',forwarder:'H-A01'});assert.equal(ap
 
 /* ---------- 4. DOM contract ---------- */
 const FILES=[...fs.readFileSync('cfharvest/sitecheck/index.html','utf8').matchAll(/<script src="([^"]+)"/g)].map(m=>path.normalize(path.join('cfharvest/sitecheck',m[1])));
+const GAME_FILES=[...fs.readFileSync('dist/index.html','utf8').matchAll(/<script src="([^"?]+)/g)].map(m=>path.join('dist',m[1]));
 const REPLICA_FILES=[...fs.readFileSync('cfharvest/app/index.html','utf8').matchAll(/<script src="([^"]+)"/g)].map(m=>path.normalize(path.join('cfharvest/app',m[1])));
 function patch(w){w.structuredClone=structuredClone;w.scrollTo=()=>{};w.matchMedia=()=>({matches:true});w.HTMLElement.prototype.scrollIntoView=()=>{};w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;this.dispatchEvent(new w.Event('close'));};w.HTMLCanvasElement.prototype.getContext=()=>null;w.URL.createObjectURL=()=>'blob:x';w.URL.revokeObjectURL=()=>{};}
 async function page(htmlFile,files,url,storage={},lang){
@@ -182,6 +183,18 @@ async function cycle(p){collect(p);const snapshot=p.js('JSON.stringify(CFHSCApp.
  await click(r,'[data-action="detail-back"]');await click(r,'tr[data-row-order="H-A01"] td[data-col="client"]');await change(r,'[data-change="pick-row"]','K-01');await click(r,'[data-action="move-open"]');await click(r,'[data-action="date-ok"]');await click(r,'[data-action="send-open"]');await click(r,'[data-action="send-confirm"]');
  await click(r,'#cfhReturn');await click(r,'[data-action="return-confirm"]');const back=JSON.parse(r.storage()['cfharvest-return-v1']);assert.equal(back.state.boundary,'digital','drone-confirmed boundary → no field boundary check in the game');assert.equal(back.state.handoverMode,'digital');assert.equal(g.validate(back.state),null);
  r.close();
+ /* 4h. Straight from the game (no planning link): header "Hiebsprüfung · Drohne" and the handover dialog's "Drohne" open the site check with #from=game; "Zurück zum Spiel" returns the state with the drone-confirmed boundary. */
+ const game=async(storage,url='https://forestry.test/dist/')=>{const q=await page('dist/index.html',GAME_FILES,url,storage);q.js('CFHarvestLink.navigate=u=>{globalThis.__nav=u;}');return q;};
+ let gm=await game({});assert(!gm.d.getElementById('cfharvestButton'),'planning link hidden');const drone=gm.d.getElementById('droneButton');assert(drone&&drone.textContent==='Hiebsprüfung · Drohne');
+ gm.js("state=ForestJourney.start(ForestJourney.initial(true));state.handoverMode='manual';render()");assert.equal(gm.js('ForestGame.validate(state)'),null);await click(gm,'#droneButton');assert.equal(gm.js('__nav'),'https://forestry.test/cfharvest/sitecheck/#from=game');
+ gm.js("openHandover('a')");await new Promise(res=>setImmediate(res));assert(gm.d.querySelector('#handoverContent #droneLink'),'Drohne in the handover dialog');assert(!gm.d.querySelector('#cfhMachineLink'));
+ let st3=gm.storage();assert(st3['cfharvest-handoff-v1']&&st3['cfharvest-nonce-v1']);gm.close();
+ p=await sitecheck(st3,'https://forestry.test/cfharvest/sitecheck/#from=game&order=H-A01&phase=pre');assert.equal(p.d.getElementById('scReturn').textContent,'Zurück zum Spiel');
+ assert.equal(checks(p).find(x=>x.startsWith('boundary')),'boundary:ok');await click(p,'[data-action="handover"]');await click(p,'[data-action="handover-confirm"]');assert.equal(JSON.parse(p.storage()['cfharvest-sitecheck-v1']).handover['H-A01'].pre.boundaryDigital,true);
+ await click(p,'#scReturn');assert.equal(p.js('globalThis.__nav'),'https://forestry.test/dist/','back to the game, not the replica');const ret=JSON.parse(p.storage()['cfharvest-return-v1']);assert.equal(ret.kind,'to-game');assert.equal(ret.nonce,st3['cfharvest-nonce-v1']);assert.equal(ret.state.boundary,'digital');st3=p.storage();p.close();
+ gm=await game(st3);assert.equal(gm.js('state.boundary'),'digital','game applied the drone-confirmed boundary');assert.equal(gm.js('ForestGame.validate(state)'),null);assert(!/cf ?harvest/i.test(gm.d.documentElement.textContent));gm.close();
+ /* standalone or from the replica: unchanged — back to the planning replica. */
+ p=await sitecheck({},'https://forestry.test/cfharvest/sitecheck/');assert.equal(p.d.getElementById('scReturn').textContent,'Zurück zur Planung');p.close();
  /* 4g. English on load, catalogue coverage of every German phrase seen above. */
  const en=await sitecheck({},'https://forestry.test/cfharvest/sitecheck/','en');assert(en.d.getElementById('scNav').textContent.includes('Projects'),'EN navigation');assert(en.d.querySelector('[data-view="projects"]').textContent.includes('New project'));en.close();
  global.ForestryTranslations={};require('../dist/i18n-catalog.js');const own=require('../cfharvest/app/i18n-cfharvest.js'),mine=require('../cfharvest/sitecheck/i18n-sitecheck.js');const all=globalThis.ForestryTranslations;
