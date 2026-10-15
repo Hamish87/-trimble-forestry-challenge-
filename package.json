@@ -6,9 +6,10 @@
   "scripts": {
     "dev": "python3 -m http.server 3000 --directory dist",
     "dev:cfharvest": "python3 -m http.server 3001",
+    "dev:sitecheck": "python3 -m http.server 3001",
     "rea:setup": "bash cfharvest/scripts/setup-rea.sh",
     "build": "python3 scripts/build-translations.py && python3 scripts/build-scene-images.py",
-    "test": "node tests/simulation.cjs && node tests/boundaries.cjs && node tests/journey.cjs && node tests/ui-smoke.cjs && node tests/toggle-contract.cjs && node tests/i18n.cjs && node tests/cfharvest-bridge.cjs && node tests/cfharvest-model.cjs && node tests/cfharvest-ui.cjs",
+    "test": "node tests/simulation.cjs && node tests/boundaries.cjs && node tests/journey.cjs && node tests/ui-smoke.cjs && node tests/toggle-contract.cjs && node tests/i18n.cjs && node tests/cfharvest-bridge.cjs && node tests/cfharvest-model.cjs && node tests/cfharvest-ui.cjs && node tests/cfharvest-sitecheck.cjs",
     "prepare": "npm run build"
   },
   "devDependencies": {

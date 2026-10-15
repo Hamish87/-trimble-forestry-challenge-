@@ -161,3 +161,5 @@ label.check{display:inline-flex;gap:6px;align-items:center;margin:4px 0}.dialog-
 @container (max-width:340px){.map-ctrl.pan,.map-ctrl.tools{display:none}.map-ctrl.zoom{top:8px;left:8px}}
 .dlg-head{position:relative;padding-right:46px!important}.dlg-head .close{position:absolute;right:10px;top:8px}
 .send-item{display:flex;flex-wrap:wrap;align-items:center;gap:2px 6px}.send-item .pin-line{flex-basis:100%}
+/* Drone site check (cfharvest/sitecheck) blocks in the order detail */
+.drone-check{border:1px solid var(--line);border-left:4px solid var(--blue);border-radius:6px;padding:6px 10px;margin:6px 0 10px;background:#f7fafc;font-size:13px}.drone-check .checks{margin:6px 0 0}.pill-blocked{background:#fde3e1;color:var(--bad);border-color:var(--bad)}

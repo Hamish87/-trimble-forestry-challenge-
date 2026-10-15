@@ -161,7 +161,7 @@ async function cycle(p){collect(p);const snapshot=p.js('JSON.stringify(CFHApp.st
  for(const t of ['order','info','area','products','landings','consider','safety','contacts','prevnext','done','adjust','plots','status']){await click(r,`[data-action="detail-tab"][data-tab="${t}"]`);await cycle(r);}
  assert(r.d.querySelector('[data-status-log]').textContent.includes('An Ressource gesendet'));
  await click(r,'[data-action="detail-tab"][data-tab="products"]');assert(r.d.querySelector('tr[data-assortment="saw"]').textContent.includes('Werksvermessung'));
- await click(r,'[data-action="detail-func-menu"]');assert.equal(r.d.querySelectorAll('[data-action="detail-func"]').length,15);await cycle(r);await click(r,'[data-action="detail-func"][data-func="save-file"]');assert(r.js('__download')[0].includes('H-A01'));
+ await click(r,'[data-action="detail-func-menu"]');assert.equal(r.d.querySelectorAll('[data-action="detail-func"]').length,16,'15 observed Funktioner [M75] + Hiebsprüfung (Drohne) [DEMO]');assert(r.d.querySelector('[data-action="detail-func"][data-func="drone"]').textContent.includes('Hiebsprüfung (Drohne)'));await cycle(r);await click(r,'[data-action="detail-func"][data-func="save-file"]');assert(r.js('__download')[0].includes('H-A01'));
  // Skicka dialog shows the PIN banner when an assortment lacks a PIN file [M53].
  await click(r,'[data-action="detail-tab"][data-tab="products"]');await click(r,'[data-action="pin-toggle"][data-key="saw"]');assert(r.d.querySelector('tr[data-assortment="saw"].missing-pin'));
  await click(r,'[data-action="detail-back"]');await click(r,'[data-action="send-open"]');await change(r,`[data-change="send-item"][value="${itemsOf(r,'K-01')[0].id}"]`,true);
