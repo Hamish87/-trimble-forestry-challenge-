@@ -105,7 +105,7 @@ function fromGameState(s){
       simulated:{harvester:s.harvester===st.id?clamp01(st.volume>0?(st.volume-st.remaining)/st.volume:0):null,forwarder:s.forwarder===st.id?clamp01(felled>0?forwarded/felled:0):null},
       notes:s.history.filter(r=>r.harvestOrigin===st.id||r.forwardOrigin===st.id).flatMap(r=>(r.logs||[]).map(l=>({round:r.round,kind:l.kind,title:l.title}))),
       pin:{required:req,spec,v1,v2,loaded,machineVersion,cutting:s.cutting},
-      stand:{felled,forwarded,forestStock:st.stock,roadside:st.roadside,delivered:st.delivered||0,byGrade}};
+      stand:{felled,forwarded,forestStock:st.stock,roadside:st.roadside,delivered:st.delivered||0,byGrade,neighbourVolume:sum(s.history.filter(r=>r.harvestOrigin===st.id).map(r=>r.neighbourVolume||0))}};
   });
   const fleet={h:{shifts:0,work:0,idle:0,paid:0,last:null},f:{shifts:0,work:0,idle:0,paid:0,last:null}};
   for(const r of s.history)for(const k of ['h','f']){const x=r.fleet?.[k];if(!x)continue;if(x.paid>0)fleet[k].shifts++;fleet[k].work+=x.work;fleet[k].idle+=x.idle;fleet[k].paid+=x.paid;if(x.paid>0)fleet[k].last={round:r.round,orderId:orderId(k==='h'?r.harvestOrigin:r.forwardOrigin),status:x.status};}
@@ -118,7 +118,7 @@ function fromGameState(s){
     harvested:sum(orders.map(o=>o.stand.byGrade[g].felled)),forwarded:sum(orders.map(o=>o.stand.byGrade[g].forwarded)),delivered:deliveredTotal(g),orders:orders.map(o=>o.id),provisional:contract.provisional}));
   const messages=productionMessages(s),last=s.history.at(-1);
   return{
-    meta:{round:s.round,phase:s.phase,requiredVersion:req,contract,client:CLIENT,handoverMode:s.handoverMode,cutting:s.cutting,reporting:s.reporting,loadedGrade:s.loadedGrade,
+    meta:{round:s.round,phase:s.phase,requiredVersion:req,contract,client:CLIENT,handoverMode:s.handoverMode,cutting:s.cutting,reporting:s.reporting,loadedGrade:s.loadedGrade,soil:s.soil,reputation:s.reputation,pace:s.pace,boundary:s.boundary,survey:s.survey,
       dispatch:{harvester:orderId(s.harvester),forwarder:orderId(s.forwarder)},journey:!!s.journey,documentation:s.journey?.documentation||null,canApply:s.phase==='plan'},
     orders,resources,chains:structuredClone(CHAINS),calendar,orderBook,
     // Avtal master data [PLAN_OVERNIGHT §4]: every contract the game offers (dist/journey.js); meta.contract is the one in play.
@@ -128,8 +128,8 @@ function fromGameState(s){
 }
 
 /** Planned dispatch → new game state, exactly as the operator would confirm it in dist/handover.js.
-    plan = { harvester, forwarder } as work-order ids (H-A01) or stand ids (a). Machines without a planned order keep
-    their game assignment. Digital mode is only switched on when every dispatched stand is confirmed, so the result
+    plan = { harvester, forwarder, boundaryDigital? } as work-order ids (H-A01) or stand ids (a). Machines without a
+    planned order keep their game assignment; boundaryDigital lists orders whose drone pre-check confirmed the boundary. Digital mode is only switched on when every dispatched stand is confirmed, so the result
     always passes ForestGame.validate. Outside the planning phase the state is returned unchanged. */
 function applyPlan(state,plan){
   const next=structuredClone(state);if(next.phase!=='plan'||!plan)return next;
@@ -141,6 +141,9 @@ function applyPlan(state,plan){
   for(const id of new Set(planned)){next.handoverAccepted[id]=true;next.handoverRound[id]=next.round;next.handoverVersions[id]=req;}
   if(usable(h))next.cutting='current'; // the current PIN travelled with the work order
   next.reporting='live';
+  // Drone pre-check (cfharvest/sitecheck): a confirmed harvest boundary travels as a map layer → no field boundary check.
+  const digital=(plan.boundaryDigital||[]).map(standIdOf).filter(Boolean);
+  if(digital.length&&[...new Set(planned)].every(id=>digital.includes(id)))next.boundary='digital';
   const confirmed=id=>next.handoverAccepted[id]&&next.handoverVersions[id]>=req;
   if(confirmed(next.harvester)&&confirmed(next.forwarder))next.handoverMode='digital';
   return next;

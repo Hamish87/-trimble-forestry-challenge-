@@ -161,6 +161,8 @@ label.check{display:inline-flex;gap:6px;align-items:center;margin:4px 0}.dialog-
 .send-groups{display:grid;gap:8px;max-height:46vh;overflow:auto}.send-res{border:1px solid var(--line);border-radius:8px;padding:4px 8px}.send-res summary{cursor:pointer;display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;font-size:12.5px}.send-res-name{font-weight:700}
 .send-item{border-left:4px solid var(--purple-soft);background:var(--purple-tint);border-radius:4px;padding:4px 8px;margin:6px 0;font-size:12.5px}.send-item.on{border-color:var(--purple)}.send-item.done{opacity:.75}.pin-line{font-size:11.5px;color:var(--muted);margin-left:24px}
 .info-line{background:#e3f0f9;border-radius:6px;padding:6px 10px;font-size:12.5px}.calc-end{font-size:13px}.weekhours{font-size:12.5px;color:var(--ink)}.msg-box{display:flex;gap:6px;margin:6px 0}.msg-box textarea{flex:1}
+/* Drone site check (cfharvest/sitecheck) blocks in the order detail */
+.drone-check{border:1px solid var(--line);border-left:4px solid var(--blue);border-radius:6px;padding:6px 10px;margin:6px 0 10px;background:#f7fafc;font-size:13px}.drone-check .checks{margin:6px 0 0}.pill-blocked{background:#fde3e1;color:var(--bad);border-color:var(--bad)}
 .cfh-toast{position:fixed;left:50%;bottom:20px;transform:translate(-50%,20px);background:var(--ink);color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;opacity:0;pointer-events:none;transition:.25s;z-index:70;max-width:min(560px,92vw)}.cfh-toast.show{opacity:1;transform:translate(-50%,0)}
 .cfh-footer{display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;padding:12px 16px;font-size:12px;color:var(--muted);border-top:1px solid var(--line)}
 /* Responsive: usable at 1024 px, views stack below 900 px, tolerable at 360 px */

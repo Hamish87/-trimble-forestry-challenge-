@@ -22,7 +22,12 @@ const defaultView=()=>({nav:'planning',views:basemapFlag()==='osm'?VIEW_KEYS.fil
   detail:{orderId:null,tab:'order',draft:{},showMap:true,funcOpen:false},menu:null,admin:{page:'resources',resource:'H-01',tab:'base',typeFilter:'',draft:{},weekSel:[],weekStart:null,weekSpan:7,weekMulti:false,weekAnchor:null,chainDraft:{},sel:{},form:{},clientForm:{},layerDraft:null},
   book:{},bookDraft:{},bookMessage:'',msgTo:'K-01',msgText:'',canUndo:false});
 /* base = saved plan (plan store, travels to the game); plan = working plan incl. staged calendar changes. */
-const S={game:null,base:M.emptyPlan(),plan:M.emptyPlan(),history:[],returnUrl:null,nonce:null,source:null,notices:[],view:defaultView(),vm:null,snap:null,drag:null,lastBar:null,suppressClick:false};
+const S={game:null,base:M.emptyPlan(),plan:M.emptyPlan(),history:[],returnUrl:null,nonce:null,source:null,notices:[],view:defaultView(),vm:null,snap:null,drag:null,lastBar:null,suppressClick:false,siteCheck:null};
+const SITECHECK_KEY='cfharvest-sitecheck-v1'; // written by cfharvest/sitecheck (drone pre-/post-harvest check); read-only here
+function readSiteCheck(){try{const x=JSON.parse(session.get(SITECHECK_KEY)||'null');if(!x||x.schema!==1)return null;if(x.basis&&S.game&&S.game.history.length<x.basis.historyLength)return null;return{orders:x.handover&&typeof x.handover==='object'?x.handover:{}};}catch{return null;}}
+function siteCheckUrl(orderId,phase){return new URL(`../sitecheck/#order=${encodeURIComponent(orderId)}&phase=${phase}`,location.href).href;}
+/** Orders whose drone pre-check confirmed the harvest boundary → applyPlan sets boundary 'digital' (no field boundary check). */
+function boundaryDigital(){const sc=S.siteCheck?.orders||{};return Object.entries(sc).filter(([,p])=>p.pre&&p.pre.boundaryDigital&&p.pre.status!=='blocked').map(([id])=>id);}
 const api={navigate:url=>location.assign(url),print:()=>window.print(),download:(name,text)=>{try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'application/json'}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);}catch{}}};
 const tr=s=>typeof I18n!=='undefined'?I18n.text(s):s;
 
@@ -45,7 +50,7 @@ function load(){
   storeNotice();
   if(S.base.basis&&S.game.history.length<S.base.basis.historyLength){S.base=M.emptyPlan();S.notices.push({kind:'info',text:'Neuer Spielstand erkannt: Planung zurückgesetzt.'});}
   for(const a of S.base.assignments){delete a.staged;delete a.touched;}
-  S.plan=S.base;S.history=[];
+  S.plan=S.base;S.history=[];S.siteCheck=readSiteCheck();
 }
 function savePlan(){S.base.basis={historyLength:S.game.history.length,contractId:B.fromGameState(S.game).meta.contract.id,...(S.source==='demo'?{demo:true}:{})};S.base.savedAt=Date.now();PS.save(S.base);}
 /** "Datenbank nicht erreichbar – lokale Sitzung": missing config.js values or a failing database switch the store to local. */
@@ -76,7 +81,7 @@ function returnPreview(){
 }
 function returnToGame(){
   if(commitStaged())S.vm=M.viewModel(S.snap,S.plan);
-  const vm=S.vm,next=S.nonce?B.applyPlan(S.game,vm.dispatch):S.game;savePlan();
+  const vm=S.vm,next=S.nonce?B.applyPlan(S.game,{...vm.dispatch,boundaryDigital:boundaryDigital()}):S.game;savePlan();
   let url=S.returnUrl||new URL('../../dist/',location.href).href;
   if(S.nonce){const env=B.envelope('to-game',next,{plan:S.base,lang:(typeof I18n!=='undefined'?I18n:null)?.language||'de',nonce:S.nonce,applied:{harvester:vm.dispatch.harvester,forwarder:vm.dispatch.forwarder}}),json=JSON.stringify(env);
     if(new URL(url,location.href).origin===location.origin)session.set(B.KEYS.toGame,json);else url=url+'#cfh-return='+encodeURIComponent(json);
@@ -137,7 +142,7 @@ function updateEditPreview(){const d=S.view.dialog;if(d?.type!=='edit')return;co
   if(!d.endTouched){q('[data-dialog="edate"]').value=p.edate;q('[data-dialog="etime"]').value=p.etime;}else{q('[data-dialog="manual"]').value=p.manual;q('[data-dialog="manualOn"]').checked=p.manualOn;}}
 function render(){
   const ae=document.activeElement,key=focusKey(ae),sel=ae&&'selectionStart'in ae&&!['checkbox','radio','number','date','time','email'].includes(ae.type)?[ae.selectionStart,ae.selectionEnd]:null;
-  S.snap=B.fromGameState(S.game);S.vm=M.viewModel(S.snap,S.plan);S.vm.staged=S.history.length;const vm=S.vm,v=S.view;
+  S.snap=B.fromGameState(S.game);S.vm=M.viewModel(S.snap,S.plan);S.vm.staged=S.history.length;S.vm.siteCheck=S.siteCheck;const vm=S.vm,v=S.view;
   if(v.calStart==null)v.calStart=Math.max(0,M.mondayOf(vm.calendar.currentDay));
   if(v.selected&&!vm.orders.some(o=>o.id===v.selected))v.selected=null;
   if(v.selItem&&!vm.rows.some(r=>r.items.some(i=>i.id===v.selItem)))v.selItem=null;
@@ -271,7 +276,7 @@ const actions={
   'send-exclude':el=>{const d=S.view.dialog;d.sel=d.sel.filter(x=>x!==el.dataset.item);render();},
   'send-confirm':()=>{const d=S.view.dialog,ids=[...d.sel];if(!ids.length)return toast(tr('Kein Auftrag ausgewählt.'));S.view.dialog=null;const saved=commitStaged();S.base=M.send(S.base,S.snap,{itemIds:ids});S.plan=S.base;savePlan();render();toast(`${tr('An Ressource gesendet')}: ${ids.length} · OIN/PIN${saved?' · '+tr('Änderungen gespeichert'):''}`);},
   'cal-today':()=>{S.view.calStart=Math.max(0,M.mondayOf(S.vm.calendar.currentDay));render();},
-  refresh:()=>{const inc=readIncoming();if(inc)S.game=inc.env.state;S.view.detail.draft={};S.view.admin.draft={};render();toast(tr('Aktualisiert'));},
+  refresh:()=>{const inc=readIncoming();if(inc)S.game=inc.env.state;S.siteCheck=readSiteCheck();S.view.detail.draft={};S.view.admin.draft={};render();toast(tr('Aktualisiert'));},
   'compress-open':()=>{const v=S.view,{days,off}=V.calWindow(v),rows=v.rowChecked.length?[...v.rowChecked]:V.calRows(S.vm,v).filter(r=>r.items.length).map(r=>r.id);v.dialog={type:'compress',rows,from:M.dayISO(Math.max(off,S.vm.calendar.currentDay)),to:M.dayISO(off+days-1),newStart:false};render();},
   'compress-confirm':()=>{const d=S.view.dialog,from=M.dayIndexOf(dq('[data-dialog="from"]')?.value),to=M.dayIndexOf(dq('[data-dialog="to"]')?.value),ns=!!dq('[data-dialog="newstart"]')?.checked;S.view.dialog=null;
     stage(M.compress(S.plan,S.snap,d.rows,{from:from??undefined,to:to??undefined,newStartDay:ns&&from!=null?from:undefined,stage:true}),tr('Kalender komprimiert')+' · '+tr('Speichern nicht vergessen'));},
@@ -318,9 +323,11 @@ const actions={
   'detail-map':()=>{S.view.detail.showMap=S.view.detail.showMap===false;render();},
   'detail-func-menu':()=>{S.view.detail.funcOpen=!S.view.detail.funcOpen;render();},
   'detail-save':()=>{const id=S.view.detail.orderId,d=S.view.detail.draft;mutate(p=>{const e=p.edits[id]??={};for(const k of ['infoContractor','infoClient'])if(d[k]!==undefined)e[k]=String(d[k]).slice(0,1000);for(const [k,val] of Object.entries(d))if(k.startsWith('vol-')&&Number.isFinite(Number(val)))(e.volumes??={})[k.slice(4)]=Math.max(0,Number(val));});S.view.detail.draft={};toast(tr('Gespeichert'));},
+  'open-sitecheck':el=>api.navigate(siteCheckUrl(el.dataset.order,el.dataset.phase==='post'?'post':'pre')),
   'pin-toggle':el=>{const id=S.view.detail.orderId,k=el.dataset.key;mutate(p=>{const r=p.pinRemoved[id]??={};if(r[k])delete r[k];else r[k]=true;},tr(S.base.pinRemoved?.[id]?.[k]?'PIN-Datei wiederhergestellt':'PIN-Datei entfernt'));},
   'detail-func':el=>{const v=S.view,o=order(v.detail.orderId);v.detail.funcOpen=false;const f=el.dataset.func,g=o.stand.byGrade;
     if(f==='message'){v.nav='messages';v.msgTo=o.row?.id||v.msgTo;v.msgText=tr(o.name)+': ';render();return;}
+    if(f==='drone'){render();return api.navigate(siteCheckUrl(o.id,o.events.some(e=>e.kind==='harvest')?'post':'pre'));}
     if(['summary-pdf','save-pdf'].includes(f)){render();return api.print();}
     if(f==='save-file'){render();return api.download(`${o.id}-stanford.json`,JSON.stringify(o.instructions,null,2));}
     render();toast({control:tr('Kontrollmessungen')+': '+tr('keine Messdaten in der Demo'),scale:tr('Waagenkontrolle')+': '+tr('keine Messdaten in der Demo'),forecast:`${tr('Rückeprognose')}: ${UI.num(o.followUp.forestStock)} ${tr('fm Waldlager zum Rücken bereit')}`,forwarding:`${tr('Rückemeldung')}: ${UI.num(o.followUp.forestStock)} ${tr('fm Waldlager zum Rücken bereit')}`,evaluation:tr('Schlussbewertung')+': '+tr('Demo, kein Formular'),close:tr('Auftrag abgeschlossen: alle Mengen gerückt.'),labels:`${tr('Polterzettel')} ${o.landing.id}: ${UI.num(g.saw.roadside+g.pulp.roadside+g.down.roadside)} fm · ${tr('Demo, kein Druck')}`,edit:tr('Felder in den Reitern bearbeiten und speichern.')}[f]||'');},
@@ -650,6 +657,7 @@ function init(){
   document.addEventListener('contextmenu',e=>{if(P)e.preventDefault();});
   // dist/i18n.js fires this event on first load before its MutationObserver exists: translate the re-render explicitly.
   document.addEventListener('forestry-language-change',()=>{render();try{I18n.localize(document.body);}catch{}});
+  window.addEventListener('pageshow',e=>{if(e.persisted){S.siteCheck=readSiteCheck();render();}});
   $('cfhDialog').addEventListener('close',()=>{if(S.view.dialog){S.view.dialog=null;render();}});
   PS.subscribe(ev=>{if(ev.type==='status'&&ev.status.notice){storeNotice();render();}});
   window.addEventListener('pagehide',()=>{if(PS.pending())PS.flush({keepalive:true});});

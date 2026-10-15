@@ -652,6 +652,10 @@ const phrases={
   'Warnungen':['Warnings','Avertissements'],
   'Neue Ressource':['New resource','Nouvelle ressource'],
   'Gerätedaten':['Unit data','Données de l’appareil'],
+  // Drone site check integration (cfharvest/sitecheck) in the order detail
+  'Hiebsprüfung (Drohne)':['Site check (drone)','Contrôle de coupe (drone)'],'Drohnen-Hiebsprüfung':['Drone site check','Contrôle de coupe par drone'],'Drohnen-Vorprüfung':['Drone pre-harvest check','Contrôle préalable par drone'],'Drohnen-Nachprüfung':['Drone post-harvest check','Contrôle final par drone'],
+  'noch nicht übergeben':['not handed over yet','pas encore transmis'],'Hiebsgrenze digital bestätigt':['Harvest boundary digitally confirmed','Limite de coupe confirmée numériquement'],'Hiebsprüfung öffnen':['Open site check','Ouvrir le contrôle de coupe'],
+  'Schlussbewertung aus der Drohnen-Nachprüfung':['Final evaluation from the drone post-harvest check','Évaluation finale issue du contrôle par drone'],'Habitatbäume erhalten / beschädigt':['Habitat trees retained / damaged','Arbres-habitats conservés / endommagés'],'Tiefe Fahrspuren (m)':['Deep ruts (m)','Ornières profondes (m)'],
   'Hersteller':['Manufacturer','Fabricant'],
   'Modell':['Model','Modèle'],
   'Baujahr':['Model year','Année du modèle'],
