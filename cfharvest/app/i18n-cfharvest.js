@@ -990,6 +990,8 @@ const phrases={
   'Schlussbewertung nicht möglich':['Final evaluation not possible','Évaluation finale impossible'],
   'Mengenabweichung vermerkt':['Volume deviation noted','Écart de volume noté'],
   'Änderung':['Change','Modification'],
+  'Im Auftrag':['In the work order','Dans l’ordre de travail'],
+  'Weiter zu den Funktionen':['Continue to the functions','Continuer vers les fonctions'],
   'Arbeitsauftrag im Bordrechner der Maschine öffnen (Demo)':['Open the work order in the machine’s on-board computer (demo)','Ouvrir l’ordre de travail dans l’ordinateur de bord de la machine (démo)'],
   // Game link (duplicated in dist/cfharvest-link.js)
   'CFHarvest Planung':['CFHarvest Planning','Planification CFHarvest'],
