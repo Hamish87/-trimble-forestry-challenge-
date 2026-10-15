@@ -210,7 +210,7 @@ function collect(p){
  results.pinWarning=['v1 on device vs v2 required','outdated send','transfer v2 clears'];
 
  /* 12. Game entry point: one additive link in the handover dialog opens the machine app with the unchanged envelope. */
- g=await page('dist/index.html',GAME_FILES,'https://forestry.test/dist/',{});g.js('CFHarvestLink.navigate=u=>{globalThis.__nav=u;}');
+ g=await page('dist/index.html',GAME_FILES,'https://forestry.test/dist/?cfharvest=1',{});g.js('CFHarvestLink.navigate=u=>{globalThis.__nav=u;}');
  g.js("state=ForestJourney.start(ForestJourney.initial());render();openHandover('a')");await tick();
  const link=g.d.querySelector('#handoverContent #cfhMachineLink');assert(link,'machine link in the handover dialog');assert.equal(link.textContent.replace(/\s+/g,' ').trim(),'Maschine (Maskin)');
  await click(g,'#handoverContent [data-report="b"]');assert(g.d.querySelector('#handoverContent #cfhMachineLink'),'link survives switching the report tab');

@@ -5,6 +5,9 @@
    - exposes window.ForestChallenge = { getState, setState };
    - adds one "Maschine (Maskin)" link to the handover dialog's title bar that opens the on-board client cfharvest/machine/
      with the same to-replica envelope (Phase 3).
+   The game itself shows none of this by default: the header button, the receipt line, the plan banner and the
+   handover-dialog link appear only with ?cfharvest=1 in the game URL (or localStorage['cfharvest-link']='1');
+   the state exchange (window.ForestChallenge, the return envelope) keeps working either way.
    `state` and `render` are global bindings of app.js (classic scripts share one global scope), so they can be read and
    reassigned here directly. Strings are translated locally: dist/i18n.js builds its matcher before this script runs. */
 'use strict';
@@ -21,6 +24,7 @@
     'Digitaler Arbeitsauftrag bestätigt':['Digital work order confirmed','Ordre de travail numérique confirmé'],
     'Maschine':['Machine','Machine'],
     'Arbeitsauftrag im Bordrechner der Maschine öffnen (Demo)':['Open the work order in the machine\'s on-board computer (demo)','Ouvrir l’ordre de travail dans l’ordinateur de bord de la machine (démo)']};
+  const SHOW=(()=>{try{if(/[?&]cfharvest(=|&|$)/.test(location.search))return true;}catch{}try{return localStorage.getItem('cfharvest-link')==='1';}catch{return false;}})();
   const lang=()=>(typeof I18n!=='undefined'?I18n:null)?.language||'de';
   const t=s=>{const row=STRINGS[s];return lang()==='en'?row?.[0]??s:lang()==='fr'?row?.[1]??s:s;};
   const tn=s=>typeof I18n!=='undefined'?I18n.text(s):s; // game phrases such as stand names
@@ -61,6 +65,7 @@
   function getState(){return structuredClone(state);}
 
   function decorate(){
+    if(!SHOW)return;
     const header=document.querySelector('header'),anchor=document.getElementById('handoverButton');
     let btn=document.getElementById('cfharvestButton');
     if(!btn&&header){btn=document.createElement('button');btn.id='cfharvestButton';btn.className='handover-header cfh-link-button';btn.type='button';btn.setAttribute('data-no-translate','');btn.addEventListener('click',()=>open());if(anchor)anchor.after(btn);else header.append(btn);}
@@ -85,6 +90,7 @@
 
   /** Handover dialog (dist/handover.js renderHandover): one "Maschine (Maskin)" button in the title bar. */
   function decorateHandover(){
+    if(!SHOW)return;
     const bar=document.querySelector('#handoverContent .handover-titlebar');if(!bar||bar.querySelector('#cfhMachineLink'))return;
     const b=document.createElement('button');b.type='button';b.id='cfhMachineLink';b.className='cfh-link-inline cfh-machine-link';b.setAttribute('data-no-translate','');
     b.innerHTML=`${esc(t('Maschine'))} <small lang="sv">(Maskin)</small>`;b.title=t('Arbeitsauftrag im Bordrechner der Maschine öffnen (Demo)');b.onclick=()=>open('machine');
@@ -93,7 +99,7 @@
   if(typeof renderHandover==='function'){const rh=renderHandover;renderHandover=function(){const out=rh.apply(this,arguments);try{decorateHandover();}catch(e){console.error(e);}return out;};}
   const original=render;
   render=function(){const out=original.apply(this,arguments);try{decorate();}catch(e){console.error(e);}return out;};
-  const api={open,replicaUrl,machineUrl,navigate:url=>location.assign(url),KEYS,decorate};
+  const api={open,replicaUrl,machineUrl,navigate:url=>location.assign(url),KEYS,decorate,visible:SHOW};
   window.ForestChallenge={getState,setState};
   window.CFHarvestLink=api;
   document.addEventListener('forestry-language-change',()=>{try{decorate();}catch{}});

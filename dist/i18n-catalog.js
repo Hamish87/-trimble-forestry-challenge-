@@ -1,8 +1,8 @@
 /* Game translations. Source: translations.tsv. */
 globalThis.ForestryTranslations = {
-  "CFHarvest Forst Challenge | Trimble Forestry": [
-    "CFHarvest Forestry Challenge | Trimble Forestry",
-    "CFHarvest Défi forestier | Trimble Forestry"
+  "Forst Challenge | Trimble Forestry": [
+    "Forestry Challenge | Trimble Forestry",
+    "Défi forestier | Trimble Forestry"
   ],
   "Trimble Forestry Forst Challenge": [
     "Trimble Forestry Challenge",
@@ -24,9 +24,9 @@ globalThis.ForestryTranslations = {
     "Workflow progress",
     "Progression du processus"
   ],
-  "CFHarvest-inspiriertes Messespiel · alle Leistungs- und Kostenwerte sind Spielannahmen": [
-    "CFHarvest-inspired trade fair game · all productivity and cost values are simulation assumptions",
-    "Jeu de salon inspiré de CFHarvest · toutes les performances et tous les coûts sont des hypothèses de simulation"
+  "Messespiel zur vernetzten Holzernte · alle Leistungs- und Kostenwerte sind Spielannahmen": [
+    "Trade fair game on connected harvesting · all productivity and cost values are simulation assumptions",
+    "Jeu de salon sur la récolte connectée · toutes les performances et tous les coûts sont des hypothèses de simulation"
   ],
   "PLANEN. ERNTEN. VERBINDEN.": [
     "PLAN. HARVEST. CONNECT.",
@@ -80,9 +80,9 @@ globalThis.ForestryTranslations = {
     "Up to 1,000 points: forest planning 100, harvesting 500, logistics 200, settlement and contract 200.",
     "Jusqu’à 1 000 points : planification forestière 100, récolte 500, logistique 200, décompte et contrat 200."
   ],
-  "Alle Preise, Zeiten, Leistungswerte und Vorfälle sind Spielannahmen. Die Lokalreporter- und Hiebsperrungs-Geschichte ist ein fiktives Ereignis. Das Spiel ist keine CFHarvest-Produktoberfläche.": [
-    "All prices, times, productivity values and incidents are simulation assumptions. The local reporter and worksite shutdown story is fictional. This game is not the CFHarvest product interface.",
-    "Tous les prix, durées, performances et incidents sont des hypothèses de simulation. Le reportage local et l’arrêt du chantier sont fictifs. Ce jeu n’est pas l’interface du produit CFHarvest."
+  "Alle Preise, Zeiten, Leistungswerte und Vorfälle sind Spielannahmen. Die Lokalreporter- und Hiebsperrungs-Geschichte ist ein fiktives Ereignis. Das Spiel ist keine Produktoberfläche.": [
+    "All prices, times, productivity values and incidents are simulation assumptions. The local reporter and worksite shutdown story is fictional. This game is not a product interface.",
+    "Tous les prix, durées, performances et incidents sont des hypothèses de simulation. Le reportage local et l’arrêt du chantier sont fictifs. Ce jeu n’est pas l’interface d’un produit."
   ],
   "Modellannahmen und Grenzen": [
     "Model assumptions and limitations",
@@ -115,10 +115,6 @@ globalThis.ForestryTranslations = {
   "Verwendetes Trimble-Datenblatt · 03/2026": [
     "Trimble data sheet used · 03/2026",
     "Fiche Trimble utilisée · 03/2026"
-  ],
-  "CFHarvest-Produktseite": [
-    "CFHarvest product page",
-    "Page produit CFHarvest"
   ],
   "Los geht’s": [
     "Let’s play",
@@ -588,9 +584,9 @@ globalThis.ForestryTranslations = {
     "Maximum 100 each",
     "Maximum 100 chacun"
   ],
-  "CFHarvest · INTERFORST · Holzernte": [
-    "CFHarvest · INTERFORST · Harvesting",
-    "CFHarvest · INTERFORST · Récolte"
+  "Trimble Forestry · INTERFORST · Holzernte": [
+    "Trimble Forestry · INTERFORST · Harvesting",
+    "Trimble Forestry · INTERFORST · Récolte"
   ],
   "Arbeitsauftrag": [
     "Work order",
@@ -912,9 +908,9 @@ globalThis.ForestryTranslations = {
     "Plan truck logistics",
     "Planifier le transport routier"
   ],
-  "Gesamtauswertung und CFHarvest-Bezug": [
-    "Overall results and CFHarvest relevance",
-    "Bilan global et lien avec CFHarvest"
+  "Gesamtauswertung und Praxisbezug": [
+    "Overall results and practical relevance",
+    "Bilan global et lien avec la pratique"
   ],
   "Arbeitsauftrag ansehen": [
     "View work order",
@@ -924,9 +920,9 @@ globalThis.ForestryTranslations = {
     "Verified harvest boundaries on the machine",
     "Limites de coupe vérifiées jusqu’à la machine"
   ],
-  "CFHarvest unterstützt gemeinsame Karten und Kartenebenen. Der Auftraggeber muss die richtige Hiebsgrenze und Freigabe bereitstellen.": [
-    "CFHarvest supports shared maps and map layers. The client must provide the correct harvest boundary and authorisation.",
-    "CFHarvest permet de partager cartes et couches cartographiques. Le donneur d’ordre doit fournir la bonne limite de coupe et l’autorisation."
+  "Vernetzte Planung unterstützt gemeinsame Karten und Kartenebenen. Der Auftraggeber muss die richtige Hiebsgrenze und Freigabe bereitstellen.": [
+    "Connected planning supports shared maps and map layers. The client must provide the correct harvest boundary and authorisation.",
+    "La planification connectée permet de partager cartes et couches cartographiques. Le donneur d’ordre doit fournir la bonne limite de coupe et l’autorisation."
   ],
   "Hat euer Fahrer den aktuellen, geprüften Hiebsplan an Bord – oder nur eine alte Skizze?": [
     "Does your operator have the current, verified harvest plan on board, or just an old sketch?",
@@ -936,9 +932,9 @@ globalThis.ForestryTranslations = {
     "Match forwarder dispatch to timber availability",
     "Adapter l’affectation du porteur au stock"
   ],
-  "CFHarvest führt geerntete, gerückte und verbleibende Mengen je Produkt zusammen.": [
-    "CFHarvest brings together harvested, forwarded and remaining volumes by product.",
-    "CFHarvest regroupe les volumes récoltés, débardés et restants par produit."
+  "Digitale Produktionsmeldungen führen geerntete, gerückte und verbleibende Mengen je Produkt zusammen.": [
+    "Digital production reports bring together harvested, forwarded and remaining volumes by product.",
+    "Les rapports de production numériques regroupent les volumes récoltés, débardés et restants par produit."
   ],
   "Wie früh sieht eure Disposition, wo tatsächlich rückbares Holz liegt?": [
     "How soon can your dispatcher see where timber is actually ready for forwarding?",
@@ -1040,9 +1036,9 @@ globalThis.ForestryTranslations = {
     "What information would have prevented your last unplanned machine hour?",
     "Quelle information aurait évité votre dernière heure machine imprévue ?"
   ],
-  "CFHarvest im Arbeitsablauf": [
-    "CFHarvest in the workflow",
-    "CFHarvest dans le processus"
+  "Vernetzte Holzernte im Arbeitsablauf": [
+    "Connected harvesting in the workflow",
+    "La récolte connectée dans le processus"
   ],
   "Wie entstehen die 1.000 Punkte?": [
     "How are the 1,000 points calculated?",
@@ -1052,9 +1048,9 @@ globalThis.ForestryTranslations = {
     "Contract: 300 points, weighted 60% for 600 m³ total and 40% for 360 m³ sawlogs. Contribution: 250 points at €22,000. Quality: 200 points for the share of potential sawlogs not downgraded. Machine utilisation: 150 points for productive divided by booked hours. Soil and trust: 100 points, weighted 40/60. Each component is capped at its maximum.",
     "Contrat : 300 points, pondérés à 60 % pour 600 m³ au total et à 40 % pour 360 m³ de sciage. Contribution : 250 points à 22 000 €. Qualité : 200 points selon la part du sciage potentiel non déclassée. Utilisation des machines : 150 points selon le rapport heures productives/heures réservées. Sol et confiance : 100 points, pondérés 40/60. Chaque critère est plafonné."
   ],
-  "Leistung und Kosten sind transparente Szenarioannahmen (siehe Spielregeln), keine allgemeingültigen Branchenwerte. Die Eurobeträge sind keine CFHarvest-ROI-Prognose. Digitalisierung ersetzt weder eine Begehung noch eine fachliche Freigabe.": [
-    "Productivity and costs are transparent scenario assumptions (see game rules), not universal industry figures. Euro amounts are not a CFHarvest ROI forecast. Digitalisation replaces neither a site inspection nor professional authorisation.",
-    "Performances et coûts sont des hypothèses transparentes du scénario (voir les règles), pas des références universelles du secteur. Les montants ne constituent pas une prévision de retour sur investissement CFHarvest. Le numérique ne remplace ni une visite ni une autorisation professionnelle."
+  "Leistung und Kosten sind transparente Szenarioannahmen (siehe Spielregeln), keine allgemeingültigen Branchenwerte. Die Eurobeträge sind keine ROI-Prognose. Digitalisierung ersetzt weder eine Begehung noch eine fachliche Freigabe.": [
+    "Productivity and costs are transparent scenario assumptions (see game rules), not universal industry figures. Euro amounts are not an ROI forecast. Digitalisation replaces neither a site inspection nor professional authorisation.",
+    "Performances et coûts sont des hypothèses transparentes du scénario (voir les règles), pas des références universelles du secteur. Les montants ne constituent pas une prévision de retour sur investissement. Le numérique ne remplace ni une visite ni une autorisation professionnelle."
   ],
   "Mit vernetzter Planung erneut spielen": [
     "Play again with connected planning",
@@ -1071,14 +1067,6 @@ globalThis.ForestryTranslations = {
   "Vier Schichten im Vergleich": [
     "Four-shift comparison",
     "Comparaison des quatre postes"
-  ],
-  "Produktbezug:": [
-    "Product reference:",
-    "Référence produit :"
-  ],
-  "Trimble CF Harvest Datenblatt · 03/2026": [
-    "Trimble CF Harvest data sheet · 03/2026",
-    "Fiche Trimble CF Harvest · 03/2026"
   ],
   "Das Spiel ist eine eigenständige Messedemonstration.": [
     "This game is an independent trade fair demonstration.",
@@ -1640,9 +1628,9 @@ globalThis.ForestryTranslations = {
     "Shared work order, shared information",
     "Un ordre partagé, des informations communes"
   ],
-  "Das CFHarvest-Datenblatt beschreibt Arbeitsgebiete mit Vertragsinformationen, Produkten, Lieferungen, Karten und laufenden Produktionsmeldungen.": [
-    "The CFHarvest data sheet describes worksites with contract information, products, deliveries, maps and ongoing production reporting.",
-    "La fiche CFHarvest décrit des chantiers avec informations contractuelles, produits, livraisons, cartes et déclarations continues de production."
+  "Ein digitaler Arbeitsauftrag beschreibt Arbeitsgebiete mit Vertragsinformationen, Produkten, Lieferungen, Karten und laufenden Produktionsmeldungen.": [
+    "A digital work order describes worksites with contract information, products, deliveries, maps and ongoing production reporting.",
+    "Un ordre de travail numérique décrit des chantiers avec informations contractuelles, produits, livraisons, cartes et déclarations continues de production."
   ],
   "Logistik & Abschluss": [
     "Logistics & closeout",
@@ -1652,9 +1640,9 @@ globalThis.ForestryTranslations = {
     "Pass on data, trace volumes",
     "Transmettre les données, suivre les volumes"
   ],
-  "Im Spiel nutzen die Folgeprozesse dieselbe Herkunft und dieselben Mengen. Lkw-Disposition, Rechnung und Vertragsabschluss sind ergänzende Spielszenarien; das verwendete Datenblatt weist sie nicht als eigenständige CFHarvest-Abrechnungsmodule aus.": [
-    "In the game, downstream processes use the same origin and volumes. Truck dispatch, invoicing and contract closeout are additional game scenarios; the data sheet used does not list them as standalone CFHarvest settlement modules.",
-    "Dans le jeu, les processus suivants utilisent la même provenance et les mêmes volumes. Affectation des camions, facturation et clôture du contrat sont des scénarios complémentaires ; la fiche utilisée ne les présente pas comme des modules de décompte autonomes de CFHarvest."
+  "Im Spiel nutzen die Folgeprozesse dieselbe Herkunft und dieselben Mengen. Lkw-Disposition, Rechnung und Vertragsabschluss sind ergänzende Spielszenarien, keine Produktfunktionen.": [
+    "In the game, downstream processes use the same origin and volumes. Truck dispatch, invoicing and contract closeout are additional game scenarios, not product features.",
+    "Dans le jeu, les processus suivants utilisent la même provenance et les mêmes volumes. Affectation des camions, facturation et clôture du contrat sont des scénarios complémentaires et non des fonctions produit."
   ],
   "Ernteschichten und Punktelogik ansehen": [
     "View harvesting shifts and scoring",
@@ -1679,10 +1667,6 @@ globalThis.ForestryTranslations = {
   "Gesamte Reise mit besserer Planung wiederholen": [
     "Replay the full journey with better planning",
     "Rejouer tout le parcours avec une meilleure planification"
-  ],
-  "Trimble CFHarvest Datenblatt · 03/2026": [
-    "Trimble CFHarvest data sheet · 03/2026",
-    "Fiche Trimble CFHarvest · 03/2026"
   ],
   "Sämtliche Preise, Verträge, Touren und Vorfälle sind Spielannahmen.": [
     "All prices, contracts, trips and incidents are game assumptions.",
@@ -2380,9 +2364,9 @@ globalThis.ForestryTranslations = {
     "Choose language",
     "Choisir la langue"
   ],
-  "Sprache und Einheiten: Deutsch, Englisch und Französisch sind Spielsprachen. Die Währung bleibt Euro. fm bezeichnet Festmeter; in Englisch und Französisch wird dieselbe Menge als m³ angezeigt. Die Sprachwahl ändert weder Markt noch Berechnung und macht keine Aussage über verfügbare CFHarvest-Produktsprachen.": [
-    "Language and units: German, English and French are game languages. Currency remains EUR. The German unit fm means solid cubic metres; English and French display the same volume as m³. Changing language does not change the market or calculations and makes no claim about available CFHarvest product languages.",
-    "Langue et unités : l’allemand, l’anglais et le français sont les langues du jeu. La devise reste l’euro. L’unité allemande fm désigne le mètre cube de bois plein ; l’anglais et le français affichent le même volume en m³. Changer de langue ne change ni le marché ni les calculs et ne préjuge pas des langues disponibles dans CFHarvest."
+  "Sprache und Einheiten: Deutsch, Englisch und Französisch sind Spielsprachen. Die Währung bleibt Euro. fm bezeichnet Festmeter; in Englisch und Französisch wird dieselbe Menge als m³ angezeigt. Die Sprachwahl ändert weder Markt noch Berechnung und macht keine Aussage über verfügbare Produktsprachen.": [
+    "Language and units: German, English and French are game languages. Currency remains EUR. The German unit fm means solid cubic metres; English and French display the same volume as m³. Changing language does not change the market or calculations and makes no claim about available product languages.",
+    "Langue et unités : l’allemand, l’anglais et le français sont les langues du jeu. La devise reste l’euro. L’unité allemande fm désigne le mètre cube de bois plein ; l’anglais et le français affichent le même volume en m³. Changer de langue ne change ni le marché ni les calculs et ne préjuge pas des langues disponibles du produit."
   ],
   "Den Bestand vor dem Einsatz verstehen.": [
     "Understand the stand before starting work.",
@@ -3099,5 +3083,9 @@ globalThis.ForestryTranslations = {
   "Unbelegt bei offenen Restmengen": [
     "Unsupported with open volumes",
     "Non justifié avec volumes restants"
+  ],
+  "Forst Challenge": [
+    "Forestry Challenge",
+    "Défi forestier"
   ]
 };

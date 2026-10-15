@@ -20,7 +20,7 @@ async function page(htmlFile,files,url,storage={},lang){
   if(d.readyState==='loading')await new Promise(resolve=>d.addEventListener('DOMContentLoaded',resolve,{once:true}));await tick();
   return{dom,w,d,js,storage:storageDump,close:()=>dom.window.close()};
 }
-const game=async(storage,url='https://forestry.test/dist/')=>{const p=await page('dist/index.html',GAME_FILES,url,storage);p.js('CFHarvestLink.navigate=u=>{globalThis.__nav=u;}');return p;};
+const game=async(storage,url='https://forestry.test/dist/?cfharvest=1')=>{const p=await page('dist/index.html',GAME_FILES,url,storage);p.js('CFHarvestLink.navigate=u=>{globalThis.__nav=u;}');return p;};
 const replica=async(storage,url='https://forestry.test/cfharvest/app/')=>{const p=await page('cfharvest/app/index.html',REPLICA_FILES,url,storage);p.js('CFHApp.api.navigate=u=>{globalThis.__nav=u;};CFHApp.api.print=()=>{globalThis.__printed=true;};CFHApp.api.download=(n,t)=>{globalThis.__download=[n,t];}');return p;};
 async function click(p,selector){const el=typeof selector==='string'?p.d.querySelector(selector):selector;assert(el,'missing '+selector);assert(!el.disabled,'disabled '+selector);el.dispatchEvent(new p.w.MouseEvent('click',{bubbles:true}));await tick();return el;}
 async function change(p,selector,value){const el=p.d.querySelector(selector);assert(el,'missing '+selector);if(el.type==='checkbox'||el.type==='radio')el.checked=value;else el.value=value;el.dispatchEvent(new p.w.Event('change',{bubbles:true}));await tick();return el;}
@@ -67,6 +67,12 @@ async function cycle(p){collect(p);const snapshot=p.js('JSON.stringify(CFHApp.st
 (async()=>{
  const results={};
  /* 1. Game link: header button, state API, handoff to the replica (same origin, repo root served). */
+ /* Default game (no ?cfharvest=1): no button, no receipt line, no handover link, no product name anywhere in the page. */
+ const plain=await page('dist/index.html',GAME_FILES,'https://forestry.test/dist/',{});
+ assert.equal(plain.js('CFHarvestLink.visible'),false);assert(!plain.d.getElementById('cfharvestButton'),'no header button by default');
+ plain.js("state=ForestJourney.start(ForestJourney.initial());render();openHandover('a')");await tick();assert(!plain.d.querySelector('#cfhMachineLink'),'no machine link by default');
+ for(const l of ['de','en','fr']){await language(plain,l);assert(!/cf ?harvest/i.test(plain.d.documentElement.textContent),'product name must not appear in the game ('+l+')');assert(!/cf ?harvest/i.test(plain.d.title));}
+ assert.equal(plain.js("typeof ForestChallenge.getState"),'function','state API stays available');
  let g=await game({});
  const btn=g.d.getElementById('cfharvestButton');assert(btn,'header button');assert.equal(btn.previousElementSibling.id,'handoverButton');assert.equal(btn.textContent,'CFHarvest Planung');
  assert.equal(g.js("typeof ForestChallenge.getState"),'function');
@@ -266,7 +272,7 @@ async function cycle(p){collect(p);const snapshot=p.js('JSON.stringify(CFHApp.st
  await click(r,'[data-nav="reports"]');await cycle(r);await click(r,'[data-action="nav-menu"][data-key="help"]');await click(r,'[data-action="help-page"]');await cycle(r);
  await click(r,'[data-nav="planning"]');
  // Back to the game with the plan applied
- await click(r,'#cfhReturn');assert(r.d.getElementById('cfhDialog').textContent.includes('H-01'));await cycle(r);await click(r,'[data-action="return-confirm"]');assert.equal(r.js('__nav'),'https://forestry.test/dist/');
+ await click(r,'#cfhReturn');assert(r.d.getElementById('cfhDialog').textContent.includes('H-01'));await cycle(r);await click(r,'[data-action="return-confirm"]');assert.equal(r.js('__nav'),'https://forestry.test/dist/?cfharvest=1');
  const fromReplica=r.storage();assert(fromReplica['cfharvest-return-v1']);
  results.languageCoverageTexts=sources.size;
 
@@ -323,12 +329,12 @@ async function cycle(p){collect(p);const snapshot=p.js('JSON.stringify(CFHApp.st
  back=await game({...handed,'cfharvest-return-v1':JSON.stringify(forged)});assert.equal(back.js('state.harvester'),'a','forged nonce must be rejected');
 
  /* 7. Two-server setup: dist on :3000, repo root on :3001 → handoff through the URL fragment. */
- let g2=await game({},'http://localhost:3000/');g2.js("state=ForestJourney.start(ForestJourney.initial());render()");await click(g2,'#cfharvestButton');const nav=g2.js('__nav');
+ let g2=await game({},'http://localhost:3000/?cfharvest=1');g2.js("state=ForestJourney.start(ForestJourney.initial());render()");await click(g2,'#cfharvestButton');const nav=g2.js('__nav');
  assert(nav.startsWith('http://localhost:3001/cfharvest/app/#cfh='),nav.slice(0,60));
- let r2=await replica({},nav);assert.equal(r2.js("CFHApp.state().source"),'hash');assert.equal(r2.w.location.hash,'');assert.equal(r2.js("CFHApp.state().returnUrl"),'http://localhost:3000/');
+ let r2=await replica({},nav);assert.equal(r2.js("CFHApp.state().source"),'hash');assert.equal(r2.w.location.hash,'');assert.equal(r2.js("CFHApp.state().returnUrl"),'http://localhost:3000/?cfharvest=1');
  await click(r2,'tr[data-row-order="H-C01"] td[data-col="client"]');await change(r2,'[data-change="pick-row"]','K-01');await click(r2,'[data-action="move-open"]');await click(r2,'[data-action="date-ok"]');
  await click(r2,'[data-action="send-open"]');await click(r2,'[data-action="send-confirm"]');assert.equal(bar(r2,'K-01','H-C01').dataset.tone,'sent','Skicka saves staged changes first');
- await click(r2,'#cfhReturn');await click(r2,'[data-action="return-confirm"]');const back2=r2.js('__nav');assert(back2.startsWith('http://localhost:3000/#cfh-return='));
+ await click(r2,'#cfhReturn');await click(r2,'[data-action="return-confirm"]');const back2=r2.js('__nav');assert(back2.startsWith('http://localhost:3000/?cfharvest=1#cfh-return='),back2.slice(0,60));
  g2=await game(g2.storage(),back2);assert.equal(g2.js('state.harvester'),'c');assert.equal(g2.js('state.handoverMode'),'digital');assert.equal(g2.js('ForestGame.validate(state)'),null);assert.equal(g2.w.location.hash,'');
  /* 8. Standalone replica (no handoff) uses a demo state and does not write a return payload; staged changes are saved on return. */
  const solo=await replica({});assert.equal(solo.js("CFHApp.state().source"),'demo');assert(solo.d.querySelector('.notice.warn'));
