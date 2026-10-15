@@ -37,14 +37,17 @@ function readIncoming(){
 function load(){
   const incoming=readIncoming();S.notices=[];
   if(incoming){const e=incoming.env;S.game=e.state;S.nonce=typeof e.nonce==='string'?e.nonce:null;S.returnUrl=safeReturnUrl(e.returnUrl);S.source=incoming.src;S.lang=e.lang;
-    let plan=e.plan;if(!plan)plan=PS.read();S.sessionPlan=!!plan;S.base=M.normalizePlan(plan);}
-  else{S.game=ForestJourney.start(ForestJourney.initial());S.nonce=null;S.returnUrl=null;S.source='demo';S.base=M.emptyPlan();S.sessionPlan=false;S.notices.push({kind:'warn',text:'Kein Spielstand übergeben: Demo-Spielstand Schicht 1 mit Standardauftrag.'});}
+    // The plan store copy wins when it is newer than the envelope's plan (saved later here or by the machine app, cfharvest/machine/).
+    let plan=e.plan;const stored=PS.read();if(!plan||(stored&&(Number(stored.savedAt)||0)>(Number(plan.savedAt)||0)))plan=stored||plan;S.sessionPlan=!!plan;S.base=M.normalizePlan(plan);}
+  else{S.game=ForestJourney.start(ForestJourney.initial());S.nonce=null;S.returnUrl=null;S.source='demo';
+    // A plan saved in this tab against the demo state (planning or machine app) is kept; anything else starts empty.
+    const stored=PS.read();S.base=stored&&stored.basis&&stored.basis.demo?M.normalizePlan(stored):M.emptyPlan();S.sessionPlan=!!(stored&&stored.basis&&stored.basis.demo);S.notices.push({kind:'warn',text:'Kein Spielstand übergeben: Demo-Spielstand Schicht 1 mit Standardauftrag.'});}
   storeNotice();
   if(S.base.basis&&S.game.history.length<S.base.basis.historyLength){S.base=M.emptyPlan();S.notices.push({kind:'info',text:'Neuer Spielstand erkannt: Planung zurückgesetzt.'});}
   for(const a of S.base.assignments){delete a.staged;delete a.touched;}
   S.plan=S.base;S.history=[];
 }
-function savePlan(){S.base.basis={historyLength:S.game.history.length,contractId:B.fromGameState(S.game).meta.contract.id};PS.save(S.base);}
+function savePlan(){S.base.basis={historyLength:S.game.history.length,contractId:B.fromGameState(S.game).meta.contract.id,...(S.source==='demo'?{demo:true}:{})};S.base.savedAt=Date.now();PS.save(S.base);}
 /** "Datenbank nicht erreichbar – lokale Sitzung": missing config.js values or a failing database switch the store to local. */
 function storeNotice(){const n=PS.status().notice;if(n&&!S.notices.some(x=>x.text===n))S.notices.push({kind:'warn',text:n});}
 /** Supabase store: a session without its own plan (no handoff plan, nothing in sessionStorage) takes the database plan;

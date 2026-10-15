@@ -368,6 +368,122 @@ function fromHPR(messages){
   return{byObject:by,totals};
 }
 
+/* ---------- On-board (Maskin) client, Phase 3 (Manual Maskin [MM]) ----------
+   The machine side lives in plan.machine (travels with the plan through the plan store and the game envelopes):
+   { orders: { <orderId>: { tabs:{<res>:[tab…]}, startMsg:{<res>:text}, started:{<res>:{round,files,pinVersion}}, status,
+     plots:[…], evaluation, route:{<res>:{drawing,points:[{point,produced}]}} } }, reports:[…], loaded:{<res>:{orderId,pinVersion,files,round}}, log:[…] }.
+   Status flow [MM]: harvester "Starta" sent → harvesting; "Avsluta avverkningen" → felled; forwarder "Starta" → forwarding;
+   forwarder Slutvärdering saved with "Nej" → completed. The machine status is combined with the production-derived status
+   (the higher one wins), so the planning app's pills and bars follow it.
+   Manual production reports (per assortment m³) become HPR/FPR messages of kind 'manual' (fromMachineReport, same shape as
+   bridge.productionMessages). Precedence: the game stays the simulation source. A manual report belongs to the next shift
+   the game will simulate (game history length + 1); once the game has results for that shift (any HPR/FPR of kind 'shift'
+   with the same round), the manual reports of that shift are dropped (mergeProduction). Manual reports are for the demo
+   between shifts. */
+const MACHINE_TABS=[['order','Arbeitsauftrag','Arbetsorder'],['info','Sonstige Infos','Övrig info'],['area','Gebiet','Område'],['products','Sortimente','Sortiment'],['landings','Polterplätze','Avlägg']];
+const MACHINE_TRANSITIONS={harvesterStart:{from:['sent'],to:'harvesting'},fellingEnd:{from:['harvesting'],to:'felled'},forwarderStart:{from:['sent','harvesting','felled'],to:'forwarding'},finalNo:{from:['forwarding'],to:'completed'}};
+const GRADE_KEYS=['saw','pulp','down'];
+function machineData(plan){
+  const m=plan&&plan.machine&&typeof plan.machine==='object'?plan.machine:{};
+  return{orders:m.orders&&typeof m.orders==='object'?m.orders:{},reports:Array.isArray(m.reports)?m.reports:[],loaded:m.loaded&&typeof m.loaded==='object'?m.loaded:{},log:Array.isArray(m.log)?m.log:[],seq:Number.isFinite(m.seq)?m.seq:0};
+}
+function machineOrder(plan,orderId){const o=machineData(plan).orders[orderId]||{};return{tabs:o.tabs||{},startMsg:o.startMsg||{},started:o.started||{},status:STATUSES.includes(o.status)?o.status:null,plots:Array.isArray(o.plots)?o.plots:[],evaluation:o.evaluation||null,route:o.route||{}};}
+/** Mutable machine part of a cloned plan (creates the containers). */
+function machineEdit(plan,orderId){const m=plan.machine=machineData(plan);m.orders={...m.orders};m.reports=[...m.reports];m.log=[...m.log];m.loaded={...m.loaded};if(orderId){const o=m.orders[orderId]=structuredClone(machineOrder(plan,orderId));return{m,o};}return{m,o:null};}
+function markTab(planIn,orderId,resourceId,tab){
+  const plan=normalizePlan(clone(planIn));if(!MACHINE_TABS.some(t=>t[0]===tab))return plan;const{o}=machineEdit(plan,orderId);
+  const seen=new Set(o.tabs[resourceId]||[]);seen.add(tab);o.tabs[resourceId]=MACHINE_TABS.map(t=>t[0]).filter(k=>seen.has(k));return plan;
+}
+function tabsSeen(plan,orderId,resourceId){return machineOrder(plan,orderId).tabs[resourceId]||[];}
+const tabsComplete=(plan,orderId,resourceId)=>MACHINE_TABS.every(t=>tabsSeen(plan,orderId,resourceId).includes(t[0]));
+/** Files the machine pulls on "Starta, överför till mätdon": harvester OIN + PIN, forwarder FOI + FDI (from the last Skicka). */
+function machineFiles(instructions,type,orderId){
+  if(!instructions||!instructions.files)return[];const f=instructions.files,v=Number(instructions.pinVersion)||1,out=[];
+  if(type==='harvester'){if(f.oin)out.push({kind:'OIN',name:`OIN_${orderId}_v${v}`,version:v});for(const p of f.pin||[])out.push({kind:'PIN',name:p.fileName||`PIN_${orderId}_v${v}`,version:Number(p.ProductInstruction?.ProductDefinition?.ProductVersion)||v});}
+  else if(type==='forwarder'){if(f.foi)out.push({kind:'FOI',name:`FOI_${orderId}_v${v}`,version:v});if(f.fdi)out.push({kind:'FDI',name:`FDI_${orderId}_v${v}`,version:v});}
+  return out;
+}
+function machineLog(m,entry){m.log.push({seq:++m.seq,...entry});}
+/** Status change requested on the machine. current = the order's shared status (view model). Unknown or not allowed → plan unchanged with plan.machineError. */
+function machineTransition(planIn,orderId,action,current,ctx={}){
+  const plan=normalizePlan(clone(planIn)),t=MACHINE_TRANSITIONS[action];
+  if(!t||!t.from.includes(current)){plan.machineError=`${action}: ${current}`;return plan;}
+  const{m,o}=machineEdit(plan,orderId);o.status=higher(t.to,o.status||'available');
+  machineLog(m,{round:ctx.round??null,orderId,resourceId:ctx.resourceId||null,from:current,to:t.to,action});return plan;
+}
+/** "Starta, överför till mätdon": the five tabs must have been opened; harvester from status sent, forwarder from sent/harvesting/felled. */
+function canStart(plan,orderId,resource,status){
+  if(!resource||!tabsComplete(plan,orderId,resource.id))return false;if(machineOrder(plan,orderId).started[resource.id])return false;
+  return(resource.type==='forwarder'?MACHINE_TRANSITIONS.forwarderStart:MACHINE_TRANSITIONS.harvesterStart).from.includes(status);
+}
+function loadFiles(m,orderId,resource,instructions,round){const files=machineFiles(instructions,resource.type,orderId);m.loaded[resource.id]={orderId,pinVersion:instructions?Number(instructions.pinVersion)||1:null,files,round:round??null};return files;}
+function machineStart(planIn,orderId,resource,{status,instructions,round,message}={}){
+  if(!canStart(planIn,orderId,resource,status)){const p=normalizePlan(clone(planIn));p.machineError='start';return p;}
+  const plan=machineTransition(planIn,orderId,resource.type==='forwarder'?'forwarderStart':'harvesterStart',status,{round,resourceId:resource.id});
+  const{m,o}=machineEdit(plan,orderId),files=loadFiles(m,orderId,resource,instructions,round);
+  o.started[resource.id]={round:round??null,files:files.map(f=>f.name),pinVersion:instructions?Number(instructions.pinVersion)||1:null};
+  machineLog(m,{round:round??null,orderId,resourceId:resource.id,action:'transfer',files:files.map(f=>f.name)});
+  if(message&&String(message).trim()){o.startMsg[resource.id]=String(message).trim().slice(0,500);plan.messages.push({to:'crew',from:resource.id,orderId,text:o.startMsg[resource.id],round:round??null,kind:'start'});}
+  return plan;
+}
+/** Funktioner → Överför till mätdon: pull the currently sent files again (e.g. after the planner re-sent a new PIN version). */
+function machineTransfer(planIn,orderId,resource,{instructions,round}={}){
+  const plan=normalizePlan(clone(planIn)),{m}=machineEdit(plan,orderId),files=loadFiles(m,orderId,resource,instructions,round);
+  machineLog(m,{round:round??null,orderId,resourceId:resource.id,action:'transfer',files:files.map(f=>f.name)});return plan;
+}
+/** PIN version the harvester's measuring device (mätdon) holds for an order: the last transfer, else the game's loaded grade. */
+function machinePinVersion(plan,order,resource){const l=machineData(plan).loaded[resource.id];if(l&&l.orderId===order.id&&l.pinVersion)return l.pinVersion;return resource.gameKey==='harvester'?order.pin?.machineVersion??null:null;}
+/** Manual production report → HPR/FPR message in the shape fromHPR consumes (bridge.productionMessages). */
+function fromMachineReport(r){
+  if(!r||!['HPR','FPR'].includes(r.type)||!r.orderId)return null;const products={};let volume=0;
+  for(const k of GRADE_KEYS){const v=Math.max(0,Number(r.products?.[k])||0);products[k]=v;volume+=v;}
+  return{type:r.type,kind:'manual',round:Number(r.round)||1,machineKey:r.resourceId||null,objectKey:r.orderId,volume,products,reportId:r.id,source:r.source||'manual'};
+}
+function addMachineReport(planIn,report){
+  const plan=normalizePlan(clone(planIn)),msg=fromMachineReport(report);if(!msg||!(msg.volume>0)){plan.machineError='report';return plan;}
+  const{m}=machineEdit(plan,report.orderId),id='MR'+(++m.seq);
+  m.reports.push({id,type:report.type,resourceId:report.resourceId||null,orderId:report.orderId,round:msg.round,products:msg.products,source:report.source||'manual',piles:report.piles||null,point:report.point||null});
+  machineLog(m,{round:msg.round,orderId:report.orderId,resourceId:report.resourceId||null,action:'report',type:report.type,volume:msg.volume,reportId:id});plan.lastReport=id;return plan;
+}
+const manualMessages=plan=>machineData(plan).reports.map(fromMachineReport).filter(Boolean);
+/** Game shift results overwrite manual reports of the same shift. */
+function mergeProduction(gameMessages,manual){const rounds=new Set((gameMessages||[]).filter(m=>m&&m.kind==='shift').map(m=>m.round));return[...(gameMessages||[]),...(manual||[]).filter(m=>!rounds.has(m.round))];}
+function overwrittenReports(gameMessages,plan){const rounds=new Set((gameMessages||[]).filter(m=>m&&m.kind==='shift').map(m=>m.round));return machineData(plan).reports.filter(r=>rounds.has(r.round)).map(r=>r.id);}
+/** Provytemätning: sample plot (id, stems/ha, mean dbh cm). Goes out as quality report (HQC harvester / FQC forwarder). */
+function addPlot(planIn,orderId,plot){
+  const plan=normalizePlan(clone(planIn)),stems=Number(plot.stems),dbh=Number(plot.dbh),id=String(plot.plotId||'').trim().slice(0,20);
+  if(!id||!(stems>0)||!(dbh>0)){plan.machineError='plot';return plan;}
+  const{m,o}=machineEdit(plan,orderId);o.plots.push({plotId:id,stems,dbh,resourceId:plot.resourceId||null,round:plot.round??null,quality:plot.type==='forwarder'?'FQC':'HQC'});
+  machineLog(m,{round:plot.round??null,orderId,resourceId:plot.resourceId||null,action:'plot',plotId:id});return plan;
+}
+/** Planned vs reported volume (Slutvärdering warning): deviation above tol (default 10 %) warns. */
+function volumeCheck(planned,reported,tol=.1){const p=Number(planned)||0,r=Number(reported)||0,diff=r-p,pct=p>0?diff/p:(r>0?1:0);return{planned:p,reported:r,diff,pct,warn:Math.abs(pct)>tol};}
+/** Slutvärdering: Tillägg/avdrag, avverkad/kvarvarande areal and the question whether more work follows. "Nej" → completed;
+    saving closes the order on this machine either way. */
+function finalEvaluation(planIn,orderId,resource,{more,adjustments=[],workedArea,comment='',status,round,checks}={}){
+  if(!['yes','no'].includes(more)){const p=normalizePlan(clone(planIn));p.machineError='evaluation';return p;}
+  let plan=more==='no'?machineTransition(planIn,orderId,'finalNo',status,{round,resourceId:resource.id}):normalizePlan(clone(planIn));
+  if(plan.machineError)return plan;
+  const{m,o}=machineEdit(plan,orderId),area=Number(workedArea);
+  o.evaluation={more,resourceId:resource.id,round:round??null,workedArea:Number.isFinite(area)&&area>=0?area:null,comment:String(comment||'').slice(0,500),
+    adjustments:(adjustments||[]).filter(a=>a&&String(a.text||'').trim()&&Number.isFinite(Number(a.amount))).map(a=>({kind:a.kind==='deduction'?'deduction':'addition',text:String(a.text).trim().slice(0,80),amount:Number(a.amount)})),checks:checks||null};
+  machineLog(m,{round:round??null,orderId,resourceId:resource.id,action:'evaluation',more});return plan;
+}
+/** Rita rutt / Sluta rita rutt: route drawing on or off; while on, each point records the production reported so far. */
+function setRouteDrawing(planIn,orderId,resourceId,on){const plan=normalizePlan(clone(planIn)),{o}=machineEdit(plan,orderId),r=o.route[resourceId]||{drawing:false,points:[]};o.route[resourceId]={...r,drawing:!!on};return plan;}
+function addRoutePoint(planIn,orderId,resourceId,point,produced){
+  const plan=normalizePlan(clone(planIn));if(!isPoint(point))return plan;const{o}=machineEdit(plan,orderId),r=o.route[resourceId]||{drawing:true,points:[]};
+  if(!r.drawing)return plan;o.route[resourceId]={...r,points:[...r.points,{point:point.map(n=>+Number(n).toFixed(1)),produced:+(Number(produced)||0).toFixed(1)}]};return plan;
+}
+/** Planering list of a resource: sent orders on a row that contains the resource, in route order (Löpnummer) then calendar order. */
+function machineOrders(vm,resourceId){
+  const route=vm.plan.routeOrder||[],out=[];
+  for(const o of vm.orders){const items=o.assignments.filter(it=>it.sent&&vm.rows.find(r=>r.id===it.rowId)?.members.includes(resourceId));if(!items.length)continue;
+    const ev=machineOrder(vm.plan,o.id).evaluation;out.push({order:o,item:items[0],closed:o.status==='completed'||!!(ev&&ev.resourceId===resourceId)});}
+  const idx=x=>{const i=route.indexOf(x.order.id);return i<0?1e6:i;};
+  return out.sort((a,b)=>idx(a)-idx(b)||(a.item.startPos??1e9)-(b.item.startPos??1e9)||a.order.id.localeCompare(b.order.id));
+}
+
 /* ---------- View model: snapshot (from bridge) + plan ---------- */
 function dispatchPlan(snapshot,plan,allRows=rows(snapshot,plan)){
   const day=snapshot.calendar.currentDay,out={harvester:null,forwarder:null,issues:[],day};
@@ -427,7 +543,7 @@ function conflictsOf(rowsOut){
 }
 function lanes(entries){const ends=[];for(const e of entries.sort((a,b)=>a.startPos-b.startPos)){let l=ends.findIndex(x=>x<=e.startPos+1e-9);if(l<0){l=ends.length;ends.push(0);}ends[l]=e.endPos;e.lane=l;}return Math.max(1,ends.length);}
 function viewModel(snapshot,planIn){
-  const plan=normalizePlan(planIn),allRows=rows(snapshot,plan),hpr=fromHPR(snapshot.production.messages);
+  const plan=normalizePlan(planIn),allRows=rows(snapshot,plan),production={...snapshot.production,messages:mergeProduction(snapshot.production.messages,manualMessages(plan))},hpr=fromHPR(production.messages);
   const driving=(order,row)=>{const est=estimate(order,row);return est.lines.reduce((x,y)=>y.hours>x.hours?y:x,est.lines[0]);};
   const rowsOut=allRows.map(row=>({...row,items:rowItems(snapshot,plan,row).map(it=>({...it,volume:driving(it.order,row)?.volume??it.order.estimatedVolume,workDays:workDays(row,it.start,it.end),startPos:positionOf(row,it.start),endPos:positionOf(row,it.end,true),startTime:timeOf(row,it.start),endTime:timeOf(row,it.end,true),outdated:it.sent&&it.sentVersion<snapshot.meta.requiredVersion}))}));
   for(const r of rowsOut){r.overlap=r.items.some((x,i)=>i&&x.start<r.items[i-1].end-1e-9);r.ghosts=[];}
@@ -440,7 +556,7 @@ function viewModel(snapshot,planIn){
     const items=rowsOut.flatMap(r=>r.items.filter(i=>i.orderId===o.id)).sort((x,y)=>(x.startPos??1e9)-(y.startPos??1e9)),a=items[0]?plan.assignments.find(x=>x.id===items[0].id):null,row=a&&rowsOut.find(r=>r.id===a.rowId),item=items[0]||null;
     const p=hpr.byObject[o.id]||{felled:0,felledByShifts:0,opening:0,forwarded:0,forestStock:0,reports:[]};
     const sentOk=items.length>0&&items.every(i=>i.sent&&i.sentVersion>=snapshot.meta.requiredVersion);
-    const status=higher(deriveStatus({planned:items.length>0,sent:sentOk||o.gameSent,felledByShifts:p.felledByShifts,forwarded:p.forwarded,forestStock:p.forestStock,remaining:o.remaining}),o.gameSent?'sent':'available');
+    const status=higher(higher(deriveStatus({planned:items.length>0,sent:sentOk||o.gameSent,felledByShifts:p.felledByShifts,forwarded:p.forwarded,forestStock:p.forestStock,remaining:o.remaining}),o.gameSent?'sent':'available'),machineOrder(plan,o.id).status||'available');
     const edit=plan.edits[o.id]||{},instr=plan.instructions[o.id];
     const pinFlag=o.pin.loaded!==o.pin.spec&&!(instr&&instr.pinVersion>=o.pin.required&&items.some(i=>i.sent));
     const starts=items.filter(i=>i.startPos!=null),startISO=starts.length?dayISO(Math.floor(starts[0].startPos)):null,endISO=starts.length?dayISO(Math.max(...starts.map(i=>Math.max(Math.floor(i.startPos),Math.ceil(i.endPos)-1)))):null;
@@ -450,8 +566,9 @@ function viewModel(snapshot,planIn){
   });
   const dispatch=dispatchPlan(snapshot,plan,allRows);
   const orderBook=snapshot.orderBook.map(b=>({...b,confirmed:!!plan.orderBook[b.id]?.confirmed,limits:{min:plan.orderBook[b.id]?.min??90,max:plan.orderBook[b.id]?.max??110},comment:plan.orderBook[b.id]?.comment||'',planned:orders.filter(o=>o.assignment&&o.status!=='completed').reduce((s,o)=>s+(o.assortments.find(x=>x.key===b.assortment)?.estimatedVolume||0),0)}));
-  return{...snapshot,plan,rows:rowsOut,orders,dispatch,orderBook,followUp:hpr,conflicts,resourcesAll:resources(snapshot,plan),chainsAll:chains(snapshot,plan).map(c=>({...c,lag:chainLag(c)})),staged:plan.assignments.filter(a=>a.staged).length};
+  return{...snapshot,production,plan,rows:rowsOut,orders,dispatch,orderBook,followUp:hpr,machine:machineData(plan),conflicts,resourcesAll:resources(snapshot,plan),chainsAll:chains(snapshot,plan).map(c=>({...c,lag:chainLag(c)})),staged:plan.assignments.filter(a=>a.staged).length};
 }
-return{STATUSES,STATUS_INFO,OPERATIONS,opLabel,PLANNER_TRANSITIONS,canTransition,deriveStatus,WEEKDAYS,CALENDAR_START,START_CLOCK,dayISO,dayIndexOf,weekday,mondayOf,hoursOn,weeklyTotal,hasCapacity,startHourOfDay,positionOf,timeOf,hourAt,hourAtPosition,overlapOnDay,workDays,addWorkingDays,hourAtBoundary,rateFor,estimate,durationHours,resources,chains,chainLag,DEFAULT_LAG,rows,emptyPlan,normalizePlan,rowItems,normalizeRow,commit,hasOverlap,assign,unassign,removeItems,moveItem,insertAt,compressPreview,compress,setEstimatedStart,updateItem,resizeHours,resizeItem,shiftItem,reflow,memberSpans,conflictsOf,send,toOIN,toPIN,toFOI,toFDI,instructionsFor,SYMBOL_KINDS,orderLandings,orderSymbols,addLanding,addSymbol,updateMapObject,removeMapObject,setRouteOrder,pinStatus,pinFileName,fromHPR,dispatchPlan,viewModel};
+return{STATUSES,STATUS_INFO,OPERATIONS,opLabel,PLANNER_TRANSITIONS,canTransition,deriveStatus,WEEKDAYS,CALENDAR_START,START_CLOCK,dayISO,dayIndexOf,weekday,mondayOf,hoursOn,weeklyTotal,hasCapacity,startHourOfDay,positionOf,timeOf,hourAt,hourAtPosition,overlapOnDay,workDays,addWorkingDays,hourAtBoundary,rateFor,estimate,durationHours,resources,chains,chainLag,DEFAULT_LAG,rows,emptyPlan,normalizePlan,rowItems,normalizeRow,commit,hasOverlap,assign,unassign,removeItems,moveItem,insertAt,compressPreview,compress,setEstimatedStart,updateItem,resizeHours,resizeItem,shiftItem,reflow,memberSpans,conflictsOf,send,toOIN,toPIN,toFOI,toFDI,instructionsFor,SYMBOL_KINDS,orderLandings,orderSymbols,addLanding,addSymbol,updateMapObject,removeMapObject,setRouteOrder,pinStatus,pinFileName,fromHPR,dispatchPlan,viewModel,
+  MACHINE_TABS,MACHINE_TRANSITIONS,machineData,machineOrder,markTab,tabsSeen,tabsComplete,machineFiles,machineTransition,canStart,machineStart,machineTransfer,machinePinVersion,fromMachineReport,addMachineReport,manualMessages,mergeProduction,overwrittenReports,addPlot,volumeCheck,finalEvaluation,setRouteDrawing,addRoutePoint,machineOrders};
 })();
 if(typeof module!=='undefined')module.exports=CFHModel;
