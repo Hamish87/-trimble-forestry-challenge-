@@ -4,13 +4,16 @@ Postgres 15 schema for the replica's real data layer (PLAN_OVERNIGHT.md §2). Fi
 
 | File | Purpose |
 |---|---|
-| `schema.sql` | Idempotent DDL: schema `cfharvest`, 13 enums, 30 tables, 2 views, status-audit and `updated_at` triggers. Re-runnable; never drops data. |
-| `seed.sql` | Demo tenant "Demo-Lohnunternehmen": client TRI, H-01 / F-01 / K-01, the game's three stands as work orders H-A01 / H-B01 / H-C01, the Standardauftrag order book. Idempotent (deterministic ids + `ON CONFLICT DO NOTHING`). |
-| `SCHEMA.md` | This document. The column tables in §3 are generated from the database catalogue and the comments in `schema.sql`. |
+| `schema.sql` | Idempotent DDL: schema `cfharvest`, 13 enums, 34 tables, 2 views, status-audit and `updated_at` triggers. Re-runnable; never drops data; columns added later use `ADD COLUMN IF NOT EXISTS`, so older databases are upgraded in place. |
+| `seed.sql` | Demo tenant "Demo-Lohnunternehmen": client TRI, H-01 / F-01 / K-01, the game's three stands as work orders H-A01 / H-B01 / H-C01, the Standardauftrag order book, Administration master data (roles, users with resource access, map layers, message templates). Idempotent (deterministic ids + `ON CONFLICT DO NOTHING`; one-time `UPDATE`s fill columns added after a database was first seeded). |
+| `grants.sql` | PostgREST grants for the demo (`anon`, `authenticated`): usage on the schema, select/insert/update on every table, delete on the tables the store mirrors. Demo only, RLS is off (see `README.md`). |
+| `apply.sh` | `apply.sh <DATABASE_URL> [--grants]`: runs `schema.sql` then `seed.sql` (and `grants.sql`) with `psql`, then prints the two one-time Supabase dashboard steps. |
+| `README.md` | Setting up Supabase (new project or isolated schema in an existing one), filling `app/config.js`, switching the replica's store, security caveat. |
+| `SCHEMA.md` | This document. The column tables in §3 were generated from the database catalogue and the comments in `schema.sql`; the §2 store-pass additions (marked †) were added by hand in the same format. |
 
 Source keys as in `SPEC_PLANNING.md` / `evidence/CAPTURE_LOG.md` (**[Mnn]** manual screenshot, **[V6-m:ss]** video frame, **[MW]** manual text, **[SS]** spec sheet, **[VS]** Viktiga steg, **[MM]** Manual Maskin). **[DEMO]** = our design decision, nothing observed. **approx.** = StanForD 2010 element names recalled from the standard, not checked against the Skogforsk XSDs. **[DEMO game]** = a value or column that exists only because the INTERFORST game needs it.
 
-Apply: `psql "$DATABASE_URL" -f cfharvest/db/schema.sql -f cfharvest/db/seed.sql` (or paste both into the Supabase SQL editor, in that order).
+Apply: `cfharvest/db/apply.sh "$DATABASE_URL" --grants` (or `psql "$DATABASE_URL" -f cfharvest/db/schema.sql -f cfharvest/db/seed.sql -f cfharvest/db/grants.sql`, or paste the three files into the Supabase SQL editor, in that order). Validation: §9.
 
 ## 1. Design rules
 
@@ -38,6 +41,11 @@ erDiagram
   app_user ||--o{ app_user_role : "has"
   role ||--o{ app_user_role : "granted"
   resource |o--o{ app_user : "Mobil/Maskin login"
+  app_user ||--o{ app_user_resource : "Tillgång till resurser"
+  resource ||--o{ app_user_resource : "visible to"
+  resource ||--o{ resource_transfer : "Resursöverföringar"
+  company ||--o{ map_layer_config : "Kartskikt"
+  company ||--o{ message_template : "Meddelande mallar"
   client ||--o{ contract : "Avtal"
   contract ||--o{ contract_operation_type : "covers"
   operation_type ||--o{ contract_operation_type : "in"
@@ -177,7 +185,7 @@ In `v_order_book_followup`, a work order contributes to an order line when the c
 ## 3. Tables
 
 <!-- COLUMNS:BEGIN -->
-Generated from the database catalogue and the inline comments of `schema.sql` (30 tables, in creation order). Every table also has `tenant_id uuid NOT NULL → company`, which is listed but not repeated in the notes.
+Generated from the database catalogue and the inline comments of `schema.sql` (34 tables, in creation order; the four tables and six columns marked † were added in the §2 store pass and are listed in the same format). Every table also has `tenant_id uuid NOT NULL → company`, which is listed but not repeated in the notes.
 
 ### `company`
 
@@ -197,6 +205,12 @@ Eget företag [M8]: the contractor tenant. tenant_id is the row's own id (genera
 | `settings` | jsonb | no | `{}` | Företagsinställningar [M8] (not observed in detail) |
 | `created_at` | timestamptz | no | `now()` |  |
 | `updated_at` | timestamptz | no | `now()` |  |
+| `biometria_id` † | text | yes |  | Biometria id, format `NNNNN+00000` (CHECK `company_biometria_ck`) |
+| `contact_name` † | text | yes |  | Kontaktperson [DEMO] |
+| `contact_phone` † | text | yes |  | [DEMO] |
+| `contact_email` † | text | yes |  | [DEMO] |
+
+Checks: `company_biometria_ck`.
 
 ### `role`
 
@@ -245,6 +259,8 @@ Resources first (app_user may be bound to a machine for the Mobil/Maskin role). 
 | `description` | text | yes |  | model.js `model` / `operation` free text [DEMO] |
 | `created_at` | timestamptz | no | `now()` |  |
 | `updated_at` | timestamptz | no | `now()` |  |
+| `unit_data_consent` † | boolean | yes |  | Enhetsdata [M8 "Förfrågan om enhetsdata"]: may the unit/device data go to CFHarvest; NULL = never asked (the app assumes consent for the game machines [DEMO]) |
+| `unit_data_consent_on` † | date | yes |  | day the consent was given (NULL when revoked) |
 
 Unique: `unique (tenant_id, code)`, `unique (tenant_id, stanford_code) WHERE ((stanford_code IS NOT NULL) AND (stanford_code <> ''::text))`. 
 
@@ -777,6 +793,68 @@ Unique: `unique (order_book_id, receiving_place_id, sortiment_code)`. Checks: `o
 
 Checks: `message_recipient_one_ck`.
 
+### `app_user_resource` †
+
+Användare → Tillgång till resurser: which machines a user may plan / see. Independent of `app_user.resource_id`, which binds a Mobil/Maskin login to its own machine (closes §8.6).
+
+| Column | Type | Null | Default | Notes |
+|---|---|---|---|---|
+| `tenant_id` | uuid | no |  |  |
+| `user_id` | uuid | no |  | PK · → app_user (cascade) |
+| `resource_id` | uuid | no |  | PK · → resource (cascade) |
+
+### `resource_transfer` †
+
+Resursöverföringar [M8]: a machine lent to a subcontractor (`out`) or taken back (`in`). The latest transfer of a resource decides `resource.is_subcontractor` (`CFHAdmin.addTransfer`).
+
+| Column | Type | Null | Default | Notes |
+|---|---|---|---|---|
+| `id` | uuid | no | `gen_random_uuid()` | PK |
+| `tenant_id` | uuid | no |  |  |
+| `transfer_no` | text | no |  | app id: RT-01 … |
+| `resource_id` | uuid | no |  | → resource (cascade) |
+| `direction` | text | no |  | `out` \| `in` (CHECK) |
+| `partner_name` | text | no |  | subcontractor (Underentreprenör) |
+| `se_number` | text | no |  | "SE" + 10 digits (+ "01"), CHECK `^SE[0-9]{10}([0-9]{2})?$` [DEMO] |
+| `valid_from` | date | no |  | transfer date |
+| `valid_to` | date | yes |  | open-ended when NULL [DEMO] |
+| `note` | text | yes |  | ≤ 200 characters |
+| `created_at` | timestamptz | no | `now()` |  |
+| `updated_at` | timestamptz | no | `now()` |  |
+
+Unique: `unique (tenant_id, transfer_no)`. Checks: direction, se_number, note length, `resource_transfer_period_ck`.
+
+### `map_layer_config` †
+
+Kartskikt [M8]: per-tenant map layer configuration (order in the 🗂 switcher, shown when a map opens, accent colour). Keys = `CFHAdmin.LAYERS` / `CFHViews.MAP_LAYERS`.
+
+| Column | Type | Null | Default | Notes |
+|---|---|---|---|---|
+| `tenant_id` | uuid | no |  | PK |
+| `layer_key` | text | no |  | PK · photo, stands, landings, symbols, protect, neighbours, routes, machines |
+| `enabled_by_default` | boolean | no | `true` |  |
+| `sort_order` | smallint | no | `0` |  |
+| `colour` | text | yes |  | `#rrggbb` lower case; NULL = drawn in status colours |
+| `fixed` | boolean | no | `false` | the orthophoto stays first and cannot be hidden |
+| `updated_at` | timestamptz | no | `now()` |  |
+
+### `message_template` †
+
+Meddelande mallar [M8]: message templates with `{Auftrag}` `{Ressource}` `{Datum}` placeholders (`CFHAdmin.fill`), offered in Skicka meddelande, the user dialog and the Nachrichten page.
+
+| Column | Type | Null | Default | Notes |
+|---|---|---|---|---|
+| `id` | uuid | no | `gen_random_uuid()` | PK |
+| `tenant_id` | uuid | no |  |  |
+| `code` | text | no |  | app id: MT-01 … |
+| `name` | text | no |  |  |
+| `body` | text | no |  | ≤ 500 characters |
+| `active` | boolean | no | `true` |  |
+| `created_at` | timestamptz | no | `now()` |  |
+| `updated_at` | timestamptz | no | `now()` |  |
+
+Unique: `unique (tenant_id, code)`.
+
 ### Enums
 
 | Type | Values |
@@ -893,7 +971,7 @@ Opening stock (the game's Talgrund: 80 fm already felled before shift 1) is an H
 
 ## 6. How the app maps to it
 
-The replica's in-memory shapes are the bridge **snapshot** (`bridge.js fromGameState()`, which is read-only game truth) and the planner's **plan** (`model.js emptyPlan()`, today kept in sessionStorage). The PLAN §2 adapter `store.js` persists the plan side and master data. In game mode, production and statuses stay game-owned: the adapter may mirror `productionMessages()` into `production_message`, but must never write planned values back as reported ones (AGENTS.md: "Planning values must come from simulation state").
+The replica's in-memory shapes are the bridge **snapshot** (`bridge.js fromGameState()`, which is read-only game truth) and the planner's **plan** (`model.js emptyPlan()`). The plan goes through the store adapter `app/store.js` (§6.3): sessionStorage by default, Supabase behind `?store=supabase`. In game mode, production and statuses stay game-owned: the adapter may mirror `productionMessages()` into `production_message`, but must never write planned values back as reported ones (AGENTS.md: "Planning values must come from simulation state").
 
 ### 6.1 Snapshot → tables
 
@@ -947,7 +1025,7 @@ The replica's in-memory shapes are the bridge **snapshot** (`bridge.js fromGameS
 
 | `plan` field | Column |
 |---|---|
-| `assignments[].id` (A1, A2 …) | `assignment.id` (uuid; the adapter keeps the mapping) |
+| `assignments[].id` (A1, A2 …) | `assignment.id` = `md5('cfh-demo:assignment:A<n>')::uuid`; on load the adapter recovers `A<n>` by search (rows written by others get the next free numbers) |
 | `…orderId` | `assignment.work_order_id` (by `order_no`) |
 | `…rowId` (H-01 / F-01 / K-01) | `assignment.resource_id` **or** `team_id` (by `code`) |
 | `…startHour` | `assignment.app_start_hour`; `start_at` = `CFHModel.timeOf(row, startHour)` (09:00 day start) |
@@ -974,6 +1052,42 @@ The replica's in-memory shapes are the bridge **snapshot** (`bridge.js fromGameS
 | `extraResources[]` | `resource` rows |
 | `chains` | `team` + `team_member` |
 | `basis`, `seq`, `schema` | not stored (client bookkeeping) |
+| `admin.company.{name, orgNo, address, phone, email, country, defaultLanguage, biometriaId, contactName}` | `company.{name, org_no, address, phone, email, country, default_language, biometria_id, contact_name}` † |
+| `admin.roles[code]` (role matrix) | `role.permissions` |
+| `admin.users[] {id, email, displayName, phone, language, roles[], resourceId, resourceAccess[], active}` | `app_user` (id = `md5('cfh-demo:user:<id>')`) + `app_user_role` + `app_user_resource` † |
+| `admin.clients[]` | `client` |
+| `admin.contracts[]` (game contracts: validity + operation types only; own contracts also targets, prices, shortfall) | `contract` + `contract_operation_type` |
+| `admin.transfers[] {id, resourceId, direction, partner, seNumber, date, note}` | `resource_transfer {transfer_no, resource_id, direction, partner_name, se_number, valid_from, note}` † |
+| `admin.layers {order, on, colours}` | `map_layer_config {layer_key, sort_order, enabled_by_default, colour, fixed}` † |
+| `admin.templates[] {id, name, text, active}` (removed seed templates: `_removed`) | `message_template {code, name, body, active}` † (a removed template is a deleted row) |
+| `resources[id].unitDataConsent {granted, date}` | `resource.unit_data_consent`, `unit_data_consent_on` † |
+
+### 6.3 The store adapter (`app/store.js`)
+
+One interface, `read()` (synchronous session copy) · `load()` → `Promise<plan | null>` · `save(plan)` · `subscribe(fn)` · `flush()` · `pending()` · `status()`, with two backends:
+
+| | LocalStore (default) | SupabaseStore |
+|---|---|---|
+| Selected by | nothing (default), `?store=local` | `?store=supabase` or `localStorage['cfharvest-store'] = 'supabase'`, and a filled `app/config.js` |
+| Plan kept in | sessionStorage `cfharvest-plan-v1` (unchanged) | the same session copy **and** the `cfharvest` rows below |
+| Writes | synchronous | session copy at once; database 300 ms after the last change (debounced), one upsert per table (`Prefer: resolution=merge-duplicates`), only tables whose rows changed since the last successful write; deletes mirror Avplanera, removed landings / symbols / templates and rewritten join tables |
+| Reads | `read()` | once per page: 21 `GET`s filtered by `tenant_id` (+ `company`, `work_order` for the id → H-A01 map); the result is used only when the session has no plan of its own (no handoff plan, nothing in sessionStorage). A session plan wins and is written to the database |
+| Errors | — | missing config, unreachable database, missing tenant (schema without `seed.sql`) or any non-2xx answer → local for the rest of the session, banner notice "Datenbank nicht erreichbar – lokale Sitzung", reason in `status().reason` and the console |
+
+Requests go to `<supabaseUrl>/rest/v1/<table>` with `apikey: <publishable key>` (plus `Authorization: Bearer` for a legacy anon JWT), `Accept-Profile: cfharvest` and, on writes, `Content-Profile: cfharvest`. The game handoff envelopes (`cfharvest-handoff-v1`, `cfharvest-return-v1`) are untouched: they still carry the whole plan through sessionStorage or the URL fragment. Leaving for the game flushes a pending write first (at most 3 s); `pagehide` flushes with `keepalive`.
+
+What is stored where:
+
+| Plan part | Database rows | Read back |
+|---|---|---|
+| `assignments` | `assignment` (start/end as Europe/Berlin wall time in UTC, `app_start_hour`, `computed_hours`, status, sent round / version, copy link) | yes |
+| `edits[o].landings`, `edits[o].symbols` | `landing` (code P-A01-2 …, GeoJSON Point), `map_symbol` (code H-A01-S1 …, `category` = warning / turn / unload / protect) | yes |
+| `instructions` | `instruction_file` per OIN / PIN (per assortment) / FOI / FDI, id per order × kind × version; never pruned (send log) | latest version of orders that still have a sent assignment |
+| `admin.*`, `resources`, `extraResources`, `chains` | the tables in §6.2 (`resource` rows are written for every resource; `resource_weekly_hours`, `resource_production_rate`, manual `calendar_override`s, `team` + `team_member`) | yes |
+| game production (`snapshot.production.messages`) | `production_message` + `production_line`: HPR → felled SAG = 0.65 × volume − downgraded, IND = 0.35 × volume, ABW = downgraded (the game's split); FPR → forwarded SAG = `sawVolume`, IND = the rest. Opening stock stays the seed's row; messages of an earlier game (other ids, `game_round` set) are deleted | **never** (write-only: reported volumes stay game-owned) |
+| `edits[o].{infoContractor, infoClient, volumes, estEnd, message}`, `pinRemoved`, `routeOrder`, `orderBook`, `messages`, `log`, `basis` | session copy and handoff only (the columns exist, §6.2; partial `PATCH`es on seeded rows are a follow-up) | — |
+
+Last writer wins: one planner per tenant at a time. The tests are `tests/cfharvest-store.cjs` (fake PostgREST); §9 lists the real-Postgres check.
 
 ## 7. Demo tenant (`seed.sql`)
 
@@ -994,6 +1108,12 @@ The replica's in-memory shapes are the bridge **snapshot** (`bridge.js fromGameS
 | map_symbols (jsonb) | harvester and forwarder routes per stand as LineStrings | `routes.js harvester / forwarder` |
 | contact | Waldbesitzer / Holzeinkauf placeholders per order | `bridge.js CONTACTS` |
 | production | one opening-stock HPR for H-B01: 52 fm SAG + 28 fm IND felled, lying in the forest | game `initial().stockGrades` |
+| company † | Biometria id 90010+00000, contact "Disposition (Demo)" | `admin-model.js COMPANY` [DEMO] |
+| role † | the administrator also gets `admin.company`, `admin.transfers`, `admin.layers`, `admin.templates` (and `messages.write`) | `admin-model.js ROLES` |
+| app_user_resource † | planner → H-01, F-01, L-01, L-02; H-01 driver → H-01 | `admin-model.js USERS` |
+| resource † | H-01 / F-01 unit-data consent since 05.01.2026; trucks never asked | `views/admin.js unitConsent` [DEMO] |
+| map_layer_config † | photo (fixed) · stands · landings · symbols · protect · neighbours · routes (hidden) · machines, with the default colours | `admin-model.js LAYERS` |
+| message_template † | MT-01 Arbeitsauftrag gesendet · MT-02 Rückegasse und Schutzbereich · MT-03 Rückmeldung erbeten | `admin-model.js TEMPLATES` |
 | order_book | B-V-26-014 "Standardauftrag", 19.–30.10.2026, follow-up against Skotare; lines SAG 360 @ 78 €, IND 240 @ 34 €, ABW 0 @ 26 €; alarm 90–110 % | game `targets()`; period / basis [DEMO] |
 
 No assignments are seeded, because the app starts unplanned. The calendar epoch is `CFHModel.CALENDAR_START` = Mon 19.10.2026, and game shift *n* is calendar day *n − 1*.
@@ -1005,6 +1125,17 @@ No assignments are seeded, because the app starts unplanned. The calendar epoch 
 3. **Sortiment master data.** `sortiment_code` / `sort_group` are free text on both `assortment` and `order_line`. A `sortiment` lookup per client (the product's "0110 Talltimmer" codes) would remove the duplication.
 4. **Priority scale.** Only "Lägsta" was observed; the five steps are [DEMO].
 5. **`assignment.app_start_hour`** duplicates `start_at` so the replica round-trips without calendar maths. Drop it once `store.js` converts reliably.
-6. **Mobil/Maskin user ↔ resource** is 1:1 (`app_user.resource_id`). Shared machines with shift crews would need a join table.
+6. **Mobil/Maskin user ↔ resource** is 1:1 (`app_user.resource_id`); the planner's *access* to resources is now the join table `app_user_resource` †. Shared machines with shift crews would still need a crew table.
 7. **StanForD element names** are approx. and must be verified against the Skogforsk 2010 XSDs before any real OIN/PIN/FOI/FDI is generated or HPR/FPR is parsed. FQC is kept although it is probably not a StanForD 2010 message.
 8. **Contract prices by sortiment code** (`contract.prices` jsonb) versus per order line: the product's Avtal screen was not observed, so the split between contract and Beställning prices is [DEMO].
+9. **FPR split.** The game reports forwarded saw volume only; the store books the rest as IND, so forwarded ABW shows as IND in `v_production_followup`. A per-grade FPR from the game would remove the approximation.
+10. **Concurrent planners.** The store is last-writer-wins per table batch. Real multi-user planning needs row versions (`updated_at` compare-and-set) or Supabase Realtime, plus RLS (header of `schema.sql`).
+
+## 9. Validation
+
+Run in a scratch directory outside the repo with `@electric-sql/pglite` 0.2.17 (PostgreSQL 16.4 in WebAssembly), 15 Oct 2026:
+
+- **Fresh database**: `schema.sql` twice, `seed.sql` twice: no errors; 34 tables. Constraint probes: a Biometria id `1234+00000`, an SE number `SE12` and a colour `#FFF` are rejected (`check_violation`); a resource transfer and a sent chain assignment as the store writes them are accepted; `DELETE` of the demo company cascades to zero rows in the new tables.
+- **Upgrade**: the previous `schema.sql` + `seed.sql` (commit `5ebc172`), then the new files twice: the new columns are added and filled once (Biometria id, contact, consent), the administrator gains the four `admin.*` permissions, 5 user-resource rows, 8 layers, 3 templates.
+- **`apply.sh`** with the real `psql` 16 client against `pglite-socket` (PGlite 0.5): `apply.sh <url> --grants` twice, exit 0, quiet second run; `anon` has `DELETE` on `assignment` but not on `work_order`.
+- **Store against real Postgres**: `CFHStore.SupabaseStore` behind a small PostgREST emulation over PGlite (`INSERT … SELECT … FROM jsonb_populate_recordset … ON CONFLICT … DO UPDATE` for merge-duplicates, the same eq / in / not.in / like / is filters): a plan with a chain bar sent (OIN + 2 PIN + FOI + FDI), a Kopiera bar, an extra landing, two symbols, company / user / role / client / contract / transfer / layer / template edits, resource weekly hours, Wochenkalender days, consent, a new resource, a chain lag and one played shift was written without a single constraint or FK error, the change set (Avplanera, removed symbol) deleted the right rows, a second session read the same plan back, and `v_production_followup` / `v_order_book_followup` showed the shift's felled and forwarded volumes.

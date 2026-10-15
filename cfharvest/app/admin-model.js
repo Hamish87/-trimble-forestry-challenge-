@@ -1,9 +1,9 @@
 /* CFHarvest replica · Administration master data (PLAN_OVERNIGHT §4, SPEC_PLANNING §1/§6, db/SCHEMA.md).
    Defaults mirror cfharvest/db/seed.sql (same ids and codes: company, roles administrator/planner/mobile, users planer and
-   h-01, client TRI, contracts V-26-014/015 from the game, operation types). Edits live in plan.admin (the plan envelope in
-   sessionStorage, which travels to the game and back) and are merged over the defaults by key, so the seed stays the
+   h-01, client TRI, contracts V-26-014/015 from the game, operation types). Edits live in plan.admin (the plan envelope in the
+   plan store — sessionStorage, or Supabase via store.js — which travels to the game and back) and are merged over the defaults by key, so the seed stays the
    source of truth for anything the planner has not changed. Field names are the camelCase of the schema columns; fields
-   the schema has no column for are listed in SCHEMA_GAPS. No DOM, no game state: the snapshot comes in as data. */
+   the schema has no column for would be listed in SCHEMA_GAPS (empty since db/schema.sql gained them). No DOM, no game state: the snapshot comes in as data. */
 'use strict';
 const CFHAdmin=(()=>{
 /* ---------- Seed (db/seed.sql) ---------- */
@@ -34,8 +34,10 @@ const TEMPLATES=[
 const LAYERS=[
   {key:'photo',on:true,colour:null,fixed:true},{key:'stands',on:true,colour:'#bff0cc'},{key:'landings',on:true,colour:'#eef7ff'},{key:'symbols',on:true,colour:null},
   {key:'protect',on:true,colour:'#ffd369'},{key:'neighbours',on:true,colour:null},{key:'routes',on:false,colour:'#52d5ff'},{key:'machines',on:true,colour:null}];
-/** Schema columns this screen needs and cfharvest/db/schema.sql does not have yet (for the report and SCHEMA.md). */
-const SCHEMA_GAPS=['company.settings.biometriaId (no column)','company.settings.contactName','app_user resource access (join table, SCHEMA §8.6)','resource_transfer table','map_layer config (company.settings.mapLayers)','message_template table','resource.settings.unitDataConsent'];
+/** Schema columns these screens need and cfharvest/db/schema.sql lacks. The PLAN_OVERNIGHT §2 pass closed every gap listed by §4:
+    company.biometria_id / contact_name, app_user_resource (resource access), resource_transfer, map_layer_config,
+    message_template, resource.unit_data_consent(_on); app/store.js maps them (db/SCHEMA.md §6.3). */
+const SCHEMA_GAPS=[];
 
 /* ---------- Helpers ---------- */
 const arr=x=>Array.isArray(x)?x:[];

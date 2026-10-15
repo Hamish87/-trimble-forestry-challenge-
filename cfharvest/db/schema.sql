@@ -740,8 +740,88 @@ CREATE TABLE IF NOT EXISTS cfharvest.message_recipient (
 );
 
 -- =====================================================================================================
+-- Administration additions (PLAN_OVERNIGHT §4 screens; the gaps listed in app/admin-model.js SCHEMA_GAPS)
+-- Columns are added with ADD COLUMN IF NOT EXISTS so databases created before them are upgraded in place;
+-- an inline CHECK is only created together with its column, so re-runs stay no-ops.
+-- =====================================================================================================
+
+-- Eget företag [M8]: Biometria id (format NNNNN+00000, as validated by the product's form) and the
+-- tenant's contact person. Shown and edited in Administration → Eigenes Unternehmen.
+ALTER TABLE cfharvest.company
+  ADD COLUMN IF NOT EXISTS biometria_id  text CONSTRAINT company_biometria_ck
+                                              CHECK (biometria_id IS NULL OR biometria_id ~ '^[0-9]{5}\+[0-9]{5}$'),
+  ADD COLUMN IF NOT EXISTS contact_name  text,        -- Kontaktperson [DEMO]
+  ADD COLUMN IF NOT EXISTS contact_phone text,        -- [DEMO]
+  ADD COLUMN IF NOT EXISTS contact_email text;        -- [DEMO]
+
+-- Enhetsdata [M8 "Förfrågan om enhetsdata"]: consent that the machine's unit/device data may be
+-- transmitted to CFHarvest. NULL = never asked (the app then assumes consent for the game machines [DEMO]).
+ALTER TABLE cfharvest.resource
+  ADD COLUMN IF NOT EXISTS unit_data_consent    boolean,
+  ADD COLUMN IF NOT EXISTS unit_data_consent_on date;   -- day the consent was given (NULL when revoked)
+
+-- Användare → resource access: which machines a user may plan / see (SCHEMA §8.6). Independent of
+-- app_user.resource_id, which binds a Mobil/Maskin login to its own machine.
+CREATE TABLE IF NOT EXISTS cfharvest.app_user_resource (
+  tenant_id    uuid NOT NULL REFERENCES cfharvest.company(id) ON DELETE CASCADE,
+  user_id      uuid NOT NULL REFERENCES cfharvest.app_user(id) ON DELETE CASCADE,
+  resource_id  uuid NOT NULL REFERENCES cfharvest.resource(id) ON DELETE CASCADE,
+  PRIMARY KEY (user_id, resource_id)
+);
+
+-- Resursöverföringar [M8]: a machine lent to a subcontractor ('out') or taken back ('in'). The latest
+-- transfer of a resource decides resource.is_subcontractor (CFHAdmin.addTransfer). SE number = the
+-- Swedish VAT/organisation form "SE" + 10 digits (+ "01"), as validated in the app [DEMO].
+CREATE TABLE IF NOT EXISTS cfharvest.resource_transfer (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id     uuid NOT NULL REFERENCES cfharvest.company(id) ON DELETE CASCADE,
+  transfer_no   text NOT NULL,                     -- app id: RT-01 …
+  resource_id   uuid NOT NULL REFERENCES cfharvest.resource(id) ON DELETE CASCADE,
+  direction     text NOT NULL CHECK (direction IN ('out', 'in')),
+  partner_name  text NOT NULL,                     -- subcontractor (Underentreprenör)
+  se_number     text NOT NULL CHECK (se_number ~ '^SE[0-9]{10}([0-9]{2})?$'),
+  valid_from    date NOT NULL,                     -- transfer date
+  valid_to      date,                              -- open-ended when NULL [DEMO]
+  note          text CHECK (note IS NULL OR length(note) <= 200),
+  created_at    timestamptz NOT NULL DEFAULT now(),
+  updated_at    timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT resource_transfer_no_uq UNIQUE (tenant_id, transfer_no),
+  CONSTRAINT resource_transfer_period_ck CHECK (valid_to IS NULL OR valid_from <= valid_to)
+);
+
+-- Kartskikt [M8]: per-tenant map layer configuration — order in the 🗂 layer switcher, shown when a map
+-- opens, accent colour (NULL = drawn in status colours). Keys = CFHViews.MAP_LAYERS / CFHAdmin.LAYERS.
+CREATE TABLE IF NOT EXISTS cfharvest.map_layer_config (
+  tenant_id           uuid NOT NULL REFERENCES cfharvest.company(id) ON DELETE CASCADE,
+  layer_key           text NOT NULL CHECK (layer_key ~ '^[a-z][a-z0-9_]*$'),  -- photo, stands, landings …
+  enabled_by_default  boolean NOT NULL DEFAULT true,
+  sort_order          smallint NOT NULL DEFAULT 0,
+  colour              text CHECK (colour IS NULL OR colour ~ '^#[0-9a-f]{6}$'),
+  fixed               boolean NOT NULL DEFAULT false,   -- the orthophoto stays first and cannot be hidden
+  updated_at          timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (tenant_id, layer_key)
+);
+
+-- Meddelande mallar [M8]: message templates with {Auftrag} {Ressource} {Datum} placeholders
+-- (CFHAdmin.fill). Used by Skicka meddelande, the user dialog and the Nachrichten page.
+CREATE TABLE IF NOT EXISTS cfharvest.message_template (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  tenant_id   uuid NOT NULL REFERENCES cfharvest.company(id) ON DELETE CASCADE,
+  code        text NOT NULL,                        -- app id: MT-01 …
+  name        text NOT NULL,
+  body        text NOT NULL CHECK (length(body) <= 500),
+  active      boolean NOT NULL DEFAULT true,
+  created_at  timestamptz NOT NULL DEFAULT now(),
+  updated_at  timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT message_template_code_uq UNIQUE (tenant_id, code)
+);
+
+-- =====================================================================================================
 -- Indexes: foreign keys and (tenant_id, status)
 -- =====================================================================================================
+CREATE INDEX IF NOT EXISTS app_user_resource_res_ix       ON cfharvest.app_user_resource (resource_id);
+CREATE INDEX IF NOT EXISTS app_user_resource_tenant_ix    ON cfharvest.app_user_resource (tenant_id);
+CREATE INDEX IF NOT EXISTS resource_transfer_res_ix       ON cfharvest.resource_transfer (resource_id, valid_from);
 CREATE INDEX IF NOT EXISTS role_tenant_ix                 ON cfharvest.role (tenant_id);
 CREATE INDEX IF NOT EXISTS app_user_tenant_ix             ON cfharvest.app_user (tenant_id);
 CREATE INDEX IF NOT EXISTS app_user_resource_ix           ON cfharvest.app_user (resource_id);

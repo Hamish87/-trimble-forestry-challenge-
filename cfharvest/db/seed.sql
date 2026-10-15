@@ -24,20 +24,31 @@ CREATE OR REPLACE FUNCTION pg_temp.did(k text) RETURNS uuid LANGUAGE sql IMMUTAB
 $$ SELECT md5('cfh-demo:' || k)::uuid $$;
 
 -- ---------------------------------------------------------------------------------------------- tenant
-INSERT INTO cfharvest.company (id, name, org_no, address, email, country, default_language, settings)
+INSERT INTO cfharvest.company (id, name, org_no, address, email, country, default_language, settings,
+  biometria_id, contact_name)
 VALUES (pg_temp.did('company'), 'Demo-Lohnunternehmen', NULL, 'Forstweg 1 · Demo', 'dispo@demo.invalid', 'DE', 'de',
-        '{"shiftHours": 8, "dayStart": "09:00", "calendarStart": "2026-10-19"}')
+        '{"shiftHours": 8, "dayStart": "09:00", "calendarStart": "2026-10-19"}',
+        '90010+00000', 'Disposition (Demo)')     -- Biometria id / contact [DEMO] = admin-model.js COMPANY
 ON CONFLICT DO NOTHING;
+-- Databases seeded before these columns existed: fill them once (no-op afterwards, never overwrites an edit).
+UPDATE cfharvest.company SET biometria_id = '90010+00000', contact_name = coalesce(contact_name, 'Disposition (Demo)')
+WHERE id = pg_temp.did('company') AND biometria_id IS NULL;
 
 -- ---------------------------------------------------------------------------------------------- roles & users [DEMO]
 INSERT INTO cfharvest.role (id, tenant_id, code, name_sv, name_de, permissions) VALUES
   (pg_temp.did('role:administrator'), pg_temp.did('company'), 'administrator', 'Administratör', 'Administrator',
-   '{admin.resources,admin.calendar,admin.teams,admin.users,admin.contracts,plan.read,plan.write,plan.send,orderbook.write}'),
+   '{admin.resources,admin.calendar,admin.teams,admin.users,admin.contracts,admin.company,admin.transfers,admin.layers,admin.templates,plan.read,plan.write,plan.send,orderbook.write,messages.write}'),
   (pg_temp.did('role:planner'),       pg_temp.did('company'), 'planner',       'Planerare',     'Planer',
    '{plan.read,plan.write,plan.send,orderbook.write,messages.write}'),
   (pg_temp.did('role:mobile'),        pg_temp.did('company'), 'mobile',        'Mobil/Maskin',  'Mobil/Maschine',
    '{plan.read.own,production.report,messages.write}')
 ON CONFLICT DO NOTHING;
+-- The four Administration areas of PLAN_OVERNIGHT §4 (= admin-model.js ROLES). Databases seeded before they existed
+-- get them once; when any of them is already present (or was removed on purpose later) nothing is touched.
+UPDATE cfharvest.role
+SET permissions = permissions || '{admin.company,admin.transfers,admin.layers,admin.templates}'::text[]
+WHERE id = pg_temp.did('role:administrator')
+  AND NOT permissions && '{admin.company,admin.transfers,admin.layers,admin.templates}'::text[];
 
 -- ---------------------------------------------------------------------------------------------- resources
 -- bridge.js MASTER. Grunddata values are [DEMO] master data (no machine brand implied).
@@ -63,11 +74,22 @@ INSERT INTO cfharvest.app_user (id, tenant_id, email, display_name, language, re
   (pg_temp.did('user:h-01'),   pg_temp.did('company'), 'h-01@demo.invalid',   'Fahrer Harvester H-01',          'de', pg_temp.did('resource:H-01'))
 ON CONFLICT DO NOTHING;
 
+-- Resource access per user (admin-model.js USERS resourceAccess): the planner sees every machine, the driver his own.
+INSERT INTO cfharvest.app_user_resource (tenant_id, user_id, resource_id)
+SELECT pg_temp.did('company'), pg_temp.did('user:' || u.id), pg_temp.did('resource:' || r.code)
+FROM (VALUES ('planer', 'H-01'), ('planer', 'F-01'), ('planer', 'L-01'), ('planer', 'L-02'), ('h-01', 'H-01')) AS u(id, code)
+JOIN (VALUES ('H-01'), ('F-01'), ('L-01'), ('L-02')) AS r(code) USING (code)
+ON CONFLICT DO NOTHING;
+
 INSERT INTO cfharvest.app_user_role (tenant_id, user_id, role_id) VALUES
   (pg_temp.did('company'), pg_temp.did('user:planer'), pg_temp.did('role:administrator')),
   (pg_temp.did('company'), pg_temp.did('user:planer'), pg_temp.did('role:planner')),
   (pg_temp.did('company'), pg_temp.did('user:h-01'),   pg_temp.did('role:mobile'))
 ON CONFLICT DO NOTHING;
+
+-- Enhetsdata consent: the game machines report production, so they start with consent (admin views unitConsent) [DEMO].
+UPDATE cfharvest.resource SET unit_data_consent = true, unit_data_consent_on = '2026-01-05'
+WHERE tenant_id = pg_temp.did('company') AND code IN ('H-01', 'F-01') AND unit_data_consent IS NULL;
 
 -- ---------------------------------------------------------------------------------------------- client, operations
 INSERT INTO cfharvest.client (id, tenant_id, code, name, regions, customer_groups, email) VALUES
@@ -272,5 +294,30 @@ INSERT INTO cfharvest.order_line (id, tenant_id, order_book_id, receiving_place_
   (pg_temp.did('ol:B-V-26-014:ABW'), pg_temp.did('company'), pg_temp.did('ob:B-V-26-014'), pg_temp.did('rp:IA-01'),
    'Industrieholz', 'ABW', 'Abgewertet', '2026-10-19', '2026-10-30', 0, 0, 26, 90, 110)
 ON CONFLICT DO NOTHING;
+
+-- ---------------------------------------------------------------------------------------------- Kartskikt, Meddelande mallar
+-- admin-model.js LAYERS: switcher order, shown when a map opens, accent colour (NULL = status colours) [DEMO].
+INSERT INTO cfharvest.map_layer_config (tenant_id, layer_key, enabled_by_default, sort_order, colour, fixed) VALUES
+  (pg_temp.did('company'), 'photo',      true,  0, NULL,      true),
+  (pg_temp.did('company'), 'stands',     true,  1, '#bff0cc', false),
+  (pg_temp.did('company'), 'landings',   true,  2, '#eef7ff', false),
+  (pg_temp.did('company'), 'symbols',    true,  3, NULL,      false),
+  (pg_temp.did('company'), 'protect',    true,  4, '#ffd369', false),
+  (pg_temp.did('company'), 'neighbours', true,  5, NULL,      false),
+  (pg_temp.did('company'), 'routes',     false, 6, '#52d5ff', false),
+  (pg_temp.did('company'), 'machines',   true,  7, NULL,      false)
+ON CONFLICT DO NOTHING;
+
+-- admin-model.js TEMPLATES [DEMO texts].
+INSERT INTO cfharvest.message_template (id, tenant_id, code, name, body, active) VALUES
+  (pg_temp.did('template:MT-01'), pg_temp.did('company'), 'MT-01', 'Arbeitsauftrag gesendet',
+   'Neuer Arbeitsauftrag {Auftrag} für {Ressource} ab {Datum}. Bitte die PIN-Datei laden und die Hiebsgrenze prüfen.', true),
+  (pg_temp.did('template:MT-02'), pg_temp.did('company'), 'MT-02', 'Rückegasse und Schutzbereich',
+   'Bei {Auftrag} bitte zuerst die Rückegasse 3 nutzen und den Schutzbereich aussparen.', true),
+  (pg_temp.did('template:MT-03'), pg_temp.did('company'), 'MT-03', 'Rückmeldung erbeten',
+   'Bitte den Stand der Arbeiten bei {Auftrag} bis Schichtende melden.', true)
+ON CONFLICT DO NOTHING;
+
+-- No resource_transfer rows: the demo starts without transfers.
 
 COMMIT;
