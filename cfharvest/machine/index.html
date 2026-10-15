@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0b3d6b">
+<title>CFHarvest Maschine · Demo-Replik | Trimble Forestry</title>
+<meta name="description" content="Demonstration des Bordrechners (CFHarvest Maskin) für Harvester und Forwarder, gespeist aus dem Spielstand und der Planung der Forst Challenge.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23003f6b'/%3E%3Cpath d='M7 8h18v5h-6v13h-6V13H7' fill='%23a5dcf6'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../app/style.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="machine">
+<header class="cfh-header m-header">
+  <a class="cfh-brand" href="./" aria-label="CFHarvest Maschine · Demo-Replik"><img src="../../dist/assets/trimble-logo.svg" alt="Trimble" width="105" height="24"><span>CFHarvest<small>Maschine · Demo <span class="sv-cap" lang="sv" data-no-translate>(Maskin)</span></small></span></a>
+  <div id="mResource" class="m-resource"></div>
+  <div class="m-header-right">
+    <a class="m-header-link" href="../app/" title="Arbeitsplanung im Büro öffnen">Planung</a>
+    <label class="language-picker"><span>Sprache</span><select data-language-select aria-label="Sprache wählen"><option data-no-translate value="de" lang="de">Deutsch</option><option data-no-translate value="en" lang="en">English</option><option data-no-translate value="fr" lang="fr">Français</option></select></label>
+    <button type="button" class="cfh-return" id="mReturn" data-action="return" hidden>Zurück zum Spiel</button>
+  </div>
+</header>
+<div id="mBanner" class="cfh-banner m-banner"></div>
+<main id="mMain" class="m-main"></main>
+<div id="mToast" class="cfh-toast" role="status" aria-live="polite"></div>
+<footer class="cfh-footer"><span>Demo-Replik des CFHarvest-Bordrechners für die Messe · keine CFHarvest-Produktoberfläche · Produktion simuliert das Spiel</span><span>PLANEN. ERNTEN. VERBINDEN.</span></footer>
+<script src="../../dist/i18n-catalog.js"></script>
+<script src="../app/i18n-cfharvest.js"></script>
+<script src="../../dist/i18n.js"></script>
+<script src="../../dist/game.js"></script>
+<script src="../../dist/journey.js"></script>
+<script src="../../dist/routes.js"></script>
+<script src="../app/model.js"></script>
+<script src="../app/bridge.js"></script>
+<script src="../app/ui.js"></script>
+<script src="../app/views/karta.js"></script>
+<script src="../app/config.js"></script>
+<script src="../app/store.js"></script>
+<script src="machine.js"></script>
+</body>
+</html>

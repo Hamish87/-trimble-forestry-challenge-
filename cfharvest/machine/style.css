@@ -1,0 +1,111 @@
+/* CFHarvest replica · on-board (Maskin) client. Loaded after ../app/style.css (shared palette, pills, map classes, tables)
+   and only adds the cab layout: touch first (targets ≥ 48 px), landscape tablet 1024×768 and 1280×800, larger type. */
+body.machine{font-size:16px;background:#e9f0f5}
+.machine button,.machine select,.machine input,.machine textarea{font-size:16px}
+.machine button{min-height:44px;padding:8px 14px;border-radius:8px}
+.machine input,.machine select,.machine textarea{min-height:44px;padding:8px 10px;border-radius:7px}
+.machine textarea{min-height:64px;width:100%}
+.machine small{font-size:13px}
+/* Header: brand · resource switcher · planning link, language, back to the game */
+.m-header{gap:12px 18px}
+.m-resource{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.m-login{color:#bcd9ef;font-size:14px}
+.m-res-switch button{background:#ffffff14;color:#fff;border-color:#7fb3da;min-width:76px;font-size:16px}
+.m-res-switch button[aria-pressed=true]{background:#fff;color:var(--ink);border-color:#fff;box-shadow:inset 0 -4px 0 var(--green)}
+.m-res-name{color:#d6ebf9;font-size:14px}
+.m-header-right{margin-left:auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.m-header-link{color:#fff;font-weight:700;text-decoration:none;border:1px solid #7fb3da;border-radius:8px;padding:10px 14px;min-height:44px;display:inline-flex;align-items:center}
+.m-header-link:hover{background:#ffffff18}
+.m-banner .context{font-size:14px}
+.m-main{padding:10px 16px 28px;max-width:1400px;margin:0 auto}
+.m-screen{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.m-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.m-head h1,.m-order-head h1{font-size:30px}
+.m-filter button{min-width:140px}
+/* Planering list: one large row per work order, route order top first */
+.m-orders{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:10px}
+.m-order{display:grid;grid-template-columns:56px 1fr auto;align-items:center;gap:14px;width:100%;text-align:left;background:#f7fbfe;border:1.5px solid #c6dce9;border-radius:12px;padding:12px 14px;min-height:92px;font-weight:500}
+.m-order:hover:not(:disabled){background:#eaf4fb}
+.m-order.closed{opacity:.75}
+.m-seq{width:48px;height:48px;border-radius:50%;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800}
+.m-order-main{display:flex;flex-direction:column;gap:3px;min-width:0}.m-order-main b{font-size:20px;color:var(--ink)}
+.m-order-side{display:flex;flex-direction:column;align-items:flex-end;gap:4px;text-align:right}
+.m-order-side .pill,.m-order-status .pill{font-size:14px;padding:3px 12px;max-width:260px}
+.m-bar{display:block;height:8px;background:#dbe8f1;border-radius:4px;overflow:hidden;margin-top:4px;max-width:420px}.m-bar>span{display:block;height:100%;background:var(--orange)}
+.m-bar.big{height:16px;max-width:none;flex:1;border-radius:8px}
+/* Order screen */
+.m-order-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.m-order-head h1 small{display:block;font-family:Inter,Arial,sans-serif;text-transform:none;font-size:13px;font-weight:500;color:var(--muted)}
+.m-order-status{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+.m-big{min-height:52px!important;font-size:17px!important;padding:10px 18px!important;font-weight:700}
+.m-big.ghost{background:#f3f8fc;border-color:#b8d2e3}
+.m-big.green{width:100%}
+.m-sections{display:flex;gap:6px;margin:12px 0;flex-wrap:wrap}
+.m-sections button{flex:1 1 0;min-height:56px;font-size:17px;background:#f3f8fc;border:1.5px solid #b8d2e3}
+.m-sections button[aria-current=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
+.m-sections button[aria-current=true] .sv-cap{color:#bcd9ef}
+.m-order-grid{display:grid;grid-template-columns:minmax(0,1.75fr) minmax(280px,1fr);gap:14px;align-items:start}
+.m-tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:10px}
+.m-tabs button{min-height:56px;font-size:15px;line-height:1.2;background:#f3f8fc;border:2px solid #b8d2e3}
+.m-tabs button.seen{background:#dcf2e4;border-color:var(--done);color:#1d5a37}
+.m-tabs button[aria-selected=true]{box-shadow:inset 0 -5px 0 var(--ink);border-color:var(--ink)}
+.m-tab-body{border:1px solid var(--line);border-radius:10px;padding:12px 14px;min-height:300px}
+.m-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.m-fields.one{grid-template-columns:1fr}
+.m-fields dt{font-size:13px}.m-fields dd{font-size:16px}
+.m-grid{font-size:15px}.m-grid th{font-size:13px}.m-grid td,.m-grid th{padding:8px 8px}
+.m-start{background:#f7fbfe;border:1.5px solid #c6dce9;border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.m-start h3{margin:0}
+.m-gate{margin:0;font-weight:700;color:var(--warn)}.m-gate.ok{color:var(--done)}
+.m-files ul{margin:4px 0;padding-left:18px;font-size:14px}.m-files h4{margin:0 0 4px}
+.m-loaded{margin:4px 0 0;color:var(--done);font-weight:600;font-size:14px}
+.m-pin-flag{font-size:14px}
+.m-start .green{white-space:normal;line-height:1.25}
+.m-start .green .sv-cap{color:#e6f7ec;display:block}
+/* Map */
+.m-map-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.m-map-tools .m-big{width:auto}
+.m-icon{min-width:52px;min-height:52px!important;font-size:22px!important}
+.m-menu{right:auto;left:0;top:100%;min-width:240px}.m-menu button{min-height:44px}
+.m-map-wrap{border-radius:10px;overflow:hidden;border:1px solid var(--line);background:#0b3a5a}
+.m-map{display:block;width:100%;height:auto;aspect-ratio:1.75/1;max-height:62vh;touch-action:manipulation}
+.m-map-wrap.drawing .m-map{cursor:crosshair;outline:4px dashed var(--yellow);outline-offset:-4px}
+.m-other{fill:#ffffff14;stroke:#ffffff80}
+.map-stand.pill-op polygon{fill:#52d5ff;fill-opacity:.4}
+.map-stand.pill-species polygon{fill:#7fd17f;fill-opacity:.45}
+.m-protect{fill:#ffc37c33;stroke:#ffd369}
+.m-drawn polyline{fill:none;stroke:#ff7a59;stroke-linecap:round;stroke-linejoin:round}
+.m-drawn circle{fill:#fff;stroke:#ff7a59;stroke-width:1.5}
+.m-drawn.fwd polyline{stroke:#ffd166}.m-drawn.fwd circle{stroke:#ffd166}
+.m-machine rect{fill:#52d5ff;stroke:#003858}.m-machine.fwd rect{fill:#ffdf72}
+.m-machine text{fill:#003f6b;font-weight:800;pointer-events:none}
+.m-machine.me rect{stroke:#fff;stroke-width:3}
+.m-pile{cursor:pointer}
+.m-pile circle{fill:#8b5a2b;fill-opacity:.85;stroke:#fff}
+.m-pile text{fill:#fff;font-weight:800;paint-order:stroke;stroke:#003858;stroke-width:2.5}
+.m-pile.selected circle{fill:var(--orange);stroke:#fff}
+.m-progress{display:flex;align-items:center;gap:14px;margin:10px 0 4px;font-size:16px}
+/* Funktioner: tiles + inline form */
+.m-func-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.m-tile{min-height:96px!important;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;text-align:left;background:#f7fbfe;border:2px solid #b8d2e3;border-radius:12px}
+.m-tile b{font-size:18px}.m-tile.active{border-color:var(--ink);background:#e3f0f9;box-shadow:inset 0 -5px 0 var(--ink)}
+.m-tile:disabled{opacity:.55}
+.m-why{color:var(--muted);font-weight:500}
+.m-func-body{margin-top:14px;border:1.5px solid #c6dce9;border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.m-func-body h3{margin:0}
+.m-func-body .green{max-width:420px}
+.m-form-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.m-form-grid .stack{display:flex;flex-direction:column;gap:4px;font-size:14px}
+.m-mode button{min-width:200px}
+.m-checks li{font-size:15px}.m-checks li.warn{color:var(--warn);font-weight:700}
+.m-adj{display:grid;gap:8px}.m-adj-row{display:grid;grid-template-columns:160px 1fr 140px;gap:8px}
+.m-yesno{border:1.5px solid #c6dce9;border-radius:10px;padding:10px 12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.m-yesno legend{font-weight:700;color:var(--ink);padding:0 4px}
+.m-radio{display:inline-flex;align-items:center;gap:8px;min-height:52px;min-width:120px;padding:8px 16px;border:2px solid #b8d2e3;border-radius:10px;font-weight:700;font-size:17px;cursor:pointer;background:#fff}
+.m-radio input{width:22px;height:22px;min-height:0}
+.m-radio.on{border-color:var(--ink);background:#e3f0f9}
+.m-yesno small{flex-basis:100%}
+.m-symbols{margin:4px 0;padding-left:18px}
+/* Smaller tablets (1024 × 768): keep the two-column order screen, tighten type */
+@media (max-width:1100px){.m-order-grid{grid-template-columns:minmax(0,1.5fr) minmax(260px,1fr)}.m-tabs button{font-size:14px;padding:6px}.m-head h1,.m-order-head h1{font-size:26px}}
+/* Portrait / phone: stack */
+@media (max-width:820px){.m-order-grid{grid-template-columns:1fr}.m-tabs{grid-template-columns:repeat(3,1fr)}.m-func-grid,.m-form-grid{grid-template-columns:1fr 1fr}.m-order{grid-template-columns:48px 1fr}.m-order-side{grid-column:2;align-items:flex-start;text-align:left}.m-adj-row{grid-template-columns:1fr}.m-sections button{flex-basis:45%}}

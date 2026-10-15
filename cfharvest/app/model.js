@@ -423,8 +423,12 @@ function machineStart(planIn,orderId,resource,{status,instructions,round,message
   const{m,o}=machineEdit(plan,orderId),files=loadFiles(m,orderId,resource,instructions,round);
   o.started[resource.id]={round:round??null,files:files.map(f=>f.name),pinVersion:instructions?Number(instructions.pinVersion)||1:null};
   machineLog(m,{round:round??null,orderId,resourceId:resource.id,action:'transfer',files:files.map(f=>f.name)});
-  if(message&&String(message).trim()){o.startMsg[resource.id]=String(message).trim().slice(0,500);plan.messages.push({to:'crew',from:resource.id,orderId,text:o.startMsg[resource.id],round:round??null,kind:'start'});}
-  return plan;
+  return message&&String(message).trim()?machineMessage(plan,orderId,resource.id,message,round):plan;
+}
+/** Start message to the crew [MM]: kept on the order (per machine) and listed with the planner's messages (to 'crew'). */
+function machineMessage(planIn,orderId,resourceId,text,round){
+  const plan=normalizePlan(clone(planIn)),t=String(text||'').trim().slice(0,500);if(!t){plan.machineError='message';return plan;}
+  const{o}=machineEdit(plan,orderId);o.startMsg[resourceId]=t;plan.messages.push({to:'crew',from:resourceId,orderId,text:t,round:round??null,kind:'start'});return plan;
 }
 /** Funktioner → Överför till mätdon: pull the currently sent files again (e.g. after the planner re-sent a new PIN version). */
 function machineTransfer(planIn,orderId,resource,{instructions,round}={}){
@@ -569,6 +573,6 @@ function viewModel(snapshot,planIn){
   return{...snapshot,production,plan,rows:rowsOut,orders,dispatch,orderBook,followUp:hpr,machine:machineData(plan),conflicts,resourcesAll:resources(snapshot,plan),chainsAll:chains(snapshot,plan).map(c=>({...c,lag:chainLag(c)})),staged:plan.assignments.filter(a=>a.staged).length};
 }
 return{STATUSES,STATUS_INFO,OPERATIONS,opLabel,PLANNER_TRANSITIONS,canTransition,deriveStatus,WEEKDAYS,CALENDAR_START,START_CLOCK,dayISO,dayIndexOf,weekday,mondayOf,hoursOn,weeklyTotal,hasCapacity,startHourOfDay,positionOf,timeOf,hourAt,hourAtPosition,overlapOnDay,workDays,addWorkingDays,hourAtBoundary,rateFor,estimate,durationHours,resources,chains,chainLag,DEFAULT_LAG,rows,emptyPlan,normalizePlan,rowItems,normalizeRow,commit,hasOverlap,assign,unassign,removeItems,moveItem,insertAt,compressPreview,compress,setEstimatedStart,updateItem,resizeHours,resizeItem,shiftItem,reflow,memberSpans,conflictsOf,send,toOIN,toPIN,toFOI,toFDI,instructionsFor,SYMBOL_KINDS,orderLandings,orderSymbols,addLanding,addSymbol,updateMapObject,removeMapObject,setRouteOrder,pinStatus,pinFileName,fromHPR,dispatchPlan,viewModel,
-  MACHINE_TABS,MACHINE_TRANSITIONS,machineData,machineOrder,markTab,tabsSeen,tabsComplete,machineFiles,machineTransition,canStart,machineStart,machineTransfer,machinePinVersion,fromMachineReport,addMachineReport,manualMessages,mergeProduction,overwrittenReports,addPlot,volumeCheck,finalEvaluation,setRouteDrawing,addRoutePoint,machineOrders};
+  MACHINE_TABS,MACHINE_TRANSITIONS,machineData,machineOrder,markTab,tabsSeen,tabsComplete,machineFiles,machineTransition,canStart,machineStart,machineMessage,machineTransfer,machinePinVersion,fromMachineReport,addMachineReport,manualMessages,mergeProduction,overwrittenReports,addPlot,volumeCheck,finalEvaluation,setRouteDrawing,addRoutePoint,machineOrders};
 })();
 if(typeof module!=='undefined')module.exports=CFHModel;
