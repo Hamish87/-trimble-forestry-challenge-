@@ -5,7 +5,10 @@
 'use strict';
 const CFHApp=(()=>{
 const B=CFHBridge,M=CFHModel,UI=CFHUI,V=CFHViews,$=id=>document.getElementById(id),esc=UI.esc;
-const store={get(k){try{return sessionStorage.getItem(k);}catch{return null;}},set(k,v){try{sessionStorage.setItem(k,v);return true;}catch{return false;}}};
+/* Handoff envelopes (to-replica / to-game) stay in sessionStorage exactly as before. The plan itself goes only through the
+   plan store (store.js): LocalStore = sessionStorage 'cfharvest-plan-v1' (default), SupabaseStore behind ?store=supabase. */
+const session={get(k){try{return sessionStorage.getItem(k);}catch{return null;}},set(k,v){try{sessionStorage.setItem(k,v);return true;}catch{return false;}}};
+const PS=CFHStore.create({context:()=>({snapshot:S.snap||(S.game?B.fromGameState(S.game):null)})});
 const local={get(k){try{return localStorage.getItem(k);}catch{return null;}},set(k,v){try{localStorage.setItem(k,v);}catch{}}};
 const config={longPress:350}; // touch: hold to pick up a row or bar, so normal scrolling keeps working
 const PHASES={forest:'Waldplanung',plan:'Schicht in Planung',receipt:'Schichtbericht',logistics:'Logistik',logisticsReceipt:'Abfuhrbericht',settlement:'Abrechnung',result:'Ergebnis'};
@@ -18,7 +21,7 @@ const defaultView=()=>({nav:'planning',views:basemapFlag()==='osm'?VIEW_KEYS.fil
   zoom:'week',calStart:null,rowChecked:[],rowsShown:null,resMenuOpen:false,resSearch:'',plannedOnly:false,insertMode:false,mapZoom:2,mapPan:[0,0],mapLayers:{},mapLegend:false,mapLayerMenu:false,mapTool:null,mapToolScope:null,symbolKind:'warning',mapObj:null,measure:null,seqStarted:false,basemap:basemapFlag(),dialog:null,
   detail:{orderId:null,tab:'order',draft:{},showMap:true,funcOpen:false},menu:null,admin:{page:'resources',resource:'H-01',tab:'base',typeFilter:'',draft:{},weekSel:[],weekStart:null,weekSpan:7,weekMulti:false,weekAnchor:null,chainDraft:{},sel:{},form:{},clientForm:{},layerDraft:null},
   book:{},bookDraft:{},bookMessage:'',msgTo:'K-01',msgText:'',canUndo:false});
-/* base = saved plan (sessionStorage, travels to the game); plan = working plan incl. staged calendar changes. */
+/* base = saved plan (plan store, travels to the game); plan = working plan incl. staged calendar changes. */
 const S={game:null,base:M.emptyPlan(),plan:M.emptyPlan(),history:[],returnUrl:null,nonce:null,source:null,notices:[],view:defaultView(),vm:null,snap:null,drag:null,lastBar:null,suppressClick:false};
 const api={navigate:url=>location.assign(url),print:()=>window.print(),download:(name,text)=>{try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'application/json'}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000);}catch{}}};
 const tr=s=>typeof I18n!=='undefined'?I18n.text(s):s;
@@ -26,21 +29,35 @@ const tr=s=>typeof I18n!=='undefined'?I18n.text(s):s;
 /* ---------- Handoff ---------- */
 function safeReturnUrl(u){try{const x=new URL(u,location.href);return /^https?:$/.test(x.protocol)&&x.hostname===location.hostname?x.href.split('#')[0]:null;}catch{return null;}}
 function readIncoming(){
-  let raw=store.get(B.KEYS.toReplica),src='session';const m=/(?:^#|&)cfh=([^&]*)/.exec(location.hash||'');
+  let raw=session.get(B.KEYS.toReplica),src='session';const m=/(?:^#|&)cfh=([^&]*)/.exec(location.hash||'');
   if(m){try{raw=decodeURIComponent(m[1]);src='hash';}catch{}try{history.replaceState(null,'',location.pathname+location.search);}catch{}}
-  const env=B.readEnvelope(raw,'to-replica');if(env&&src==='hash')store.set(B.KEYS.toReplica,raw);
+  const env=B.readEnvelope(raw,'to-replica');if(env&&src==='hash')session.set(B.KEYS.toReplica,raw);
   return env?{env,src}:null;
 }
 function load(){
   const incoming=readIncoming();S.notices=[];
   if(incoming){const e=incoming.env;S.game=e.state;S.nonce=typeof e.nonce==='string'?e.nonce:null;S.returnUrl=safeReturnUrl(e.returnUrl);S.source=incoming.src;S.lang=e.lang;
-    let plan=e.plan;if(!plan){try{plan=JSON.parse(store.get(B.KEYS.plan)||'null');}catch{plan=null;}}S.base=M.normalizePlan(plan);}
-  else{S.game=ForestJourney.start(ForestJourney.initial());S.nonce=null;S.returnUrl=null;S.source='demo';S.base=M.emptyPlan();S.notices.push({kind:'warn',text:'Kein Spielstand übergeben: Demo-Spielstand Schicht 1 mit Standardauftrag.'});}
+    let plan=e.plan;if(!plan)plan=PS.read();S.sessionPlan=!!plan;S.base=M.normalizePlan(plan);}
+  else{S.game=ForestJourney.start(ForestJourney.initial());S.nonce=null;S.returnUrl=null;S.source='demo';S.base=M.emptyPlan();S.sessionPlan=false;S.notices.push({kind:'warn',text:'Kein Spielstand übergeben: Demo-Spielstand Schicht 1 mit Standardauftrag.'});}
+  storeNotice();
   if(S.base.basis&&S.game.history.length<S.base.basis.historyLength){S.base=M.emptyPlan();S.notices.push({kind:'info',text:'Neuer Spielstand erkannt: Planung zurückgesetzt.'});}
   for(const a of S.base.assignments){delete a.staged;delete a.touched;}
   S.plan=S.base;S.history=[];
 }
-function savePlan(){S.base.basis={historyLength:S.game.history.length,contractId:B.fromGameState(S.game).meta.contract.id};store.set(B.KEYS.plan,JSON.stringify(S.base));}
+function savePlan(){S.base.basis={historyLength:S.game.history.length,contractId:B.fromGameState(S.game).meta.contract.id};PS.save(S.base);}
+/** "Datenbank nicht erreichbar – lokale Sitzung": missing config.js values or a failing database switch the store to local. */
+function storeNotice(){const n=PS.status().notice;if(n&&!S.notices.some(x=>x.text===n))S.notices.push({kind:'warn',text:n});}
+/** Supabase store: a session without its own plan (no handoff plan, nothing in sessionStorage) takes the database plan;
+    a session plan wins and is written to the database. An empty database just leaves the local behaviour. */
+function syncRemote(){
+  if(!PS.remote)return;const had=S.sessionPlan,base0=S.base;
+  PS.load().then(remote=>{
+    if(PS.status().fallback)return;
+    if(!had&&remote&&S.base===base0&&!S.history.length&&(remote.assignments.length||Object.keys(remote.instructions).length||Object.keys(remote.edits).length||remote.extraResources.length||Object.keys(remote.admin).length)){
+      S.base=M.normalizePlan(remote);for(const a of S.base.assignments){delete a.staged;delete a.touched;}S.plan=S.base;S.history=[];S.view.canUndo=false;render();toast(tr('Planung aus der Datenbank geladen'));}
+    else if(had)PS.save(S.base);
+  });
+}
 /** Stage a calendar change: counted in Återställ (n), resolved on Spara. */
 function stage(next,message){S.history.push(S.plan);S.plan=next;S.view.canUndo=true;render();if(message)toast(message);}
 /** Spara: resolve overlaps (later bars shift right) and persist. */
@@ -59,9 +76,11 @@ function returnToGame(){
   const vm=S.vm,next=S.nonce?B.applyPlan(S.game,vm.dispatch):S.game;savePlan();
   let url=S.returnUrl||new URL('../../dist/',location.href).href;
   if(S.nonce){const env=B.envelope('to-game',next,{plan:S.base,lang:(typeof I18n!=='undefined'?I18n:null)?.language||'de',nonce:S.nonce,applied:{harvester:vm.dispatch.harvester,forwarder:vm.dispatch.forwarder}}),json=JSON.stringify(env);
-    if(new URL(url,location.href).origin===location.origin)store.set(B.KEYS.toGame,json);else url=url+'#cfh-return='+encodeURIComponent(json);
-    store.set(B.KEYS.toReplica,JSON.stringify(B.envelope('to-replica',next,{plan:S.base,lang:env.lang,nonce:S.nonce,returnUrl:S.returnUrl})));}
-  api.navigate(url);
+    if(new URL(url,location.href).origin===location.origin)session.set(B.KEYS.toGame,json);else url=url+'#cfh-return='+encodeURIComponent(json);
+    session.set(B.KEYS.toReplica,JSON.stringify(B.envelope('to-replica',next,{plan:S.base,lang:env.lang,nonce:S.nonce,returnUrl:S.returnUrl})));}
+  // A debounced database write still pending is sent before leaving (at most 3 s); the local store needs no wait.
+  let gone=false;const go=()=>{if(!gone){gone=true;api.navigate(url);}};
+  if(PS.pending()){const t=setTimeout(go,3000);PS.flush().then(()=>{clearTimeout(t);go();});}else go();
 }
 
 /* ---------- Rendering ---------- */
@@ -629,10 +648,12 @@ function init(){
   // dist/i18n.js fires this event on first load before its MutationObserver exists: translate the re-render explicitly.
   document.addEventListener('forestry-language-change',()=>{render();try{I18n.localize(document.body);}catch{}});
   $('cfhDialog').addEventListener('close',()=>{if(S.view.dialog){S.view.dialog=null;render();}});
-  render();
+  PS.subscribe(ev=>{if(ev.type==='status'&&ev.status.notice){storeNotice();render();}});
+  window.addEventListener('pagehide',()=>{if(PS.pending())PS.flush({keepalive:true});});
+  render();syncRemote();
   if(S.lang&&typeof I18n!=='undefined'&&I18n.supported.includes(S.lang)&&I18n.language!==S.lang)I18n.setLanguage(S.lang);
 }
 // Scripts sit at the end of <body>, so the shell already exists.
 if(typeof document!=='undefined'&&document.getElementById('cfhMain'))init();
-return{api,config,state:()=>S,vm:()=>S.vm,render,actions,init,commitStaged};
+return{api,config,store:PS,state:()=>S,vm:()=>S.vm,render,actions,init,commitStaged};
 })();

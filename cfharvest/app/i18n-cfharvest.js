@@ -25,6 +25,8 @@ const phrases={
   'Übergabe im Spiel':['Handover in the game','Transmission dans le jeu'],
   'digital':['digital','numérique'],
   'manuell':['manual','manuelle'],
+  'Datenbank nicht erreichbar – lokale Sitzung':['Database not reachable – local session','Base de données injoignable – session locale'],
+  'Planung aus der Datenbank geladen':['Planning loaded from the database','Planification chargée depuis la base de données'],
   'Kein Spielstand übergeben: Demo-Spielstand Schicht 1 mit Standardauftrag.':['No game state handed over: demo state, shift 1 with the standard contract.','Aucune partie transmise : partie de démonstration, poste 1 avec le contrat standard.'],
   'Neuer Spielstand erkannt: Planung zurückgesetzt.':['New game detected: planning reset.','Nouvelle partie détectée : planification réinitialisée.'],
   'Arbeitsplanung':['Work planning','Planification des travaux'],
