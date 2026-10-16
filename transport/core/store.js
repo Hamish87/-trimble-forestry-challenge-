@@ -8,10 +8,10 @@ const M=req('TransportCore','model','./model.js'),SAMPLES=req('TransportData','s
 const KEY='transport-demo-v1';
 function create(opts={}){
   const storage=opts.storage||(typeof window!=='undefined'&&typeof localStorage!=='undefined'?localStorage:null);const key=opts.key||KEY;const listeners=new Set();
-  let state=null;let seqEvent=0;
+  let state=null;let seqEvent=0;let restored=false;
   let clockValue=null;const clock=opts.clock||(()=>clockValue||new Date().toISOString());
   function fresh(){const s=M.initialState({settings:opts.settings});s.clock=clock;return s;}
-  function load(){if(storage){try{const raw=storage.getItem(key);if(raw){const parsed=JSON.parse(raw);if(parsed&&parsed.schema===1){state=parsed;state.clock=clock;migrate(state);return state;}}}catch(e){/* corrupt or unavailable storage → start fresh */}}state=fresh();return state;}
+  function load(){if(storage){try{const raw=storage.getItem(key);if(raw){const parsed=JSON.parse(raw);if(parsed&&parsed.schema===1){state=parsed;state.clock=clock;migrate(state);restored=true;return state;}}}catch(e){/* corrupt or unavailable storage → start fresh */}}state=fresh();return state;}
   /* additive migrations for workspaces saved by earlier versions of this demo */
   function migrate(st){for(const x of Object.values(st.stacks||{}))if(!Array.isArray(x.photos))x.photos=[];for(const l of Object.values(st.loads||{}))if(!Array.isArray(l.photos))l.photos=[];for(const d of Object.values(st.documents||{})){if(d.original===undefined)d.original=null;if(d.driverOriginal===undefined)d.driverOriginal=!(d.extraction&&d.extraction.exceptions||[]).some(e=>e.code==='E-RESTRICTED');}if(!st.ui.offlineDrivers)st.ui.offlineDrivers=[];}
   function save(){if(!storage)return;try{const {clock:_c,...plain}=state;storage.setItem(key,JSON.stringify(plain));}catch(e){/* quota or private mode: keep working in memory */}}
@@ -72,7 +72,7 @@ function create(opts={}){
     setStackField(key,field,value){const st=state.stacks[key];const before=structuredClone(st[field]);if(field==='planned')st.planned=Object.assign({},st.planned,value);else st[field]=value;M.audit(state,by(),'stack.edited',key,before,st[field]);return st;}
   };
   function apply(type,...args){if(!actions[type])throw new Error('unknown action '+type);const r=actions[type](...args);save();emit({type,args});return r;}
-  const store={get state(){return state;},load,save,reset,subscribe,apply,driverEvent,sync,setOnline,download,clock,setClockValue(v){clockValue=v;},actions:Object.keys(actions),KEY:key,
+  const store={get state(){return state;},get restored(){return restored;},load,save,reset,subscribe,apply,driverEvent,sync,setOnline,download,clock,setClockValue(v){clockValue=v;},actions:Object.keys(actions),KEY:key,
     model:M,report:id=>M.collectionReport(state,id),reconcileOrder:id=>M.reconcileOrder(state,id),reconcileLoad:id=>M.reconcileLoad(state,id),reconcileQuotas:()=>M.reconcileQuotas(state),exportOrder:id=>M.exportOrder(state,id),excerpt:id=>M.driverExcerpt(state,id),visibleWork:id=>M.visibleWorkFor(state,id)};
   load();return store;
 }

@@ -2,6 +2,7 @@
 'use strict';
 (function(){
 const LONG={
+"Demo-Durchlauf beim ersten Aufruf geladen – zurücksetzen unter Verwaltung":["Demo run loaded on first visit – reset under Administration","Parcours de démonstration chargé à la première visite – réinitialisation sous Administration"],
 "Kein Original im Browser-Speicher — bitte erneut hinterlegen.":["No original in browser storage — please attach it again.","Aucun original dans le stockage du navigateur — veuillez le joindre à nouveau."],
 "PDF-Anzeige nicht verfügbar (pdf.js nicht geladen) — Nachbildung verwenden.":["PDF viewer unavailable (pdf.js not loaded) — use the facsimile.","Affichage PDF indisponible (pdf.js non chargé) — utiliser le fac-similé."],
 "Die Datei bleibt im Browser (IndexedDB); nichts wird hochgeladen oder eingecheckt.":["The file stays in the browser (IndexedDB); nothing is uploaded or committed.","Le fichier reste dans le navigateur (IndexedDB) ; rien n'est téléversé ni versionné."],

@@ -26,6 +26,8 @@ Root Directory `transport` and "include source files outside the root directory"
 https://holztransport-demo.vercel.app/ — first production deployment made from branch `claude/elegant-hodgkin-ab437b`
 on 16 Oct 2026 (git-sourced); the project's production branch is `main`, so merging the branch keeps it current, and
 other branches get preview deployments. The game site keeps its own project; it also serves this app at `/transport/`.
+A first visit without a saved workspace plays the Demo-Durchlauf automatically (with a toast), so the link opens on a
+populated inbox and map; „Verwaltung → Daten zurücksetzen“ empties it and the empty workspace then stays empty.
 
 ## Tour (what a visitor does)
 

@@ -7,10 +7,13 @@ const {JSDOM}=require('jsdom');
 const tick=()=>new Promise(resolve=>setImmediate(resolve));const ticks=async n=>{for(let i=0;i<n;i++)await tick();};
 const FILES=[...fs.readFileSync('transport/index.html','utf8').matchAll(/<script src="([^"]+)"/g)].map(m=>m[1]).filter(s=>!/^https?:/.test(s)).map(s=>path.join('transport',s));
 function patch(w){w.structuredClone=structuredClone;w.scrollTo=()=>{};w.matchMedia=()=>({matches:true});w.HTMLElement.prototype.scrollIntoView=()=>{};w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;this.dispatchEvent(new w.Event('close'));};w.URL.createObjectURL=()=>'blob:x';w.confirm=()=>true;}
-async function page(url,lang){
+const CORE=FILES.filter(f=>/(core\/(i18n|i18n-long|units|coords|extract|model|store)|data\/[a-z]+)\.js$/.test(f));
+const EMPTY=(()=>{const c=vm.createContext({console,structuredClone});for(const f of CORE)vm.runInContext(fs.readFileSync(f,'utf8'),c,{filename:f});return vm.runInContext('const {clock,...plain}=TransportCore.store.create({storage:null}).state;JSON.stringify(plain)',c);})();
+async function page(url,lang,opts={}){
   const html=fs.readFileSync('transport/index.html','utf8').replace(/<script\b[^>]*>[\s\S]*?<\/script>/g,'');
   const dom=new JSDOM(html,{url,runScripts:'outside-only',pretendToBeVisual:true}),w=dom.window,c=dom.getInternalVMContext();patch(w);
   if(lang)w.localStorage.setItem('transport-demo-lang',lang);
+  if(!opts.firstRun)w.localStorage.setItem('transport-demo-v1',EMPTY); // a saved (empty) workspace: the first visit without one plays the demo run
   for(const f of FILES)vm.runInContext(fs.readFileSync(f,'utf8'),c,{filename:f});
   const js=code=>vm.runInContext(code,c),d=w.document;await ticks(2);
   js('TransportApp.api.confirm=()=>true;TransportApp.api.print=()=>{globalThis.__printed=true;};TransportApp.api.download=(n,t)=>{globalThis.__download=[n,t];};');
@@ -145,5 +148,8 @@ const stateOf=p=>p.js('TransportApp.store.state');
   const raw=p.w.localStorage.getItem('transport-demo-v1');assert(raw&&raw.length>50000);
   const p2=await page('https://forestry.test/transport/#/reports');p2.w.localStorage.setItem('transport-demo-v1',raw);p2.js('TransportApp.store.load();TransportApp.render()');await tick();assert(qa(p2,'.reports tbody tr').length===5,'reloaded workspace');p2.close();
   p.close();
+  /* ---------- first visit: no saved workspace → the demo run is played; a saved empty workspace stays empty ---------- */
+  {const f=await page('https://forestry.test/transport/',null,{firstRun:true});assert.equal(Object.keys(f.js('TransportApp.store.state.orders')).length,5,'first visit seeded');assert(/Demo-Durchlauf/.test(f.d.getElementById('tpToast').textContent),'first-visit toast');assert(f.w.localStorage.getItem('transport-demo-v1').length>50000,'seeded workspace saved');f.close();
+   const e=await page('https://forestry.test/transport/');assert.equal(Object.keys(e.js('TransportApp.store.state.orders')).length,0,'saved empty workspace not reseeded');e.close();}
   console.log(JSON.stringify({passed:true,mode:'jsdom DOM contract; browser layout not tested',files:FILES.length}));
 })().catch(e=>{console.error(e);process.exit(1);});

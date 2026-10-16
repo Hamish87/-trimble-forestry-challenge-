@@ -233,6 +233,7 @@ function boot(){document.addEventListener('click',onClick);document.addEventList
   const d=$('#tpDialog');d.addEventListener('click',ev=>{if(ev.target===d)closeDialog();});d.addEventListener('close',()=>{dialogFn=null;});
   $('#tpLang').addEventListener('change',ev=>{if(I)I.setLang(ev.target.value);render();});
   if(globalThis.pdfjsLib&&globalThis.pdfjsLib.GlobalWorkerOptions)globalThis.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  if(!store.restored&&!Object.keys(store.state.documents||{}).length){TC.tour.run(store);ui.mapFitted=false;toast(t('Demo-Durchlauf beim ersten Aufruf geladen – zurücksetzen unter Verwaltung'));}
   store.subscribe(()=>{});render();}
 globalThis.TransportApp={store,render,ui,api,actions,forms,ctx,get drafts(){return drafts;},dialog,closeDialog,toast,route};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
