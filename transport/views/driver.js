@@ -41,17 +41,19 @@ function heroCard(ctx,w,dl){
     ${contact?`<div class="hero-contact small">${esc(contact.role)}: ${S.telLink(contact.value)}</div>`:''}
     ${st.problem?`<div class="hero-contact small warn-text">⚠ ${esc(st.problem.kind)}${st.problem.note?' — '+esc(st.problem.note):''}</div>`:''}
     <div class="hero-actions">
-      ${a&&a.state==='Proposed'?button(`<i class="modus-icons" aria-hidden="true">check_bold</i> ${t('Annehmen')}`,'driver-accept',{alloc:a.id},'big primary'):''}
+      ${claimed(ctx,a)?`<div class="row"><span class="pill pill-red">${esc(t('Doppelanspruch'))}</span> <span class="muted small">${esc(t('Disposition entscheidet'))}</span></div>`:a&&a.state==='Proposed'?button(`<i class="modus-icons" aria-hidden="true">check_bold</i> ${t('Annehmen')}`,'driver-accept',{alloc:a.id},'big primary'):''}
       ${w.shared&&!a&&st.progress!=='Cleared'?button(`<i class="modus-icons" aria-hidden="true">check_bold</i> ${t('Übernehmen')}`,'driver-reserve',{stack:st.key},'big primary',state.ui.online===false?'disabled title="'+esc(t('Verbindung nötig'))+'"':''):''}
       ${active&&st.progress!=='Cleared'?button(`<i class="modus-icons" aria-hidden="true">delivery_truck</i> ${t('Abholung erfassen')}`,'pickup-open',{stack:st.key},'big primary')+button(`<i class="modus-icons" aria-hidden="true">check_circle</i> ${t('Polter geräumt')}`,'cleared-open',{stack:st.key},'big')+button(`<i class="modus-icons" aria-hidden="true">warning</i> ${t('Problem melden')}`,'problem-open',{stack:st.key},'big warn'):''}
     </div>
     <div class="row wrap hero-more">${originalButton(ctx,o)}${S.photoStrip(M().stackPhotos(state,st.key),{max:4})}</div>
     ${eventsOf(ctx,st)}</article>`;
 }
+/* a Proposed allocation whose acceptance was rejected while a double-claim conflict is open: the dispatcher decides, the driver waits */
+function claimed(ctx,a){return !!(a&&a.state==='Proposed'&&(a.history||[]).some(h=>h.event==='accept-rejected')&&ctx.state.conflicts.some(c=>!c.resolved&&c.kind==='doubleClaim'&&c.refs&&Array.isArray(c.refs.allocations)&&c.refs.allocations.includes(a.id)));}
 function jobRow(ctx,w){
   const {state}=ctx;const st=w.stack,o=w.order,a=w.allocation;
   return `<article class="job row-card${st.progress==='Cleared'?' done':''}" data-stack="${esc(st.key)}"><button type="button" class="row-main" data-action="driver-job" data-stack="${esc(st.key)}"><strong>${S.stackRef(st)}</strong><span class="muted small">${esc(S.party(state,o.customerId)||'')} · ${fmt.qty(st.planned.qty,st.planned.unit)} · ${t('Frist')} ${S.deadline(o)}</span></button>
-    <div class="row-side">${statusPill('stack',st.progress,'small')}${a&&a.state==='Proposed'?button(t('Annehmen'),'driver-accept',{alloc:a.id},'small primary'):''}${w.shared&&!a&&st.progress!=='Cleared'?button(t('Übernehmen'),'driver-reserve',{stack:st.key},'small primary',state.ui.online===false?'disabled':''):''}</div></article>`;
+    <div class="row-side">${statusPill('stack',st.progress,'small')}${claimed(ctx,a)?`<span class="pill pill-red small" title="${esc(t('Disposition entscheidet'))}">${esc(t('Doppelanspruch'))}</span>`:a&&a.state==='Proposed'?button(t('Annehmen'),'driver-accept',{alloc:a.id},'small primary'):''}${w.shared&&!a&&st.progress!=='Cleared'?button(t('Übernehmen'),'driver-reserve',{stack:st.key},'small primary',state.ui.online===false?'disabled':''):''}</div></article>`;
 }
 function eventsOf(ctx,st){const {state}=ctx;const evs=[...state.events.filter(e=>e.stackKey===st.key),...state.ui.queue.filter(e=>e.stackKey===st.key)].slice(-4);if(!evs.length)return '';return `<ul class="job-events small">${evs.map(e=>`<li>${esc(t({pickup:'Abholung',cleared:'geräumt',problem:'Problem'}[e.kind]||e.kind))}${e.qty!=null?` ${fmt.qty(e.qty,e.unit)}`:''} · ${fmt.dt(e.eventTime)} ${statusPill('sync',e.sync,'small')}</li>`).join('')}</ul>`;}
 function workTab(ctx,drv,dl){

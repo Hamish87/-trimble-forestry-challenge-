@@ -40,6 +40,9 @@ const confBadge=c=>c==null?'':`<span class="conf ${c>=0.9?'hi':c>=0.7?'mid':'lo'
 const srcBadge=s=>s?`<span class="src src-${esc(s)}">${esc(s==='ocr'?'OCR':s==='text'?'Text':s==='manual'?t('manuell'):s)}</span>`:'';
 /* button(): a Modus button for actions; native <button> for tabs, ghost close buttons and row controls (which have
    their own styling) — all carry data-action for the app's event delegation. */
+/* compact icon-only row action (native button, Modus icon ligature); label goes to title + aria-label */
+const iconBtn=(icon,title,action,data={},cls='',attrs='')=>`<button type="button" class="ib ${cls}" data-action="${esc(action)}" ${Object.entries(data).map(([k,v])=>`data-${k}="${esc(String(v))}"`).join(' ')} title="${esc(title)}" aria-label="${esc(title)}" ${attrs}><i class="modus-icons" aria-hidden="true">${icon}</i></button>`;
+const iconLink=(icon,title,href,cls='')=>`<a class="ib ${cls}" href="${esc(href)}" title="${esc(title)}" aria-label="${esc(title)}"><i class="modus-icons" aria-hidden="true">${icon}</i></a>`;
 function button(label,action,data={},cls='',attrs=''){
   const ds=Object.entries(data).map(([k,v])=>`data-${k}="${esc(v)}"`).join(' ');const c=' '+cls+' ';
   if(/ (tab|ghost|row-main|photo) /.test(c))return `<button type="button" class="${cls}" data-action="${esc(action)}" ${ds} ${attrs}>${label}</button>`;
@@ -86,7 +89,7 @@ function telLink(value){const m=String(value||'').match(/(\+?[\d][\d\s()\/-]{6,}
 function progressBar(collected,planned,unit){const pct=planned&&collected!=null?Math.max(0,Math.min(100,Math.round(collected/planned*100))):0;return `<div class="prog" title="${esc(t('abgeholt'))} ${fmt.qty(collected,unit)} / ${fmt.qty(planned,unit)}"><div class="prog-bar"><i style="width:${pct}%"></i></div><span class="prog-txt">${collected!=null?fmt.qty(collected,unit):'0'} / ${fmt.qty(planned,unit)}</span></div>`;}
 const METHODS={printed:'gedruckte Koordinate bestätigt',suggestion:'Lesart bestätigt',manual:'manuell gesetzt',address:'Werksadresse','manual-from-map':'aus Kartenbild platziert'};
 const methodLabel=m=>t(METHODS[m]||m||'–');
-const api={esc,t,lang,fmt,LABELS,pill,alert,icon,statusPill,statusLabel,confBadge,srcBadge,button,select,empty,kv,table,party,userName,truckReg,stackRef,timber,orderRef,deadline,dueClass,facsimile,mapPage,exceptions,fieldCell,locationText,methodLabel,photoStrip,photoInput,navLinks,telLink,progressBar};
+const api={esc,t,lang,fmt,LABELS,pill,alert,icon,iconBtn,iconLink,statusPill,statusLabel,confBadge,srcBadge,button,select,empty,kv,table,party,userName,truckReg,stackRef,timber,orderRef,deadline,dueClass,facsimile,mapPage,exceptions,fieldCell,locationText,methodLabel,photoStrip,photoInput,navLinks,telLink,progressBar};
 (globalThis.TransportViews=globalThis.TransportViews||{}).shared=api;
 if(typeof module!=='undefined')module.exports=api;
 })();

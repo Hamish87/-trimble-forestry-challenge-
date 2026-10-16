@@ -263,7 +263,10 @@ function deriveOrderStatus(state,orderId){
 }
 function resolveStack(state,key,by,note){const st=state.stacks[key];st.resolved=true;st.resolvedNote=note||null;audit(state,by,'stack.resolved',key,null,note);deriveOrderStatus(state,st.orderId);}
 function blockStack(state,key,by,reason,on=true){const st=state.stacks[key];const before=st.progress;if(on){st.blocked={reason,by,at:now(state)};st.prevProgress=st.progress;st.progress='Blocked';}else{st.blocked=null;st.progress=st.prevProgress||'Available';}audit(state,by,on?'stack.blocked':'stack.unblocked',key,before,st.progress);}
-function resolveConflict(state,id,by,resolution){const c=state.conflicts.find(x=>x.id===id);c.resolved=true;c.resolution=resolution;c.resolvedBy=by;c.resolvedAt=now(state);audit(state,by,'conflict.resolved',id,null,resolution);const sk=c.refs&&c.refs.stackKey;if(sk&&state.stacks[sk])deriveOrderStatus(state,state.stacks[sk].orderId);}
+function resolveConflict(state,id,by,resolution){const c=state.conflicts.find(x=>x.id===id);
+  if(c.kind==='doubleClaim'&&/^keep:/.test(resolution||'')&&c.refs&&Array.isArray(c.refs.allocations)){const keep=resolution.slice(5);for(const aid of c.refs.allocations){const a=state.allocations[aid];if(a&&aid!==keep&&['Proposed','Accepted','Reserved'].includes(a.state))withdrawAllocation(state,aid,by);}
+    const k=state.allocations[keep];if(k&&k.state==='Proposed'){k.state='Accepted';k.acceptedAt=now(state);k.history.push({at:now(state),event:'accepted-by-dispatch',conflict:id});audit(state,by,'allocation.accepted',k.id,null,'Doppelanspruch entschieden');}}
+  c.resolved=true;c.resolution=resolution;c.resolvedBy=by;c.resolvedAt=now(state);audit(state,by,'conflict.resolved',id,null,resolution);const sk=c.refs&&c.refs.stackKey;if(sk&&state.stacks[sk])deriveOrderStatus(state,state.stacks[sk].orderId);}
 /* ---------- Reports, export, redaction ---------- */
 function collectionReport(state,orderId){
   const o=state.orders[orderId];const loads=Object.values(state.loads).filter(l=>l.orderId===orderId).sort((a,b)=>(a.loadedAt||a.createdAt).localeCompare(b.loadedAt||b.createdAt));
