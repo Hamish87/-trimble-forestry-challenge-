@@ -46,8 +46,8 @@ function classifyPage(pg,profile,index,pages){
   if(/Werkseingangsschein|Wiegeschein|Eingangsschein|Wiegenummer/i.test(text)){return {cls:'mill_ticket',confidence:0.93,signals:['Werksbeleg-Schlüsselwort']};}
   const blanks=(text.match(/_{4,}|\|_\|/g)||[]).length;
   if(/^Lieferschein\b/m.test(first)&&blanks>=4){return {cls:'delivery_note_form',confidence:0.9,signals:['Lieferschein + leere Felder ('+blanks+')']};}
-  if(/Abfuhrmeldung|Fertigmeldung|Abfuhrbericht/i.test(first)&&/Fuhre\s*Nr/i.test(text)){return {cls:'collection_report_form',confidence:0.9,signals:['Abfuhrmeldung/Fertigmeldung-Formular']};}
-  const typeHit=[...ORDER_TYPES,...(profile.documentTypes||[])].find(t=>new RegExp('(^|\\n)\\s*'+esc(t)+'\\b','i').test(text));
+  if(/Abfuhrmeldung|Fertigmeldung|Abfuhrbericht/i.test(first)&&(/Fuhre\s*Nr/i.test(text)||(/\bSoll:/.test(text)&&/Differenz/.test(text)))){return {cls:'collection_report_form',confidence:0.9,signals:['Abfuhrmeldung/Fertigmeldung-Formular']};}
+  const typeHit=[...ORDER_TYPES,...(profile.documentTypes||[])].find(t=>new RegExp('(^|[\\n\\t])\\s*'+esc(t)+'\\b','i').test(text));
   const tableHit=pg.lines.some(l=>headerColumns(l).count>=3);
   if(typeHit&&/Änderung|Storno|storniert|ersetzt|geändert/i.test(first)){sig.push('Änderungshinweis');cls='amendment';conf=0.85;}
   else if(typeHit||tableHit){cls='order';conf=typeHit&&tableHit?0.95:0.82;sig.push(typeHit?'Belegart „'+typeHit+'“':'Poltertabelle');}
@@ -84,6 +84,9 @@ function extractKV(pg,labels,profile,used){
         if(v&&!isLabelCell(v)){value=v;conf=base*0.9;lineRef=li+1;cellRef=labelIdx;
           const third=li+2<pg.lines.length?cells(pg.lines[li+2]).filter(Boolean):[];if(third.length&&third.every(t=>/^[+\d][\d\s()\/-]{6,}$/.test(t))){value+=' · '+(third[labelIdx]||'');used.add(li+2);}
           used.add(li+1);}
+      }
+      if(!value&&(VALUE_KIND[m.key]||'text')==='ref'&&li+1<pg.lines.length&&!used.has(li+1)&&nonEmpty(pg.lines[li+1]).length<=2){ // reference printed on the line below its label
+        const v=(cells(pg.lines[li+1])[ci]||'').trim();if(v&&!isStopCell(v)&&kindOk(m.key,v)&&!hasDate(v)){value=v;conf=base*0.85;lineRef=li+1;cellRef=ci;}
       }
       if(value&&!kindOk(m.key,value)){value='';}
       if(!value&&cs.filter(Boolean).length===1&&(VALUE_KIND[m.key]||'text')!=='date'){ // label alone → block below (address boxes)
@@ -131,11 +134,13 @@ function parseTable(pg,labels,profile,used){
       mode='rows';
     }
     if(mode==='lots'){const q=ne.map(c=>U.parseQuantity(c,dec)).find(x=>x&&x.unit);if(q){const ints=ne.filter(c=>/^\d{2,4}$/.test(c)&&c!==q.raw);const pieces=ne.slice(ne.indexOf(q.raw)+1).map(c=>/^\d+$/.test(c)?+c:null).find(x=>x!=null)??null;const ref={};const order=['colFowj','colHieb','colLos'].filter(k=>header.cols.includes(k));order.forEach((k,i)=>{if(ints[i]!=null)ref[k.slice(3).toLowerCase()]=ints[i];});out.lots.push({ref,qty:q,pieces,pct:ne.find(c=>/%/.test(c))||null,page:pg.n,line:li,raw:raw.trim()});used.add(li);continue;}}
-    if(mode==='codes'){const q=ne.map(c=>U.parseQuantity(c,dec)).find(x=>x&&x.unit);if(q&&ne.length<=3){out.codes.push({code:ne[0],qty:q,page:pg.n,line:li});used.add(li);continue;}}
+    if(mode==='codes'){const q=ne.map(c=>U.parseQuantity(c,dec)).find(x=>x&&x.unit);if(q&&ne.length<=4){out.codes.push({code:ne.slice(0,ne.indexOf(q.raw)).join(' ')||ne[0],qty:q,page:pg.n,line:li});used.add(li);continue;}}
     if(mode==='after-total'){mode='rows';}
     // a stack row
     const row=rowToStack(cs,ne,header,defUnit,dec,pg,li,base,src,profile);
-    if(row){out.stacks.push(row);lastStack=row;used.add(li);}
+    if(row){ // reports often print Fowj/Hieb/Los only on the first row of a group: inherit the context, flagged
+      if(lastStack&&!row.refs.hieb&&!row.refs.los&&(lastStack.refs.hieb||lastStack.refs.los)&&(row.refs.polter||row.refs.pos)){for(const k of ['fowj','hieb','los'])if(!row.refs[k]&&lastStack.refs[k])row.refs[k]=lastStack.refs[k];row.refs.inherited=true;row.confidence=Math.round(row.confidence*0.95*100)/100;}
+      out.stacks.push(row);lastStack=row;used.add(li);}
   }
   // "Pos." tables (BaySF): rows are positions of one Polter named in the header fields
   if(header.cols.includes('colPos')&&!header.cols.includes('colPolter')){out.positions=out.stacks;out.stacks=[];}
@@ -200,7 +205,7 @@ function extractDocument(doc,ctx={}){
   const result={profileId:profile.id,partyId:profile.partyId,contentHash:contentHash(doc),pages:pages.map(p=>({n:p.n,kind:p.kind,cls:p._cls,confidence:p._conf,signals:p._signals,attachment:p.attachment})),orders:[],tickets:[],exceptions};
   // duplicates / amendments against the existing inbox
   const existing=(ctx.existingDocs||[]).filter(d=>d.id!==doc.id);
-  const dup=existing.find(d=>d.contentHash===result.contentHash);
+  const hasText=pages.some(p=>p.lines.length);const dup=hasText?existing.find(d=>d.contentHash===result.contentHash):null; // text-less scans cannot be compared by content
   if(dup){result.duplicateOf=dup.id;ex('E-DUP','info','document',`Exakte Wiederholung von ${dup.id} (${dup.subject||''}) — keine neue Arbeit angelegt`,{ref:dup.id});}
   const orderPages=pages.filter(p=>['order','amendment'].includes(p._cls)),contPages=pages.filter(p=>p._cls==='order_continuation'),mapPages=pages.filter(p=>p._cls==='map'),formPages=pages.filter(p=>['delivery_note_form','collection_report_form'].includes(p._cls));
   const used=new Map();const usedFor=pg=>{if(!used.has(pg.n))used.set(pg.n,new Set());return used.get(pg.n);};
@@ -215,7 +220,7 @@ function extractDocument(doc,ctx={}){
     const first=k=>(kv[k]||[]).find(f=>!f.empty)||(kv[k]||[])[0]||null;
     const src=pg.kind==='scan'?'ocr':'text';
     // document type: a line equal to a known type within the first lines
-    let docType=null;pg.lines.slice(0,10).forEach((l,li)=>{if(docType)return;const t=l.trim();const hit=[...(profile.documentTypes||[]),...ORDER_TYPES].find(x=>new RegExp('^'+esc(x)+'\\b','i').test(t));if(hit)docType=F(hit,t,pg.n,li,0,0.95,src);});
+    let docType=null;pg.lines.slice(0,10).forEach((l,li)=>{if(docType)return;cells(l).forEach((c,ci)=>{if(docType||!c)return;const hit=[...(profile.documentTypes||[]),...ORDER_TYPES].find(x=>new RegExp('^'+esc(x)+'\\b','i').test(c));if(hit)docType=F(hit,c,pg.n,li,ci,0.95,src);});});
     let docNo=first('documentNumber');
     if(docNo&&!docNo.value&&docType){const li=docType.line+1;const v=(pg.lines[li]||'').trim();if(v&&!anyLabel(cells(v)[0],labels,Object.keys(labels)))docNo=F(v,v,pg.n,li,0,0.9,src,{label:docNo.label});}
     if(docType&&!docNo&&/Nr\.?\s*\S+/.test(docType.raw)){const m=docType.raw.match(/Nr\.?\s*(\S+)/);docNo=F(m[1],docType.raw,pg.n,docType.line,0,0.95,src,{label:'Nr.'});}
@@ -252,7 +257,7 @@ function extractDocument(doc,ctx={}){
     }
     // identity, references
     if(!order.documentNumber||!order.documentNumber.value){const bc=pg.lines.find(l=>/^\$[A-Z]{2}\$\d+/.test(l.trim()));ex('E-NOID','warn','order','Keine Kundenauftragsnummer gedruckt — interne Referenz wird vergeben, keine Kundenreferenz erfunden'+(bc?` (Barcode „${bc.trim()}“ als Rohreferenz gespeichert)`:''));if(bc)order.references.other.push(F(bc.trim(),bc.trim(),pg.n,pg.lines.indexOf(bc),0,0.7,src,{label:'Barcode'}));}
-    if(!order.destination||!order.destination.value){const hint=formPages.flatMap(p=>p.lines.map((l,li)=>({l,li,p}))).find(x=>/Empfänger\s*\/\s*Zielwerk/i.test(x.l));let msg='Zielwerk/Empfänger nicht gedruckt — Ziel vor der Freigabe bestätigen';if(hint){const m=hint.l.match(/Empfänger\s*\/\s*Zielwerk:?\s*\t?([^\t]+)/i);if(m)msg+=` (Seite ${hint.p.n} nennt „${m[1].trim()}“ — identisch mit dem Auftraggeber? Keine automatische Übernahme)`;}ex('E-DEST','warn','order',msg);}
+    if(!order.destination||!order.destination.value){const hint=formPages.flatMap(p=>p.lines.map((l,li)=>({l,li,p}))).find(x=>/Empfänger\s*\/\s*Zielwerk/i.test(x.l));let msg='Zielwerk/Empfänger nicht gedruckt — Ziel vor der Freigabe bestätigen';if(hint){const m=hint.l.match(/Empfänger\s*\/\s*Zielwerk:?\s*\t?([^\t]+)/i);let v=m?m[1].trim():'';if(!v||/:$/.test(v)){const idx=cells(hint.l).findIndex(c=>/Empfänger\s*\/\s*Zielwerk/i.test(c));v=(cells(hint.p.lines[hint.li+1]||'')[idx]||'').trim();}if(v&&!/:$/.test(v))msg+=` (Seite ${hint.p.n} nennt „${v}“ — identisch mit dem Auftraggeber? Keine automatische Übernahme)`;}ex('E-DEST','warn','order',msg);}
     if(!order.issuer||!order.issuer.value){const lh=profile.letterhead.find(h=>pg.lines.slice(0,6).join('\n').includes(h));if(lh)order.issuer=F(profile.name,lh,pg.n,pg.lines.findIndex(l=>l.includes(lh)),0,0.85,src,{label:'Briefkopf'});}
     if(!order.carrier||!order.carrier.value)ex('E-CARRIER','info','order','Frachtführer nicht gedruckt — Zustellung an unseren Posteingang gilt als Adressierung');
     const restrictedFound=Object.entries(order.restricted).filter(([,f])=>f).map(([k,f])=>k+(f.value?'':' (Feld leer)'));const ri=order.instructions.filter(i=>i.restricted).length;
@@ -294,7 +299,7 @@ function extractDocument(doc,ctx={}){
   return result;
 }
 function fmtDate(iso){if(!iso)return '–';const [y,m,d]=iso.slice(0,10).split('-');return `${d}.${m}.${y}`;}
-const api={extractDocument,classifyPage,parseTable,extractKV,extractTicket,parseDates,parseDateTime,contentHash,hash,labelSet,cells,fmtDate,ORDER_TYPES};
+const api={extractDocument,classifyPage,parseTable,extractKV,extractTicket,parseDates,parseDateTime,contentHash,hash,labelSet,cells,headerColumns,fmtDate,ORDER_TYPES};
 (globalThis.TransportCore=globalThis.TransportCore||{}).extract=api;
 if(typeof module!=='undefined')module.exports=api;
 })();

@@ -174,12 +174,24 @@ const forms={
   synonym:f=>{store.apply('addProfileSynonym',F(f,'profile').value,F(f,'key').value,F(f,'syn').value.trim());toast(t('Synonym gelernt'));},
   settings:f=>{store.apply('setSetting','tolerancePct',num(F(f,'tolerancePct').value));store.apply('setSetting','retentionMonths',num(F(f,'retentionMonths').value));store.apply('setSetting','localExpiryDays',num(F(f,'localExpiryDays').value));store.apply('setSetting','driverSeesRates',F(f,'driverSeesRates').checked);toast(t('Gespeichert'));}
 };
-/* pdf.js text layer → lines with tab-separated cells (progressive enhancement). */
+/* pdf.js text layer → lines with tab-separated cells (progressive enhancement). Glyph runs closer than 1.5 pt form one
+   word; words further apart than 14 pt become separate cells. A row whose words are column labels of the stack table
+   (TC.extract.headerColumns) anchors a column grid: every row below it is split at the midpoints between the header
+   labels, so empty cells survive and right-aligned numbers stay in their column. Pages without any text are scans;
+   pages that are mostly one image with at most four short lines are map pages. No OCR, no rendering. */
 async function pdfPages(file){const lib=globalThis.pdfjsLib;const buf=await file.arrayBuffer();const pdf=await lib.getDocument({data:buf}).promise;const pages=[];
+  const HC=TC.extract.headerColumns;const OPS=lib.OPS||{};const imgOps=new Set([OPS.paintImageXObject,OPS.paintInlineImageXObject,OPS.paintJpegXObject,OPS.paintImageXObjectRepeat].filter(x=>x!=null));
   for(let n=1;n<=pdf.numPages;n++){const pg=await pdf.getPage(n);const tc=await pg.getTextContent();const items=tc.items.filter(it=>it.str&&it.str.trim()).map(it=>({x:it.transform[4],y:it.transform[5],w:it.width,s:it.str}));
+    let hasImage=false;try{const ops=await pg.getOperatorList();hasImage=ops.fnArray.some(f=>imgOps.has(f));}catch(e){hasImage=false;}
     const rows=[];for(const it of items.sort((a,b)=>b.y-a.y||a.x-b.x)){const row=rows.find(r=>Math.abs(r.y-it.y)<3);if(row)row.items.push(it);else rows.push({y:it.y,items:[it]});}
-    const lines=rows.map(r=>{r.items.sort((a,b)=>a.x-b.x);let out='',last=null;for(const it of r.items){if(last){const gap=it.x-(last.x+last.w);out+=gap>14?'\t':gap>1.5?' ':'';}out+=it.s;last=it;}return out;}).filter(l=>l.trim());
-    pages.push({n,kind:lines.length?'text':'scan',lines});}
+    let grid=null;const lines=[];
+    for(const r of rows){r.items.sort((a,b)=>a.x-b.x);
+      const words=[];for(const it of r.items){const last=words[words.length-1];if(last&&it.x-(last.x+last.w)<=1.5){last.s+=it.s;last.w=it.x+it.w-last.x;}else words.push({x:it.x,w:it.w,s:it.s});}
+      if(words.length>=3&&HC(words.map(w=>w.s).join('\t')).count>=3){grid=words.map(w=>({start:w.x,end:w.x+w.w}));lines.push(words.map(w=>w.s).join('\t'));continue;}
+      if(grid){const cells=grid.map(()=>[]);const bounds=grid.slice(1).map((g,i)=>(grid[i].end+g.start)/2);for(const w of words){const mid=w.x+w.w/2;let col=0;while(col<bounds.length&&mid>bounds[col])col++;cells[col].push(w.s);}lines.push(cells.map(c=>c.join(' ')).join('\t'));continue;}
+      let out='',last=null;for(const w of words){if(last)out+=w.x-(last.x+last.w)>14?'\t':' ';out+=w.s;last=w;}lines.push(out);}
+    const text=lines.filter(l=>l.trim());
+    pages.push({n,kind:text.length?(hasImage&&text.length<=4&&text.every(l=>l.length<=80)?'map':'text'):'scan',lines:text});}
   return pages;}
 /* ---------- help ---------- */
 function help(c){return `<section class="help"><h2>${t('Hilfe')}</h2><p>${esc(t('Dieses Demo zeigt den carrier-first Arbeitsablauf für Holztransport: E-Mail-PDF → Extraktion → Ausnahmen prüfen → an Flotte oder Fahrer veröffentlichen → Abholungen erfassen → Räumung bestätigen → Lieferschein ausstellen → Werksschein erfassen → Mengen abgleichen.'))}</p>
