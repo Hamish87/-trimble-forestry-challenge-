@@ -26,7 +26,7 @@ function matchCompound(el,comp){const m=comp.match(/^([a-z][\w-]*)?((?:#[\w-]+|\
 function matchSel(el,sel){const comps=sel.trim().split(/\s+/);if(!matchCompound(el,comps[comps.length-1]))return false;let node=el.parentElement;for(let i=comps.length-2;i>=0;i--){while(node&&!matchCompound(node,comps[i]))node=node.parentElement;if(!node)return false;node=node.parentElement;}return true;}
 function qa(p,sel){const groups=sel.split(',').map(x=>x.trim()).filter(Boolean);const out=[];for(const el of p.d.getElementsByTagName('*'))if(groups.some(g=>matchSel(el,g)))out.push(el);return out;}
 const q=(p,s)=>qa(p,s)[0]||null;
-async function click(p,sel){const el=typeof sel==='string'?q(p,sel):sel;assert(el,'missing '+sel);assert(!el.disabled,'disabled '+sel);el.dispatchEvent(new p.w.MouseEvent('click',{bubbles:true,cancelable:true}));await ticks(3);return el;}
+async function click(p,sel){const el=typeof sel==='string'?q(p,sel):sel;assert(el,'missing '+sel);assert(!el.disabled&&!el.hasAttribute('disabled'),'disabled '+sel);el.dispatchEvent(new p.w.MouseEvent('click',{bubbles:true,cancelable:true}));await ticks(3);return el;}
 async function change(p,sel,value){const el=typeof sel==='string'?q(p,sel):sel;assert(el,'missing '+sel);if(el.type==='checkbox'||el.type==='radio')el.checked=value;else el.value=value;el.dispatchEvent(new p.w.Event('change',{bubbles:true}));await ticks(2);return el;}
 async function input(p,sel,value){const el=typeof sel==='string'?q(p,sel):sel;assert(el,'missing '+sel);el.value=value;el.dispatchEvent(new p.w.Event('input',{bubbles:true}));await ticks(2);return el;}
 async function submit(p,form){form.dispatchEvent(new p.w.Event('submit',{bubbles:true,cancelable:true}));await ticks(6);}
@@ -50,8 +50,8 @@ const stateOf=p=>p.js('TransportApp.store.state');
   await click(p,qa(p,'.rv-pages .tab')[2]);assert(q(p,'.fx-map .fx-pin[data-pin="9"]'),'map page facsimile with pins');
   // place from map: dialog with placeMap and coordinate inputs
   await click(p,'.stacks tr[data-stack="124_501/9"] [data-action="review-line-place"]');assert(dlg(p).open&&q(p,'#tpDialog #placeMap .tm'),'place dialog with a mounted map');
-  assert(q(p,'#tpDialog [data-action="place-save"]').disabled,'no point yet');
-  await input(p,'#tpDialog [name="lat"]','47.831');await input(p,'#tpDialog [name="lon"]','8.869');assert(!q(p,'#tpDialog [data-action="place-save"]').disabled);
+  assert(q(p,'#tpDialog [data-action="place-save"]').hasAttribute('disabled'),'no point yet');
+  await input(p,'#tpDialog [name="lat"]','47.831');await input(p,'#tpDialog [name="lon"]','8.869');assert(!q(p,'#tpDialog [data-action="place-save"]').hasAttribute('disabled'));
   q(p,'#tpDialog [name="note"]').value='aus Kartenseite 3 platziert';await click(p,'#tpDialog [data-action="place-save"]');assert(!dlg(p).open);assert(text(q(p,'.stacks tr[data-stack="124_501/9"]')).includes('Standort bestätigt'));
   // second stack: skip it, then reset
   await click(p,'.stacks tr[data-stack="124_501/10"] [data-action="review-line-skip"]');assert(q(p,'.stacks tr[data-stack="124_501/10"].skipped'));await click(p,'.stacks tr[data-stack="124_501/10"] [data-action="review-line-reset"]');assert(!q(p,'.stacks tr[data-stack="124_501/10"].skipped'));

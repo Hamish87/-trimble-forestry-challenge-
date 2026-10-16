@@ -117,6 +117,8 @@ set the tolerance and pilot thresholds with the carriers instead of the placehol
 | D7 | Driver view simulated in a phone frame with an offline toggle | the spec's mobile behaviour (download, pending sync, idempotent replay) is demonstrable without a native app |
 | D8 | Tolerance 0,5 % placeholder, labelled | the spec says thresholds are agreed with pilots, not invented |
 | D9 | Tests in the repository's jsdom DOM-contract style, part of `npm test` | consistent with the other tracks |
+| D10 | UI on Trimble Modus Web Components 2.0 (pinned 1.20.0 from jsDelivr, light-DOM components; Modus tokens, Open Sans, Modus Icons 1.0) with `:not(:defined)` fallbacks | Trimble branding; buildless-compatible (ESM loader); the app still works offline/without the CDN (RESEARCH §3.7) |
+| D11 | Originals (PDF/photo) stay in the browser (IndexedDB), released to drivers per document; photos attach to driver events; demo photos are illustrations | personal data in the sample pack; driver needs the original and site evidence; no server |
 
 ## 7. Execution model and ownership
 

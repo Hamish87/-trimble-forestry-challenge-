@@ -14,16 +14,16 @@ function render(ctx){
   const body=tab==='work'?workTab(ctx,drv,dl):tab==='load'?loadTab(ctx,drv):tab==='docs'?docsTab(ctx,drv):moreTab(ctx,drv,dl);
   return `<section class="driver">${picker}
     <div class="phone"><div class="phone-bar"><strong>${esc(drv.name)}</strong> <span class="muted">${esc(S.truckReg(state,drv.truckId))}</span>
-      ${button(online?`● ${t('Online')}`:`○ ${t('Offline')}`,'driver-online',{},online?'small online':'small offline')}${q?`<span class="pill pill-amber small" title="${t('Ausstehende Synchronisierung')}">${q} ${t('ausstehend')}</span>`:''}</div>
-      <div class="phone-sub muted small">${dl?`${t('Daten vom')} ${fmt.dt(dl.at)}`:esc(t('noch nicht heruntergeladen'))} · ${t('letzte Übertragung')} ${fmt.time(state.ui.lastSync)} ${button(t('Herunterladen'),'driver-download',{},'link small',online?'':'disabled')} ${button(t('Synchronisieren'),'driver-sync',{},'link small',online&&q?'':'disabled')}</div>
-      <nav class="phone-tabs">${[['work',t('Meine Arbeit')],['load',t('Fuhre')],['docs',t('Belege')],['more',t('Mehr')]].map(([k,l])=>button(l,'driver-tab',{tab:k},k===tab?'tab active':'tab')).join('')}</nav>
+      ${button(online?`<i class="modus-icons" aria-hidden="true">wifi</i> ${t('Online')}`:`<i class="modus-icons" aria-hidden="true">wifi-off</i> ${t('Offline')}`,'driver-online',{},online?'small online':'small offline')}${q?`<span class="pill pill-amber small" title="${t('Ausstehende Synchronisierung')}">${q} ${t('ausstehend')}</span>`:''}</div>
+      <div class="phone-sub muted small">${dl?`${t('Daten vom')} ${fmt.dt(dl.at)}`:esc(t('noch nicht heruntergeladen'))} · ${t('letzte Übertragung')} ${fmt.time(state.ui.lastSync)} ${button(`<i class="modus-icons" aria-hidden="true">cloud-download</i> ${t('Herunterladen')}`,'driver-download',{},'link small',online?'':'disabled')} ${button(`<i class="modus-icons" aria-hidden="true">sync</i> ${t('Synchronisieren')}`,'driver-sync',{},'link small',online&&q?'':'disabled')}</div>
+      <nav class="phone-tabs">${[['work',t('Meine Arbeit'),'list-bulleted'],['load',t('Fuhre'),'delivery-truck'],['docs',t('Belege'),'document'],['more',t('Mehr'),'menu']].map(([k,l,ic])=>button(`<i class="modus-icons" aria-hidden="true">${ic}</i><span>${l}</span>`,'driver-tab',{tab:k},k===tab?'tab active':'tab')).join('')}</nav>
       <div class="phone-body">${body}</div>
       <div class="phone-foot muted small">${online?esc(t('Verbunden — Aktionen werden sofort quittiert.')):esc(t('Offline — Aktionen werden lokal gespeichert und beim Verbinden einmalig übertragen.'))}</div></div></section>`;
 }
 function distanceKm(state,st){const base=state.parties.find(p=>p.id===state.carrierId);if(!st.confirmed||!base)return null;return C().haversineKm(base.lat,base.lon,st.confirmed.lat,st.confirmed.lon);}
 const M=()=>globalThis.TransportCore.model;
 function docOf(state,o){return state.documents[o.documentIds[o.documentIds.length-1]]||null;}
-function originalButton(ctx,o,cls='small link'){const d=docOf(ctx.state,o);if(!d)return '';if(d.original&&d.driverOriginal)return button(`📄 ${t('Original öffnen')}`,'original-open',{doc:d.id},cls);return button(`📄 ${t('Auszug')}`,'excerpt-open',{doc:d.id},cls);}
+function originalButton(ctx,o,cls='small link'){const d=docOf(ctx.state,o);if(!d)return '';if(d.original&&d.driverOriginal)return button(`<i class="modus-icons" aria-hidden="true">file-type-pdf</i> ${t('Original öffnen')}`,'original-open',{doc:d.id},cls);return button(`<i class="modus-icons" aria-hidden="true">document</i> ${t('Auszug')}`,'excerpt-open',{doc:d.id},cls);}
 function rank(w){const a=w.allocation,st=w.stack;if(a&&['Accepted','Reserved'].includes(a.state)&&st.progress!=='Cleared')return 0;if(a&&a.state==='Proposed')return 1;if(w.shared&&st.progress!=='Cleared')return 2;return 3;}
 /* the big card for the task the driver is on now: one glance, thumb-sized actions */
 function heroCard(ctx,w,dl){
@@ -37,13 +37,13 @@ function heroCard(ctx,w,dl){
     <div class="hero-facts"><div><b>${fmt.qty(st.planned.qty,st.planned.unit)}</b><span>${esc(t('Menge'))}${st.pieces.value?` · ${st.pieces.value} ${t('Stück')}`:''}</span></div><div><b class="${S.dueClass(o,ctx.now)}">${S.deadline(o)}</b><span>${esc(t('Frist'))}</span></div><div><b>${dist!=null?fmt.num(dist,0)+' km':'–'}</b><span>${esc(t('ab Standort'))}</span></div></div>
     <div class="hero-facts2">${S.timber(st)}${a&&a.share&&a.share.kind!=='whole'?` · ${t('Anteil')}: ${esc(a.share.value)} ${esc(t(a.share.kind==='loads'?'Fuhren':a.share.kind))}`:''}<br><span class="muted">${t('Ziel')}: ${esc(S.party(state,o.destinationId)||o.destination||t('unbestätigt'))}</span></div>
     ${S.progressBar(col?col.value:null,st.planned.qty,st.planned.unit)}
-    ${st.location.status==='confirmed'?`<div class="hero-nav">${st.confirmed?S.navLinks(st.confirmed.lat,st.confirmed.lon,t('Navigation starten')):''}${button(t('Karte'),'driver-map',{stack:st.key},'small')}</div>`:`<div class="hero-nav warn-text small">${esc(t('Standort noch nicht bestätigt — Disposition'))}</div>`}
+    ${st.location.status==='confirmed'?`<div class="hero-nav">${st.confirmed?S.navLinks(st.confirmed.lat,st.confirmed.lon,t('Navigation starten')):''}${button(`<i class="modus-icons" aria-hidden="true">map</i> ${t('Karte')}`,'driver-map',{stack:st.key},'small')}</div>`:`<div class="hero-nav warn-text small">${esc(t('Standort noch nicht bestätigt — Disposition'))}</div>`}
     ${contact?`<div class="hero-contact small">${esc(contact.role)}: ${S.telLink(contact.value)}</div>`:''}
     ${st.problem?`<div class="hero-contact small warn-text">⚠ ${esc(st.problem.kind)}${st.problem.note?' — '+esc(st.problem.note):''}</div>`:''}
     <div class="hero-actions">
-      ${a&&a.state==='Proposed'?button(`✔ ${t('Annehmen')}`,'driver-accept',{alloc:a.id},'big primary'):''}
-      ${w.shared&&!a&&st.progress!=='Cleared'?button(`✔ ${t('Übernehmen')}`,'driver-reserve',{stack:st.key},'big primary',state.ui.online===false?'disabled title="'+esc(t('Verbindung nötig'))+'"':''):''}
-      ${active&&st.progress!=='Cleared'?button(`🪵 ${t('Abholung erfassen')}`,'pickup-open',{stack:st.key},'big primary')+button(`✅ ${t('Polter geräumt')}`,'cleared-open',{stack:st.key},'big')+button(`⚠ ${t('Problem melden')}`,'problem-open',{stack:st.key},'big warn'):''}
+      ${a&&a.state==='Proposed'?button(`<i class="modus-icons" aria-hidden="true">check-bold</i> ${t('Annehmen')}`,'driver-accept',{alloc:a.id},'big primary'):''}
+      ${w.shared&&!a&&st.progress!=='Cleared'?button(`<i class="modus-icons" aria-hidden="true">check-bold</i> ${t('Übernehmen')}`,'driver-reserve',{stack:st.key},'big primary',state.ui.online===false?'disabled title="'+esc(t('Verbindung nötig'))+'"':''):''}
+      ${active&&st.progress!=='Cleared'?button(`<i class="modus-icons" aria-hidden="true">delivery-truck</i> ${t('Abholung erfassen')}`,'pickup-open',{stack:st.key},'big primary')+button(`<i class="modus-icons" aria-hidden="true">check-circle</i> ${t('Polter geräumt')}`,'cleared-open',{stack:st.key},'big')+button(`<i class="modus-icons" aria-hidden="true">warning</i> ${t('Problem melden')}`,'problem-open',{stack:st.key},'big warn'):''}
     </div>
     <div class="row wrap hero-more">${originalButton(ctx,o)}${S.photoStrip(M().stackPhotos(state,st.key),{max:4})}</div>
     ${eventsOf(ctx,st)}</article>`;
@@ -59,7 +59,7 @@ function workTab(ctx,drv,dl){
   if(state.ui.online===false&&dl)work=work.filter(w=>dl.stackKeys.includes(w.stack.key)).concat(work.filter(w=>!dl.stackKeys.includes(w.stack.key)&&w.allocation));
   work.sort((x,y)=>rank(x)-rank(y)||(x.order.window.to||'9').localeCompare(y.order.window.to||'9'));
   let hero=work.find(w=>w.stack.key===ctx.ui.driverJob)||work[0]||null;const rest=work.filter(w=>w!==hero);
-  return `${state.ui.online===false&&!dl?`<div class="banner banner-amber">${esc(t('Offline ohne Download: Arbeit zuerst online herunterladen.'))}</div>`:''}
+  return `${state.ui.online===false&&!dl?`${S.alert('amber',`${esc(t('Offline ohne Download: Arbeit zuerst online herunterladen.'))}`)}`:''}
     ${hero?heroCard(ctx,hero,dl):`<div class="empty">${esc(t('Keine Arbeit zugeteilt oder freigegeben.'))}</div>`}
     ${rest.length?`<h3 class="list-head">${t('Weitere Aufgaben')} <span class="muted">(${rest.length})</span></h3>${rest.map(w=>jobRow(ctx,w)).join('')}`:''}`;
 }

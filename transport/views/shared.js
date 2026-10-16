@@ -27,12 +27,27 @@ const LABELS={
   severity:{block:['blockiert','red'],warn:['prüfen','amber'],info:['Hinweis','grey']},
   cls:{order:['Auftrag','blue'],order_continuation:['Folgeseite','grey'],amendment:['Änderung','amber'],map:['Karte','grey'],delivery_note_form:['Lieferschein-Formular (leer)','grey'],collection_report_form:['Abfuhrmeldung-Formular','grey'],mill_ticket:['Werksbeleg','green'],other:['Sonstiges','grey']}
 };
-const pill=(kind,text,extra='')=>`<span class="pill pill-${kind} ${extra}">${esc(text)}</span>`;
+/* Modus Web Components when the CDN loaded them, plain styled elements otherwise (style.css has :not(:defined)
+   fallbacks). Status badge colours follow Modus semantics: tertiary (neutral), primary, success, warning, danger. */
+const BADGE_COLOR={grey:'tertiary',blue:'primary',green:'success',amber:'warning',red:'danger'};
+const pill=(kind,text,extra='')=>`<modus-wc-badge class="pill pill-${kind} ${extra}" color="${BADGE_COLOR[kind]||'tertiary'}" variant="${kind==='blue'?'outlined':'filled'}" size="${/small/.test(extra)?'sm':'md'}">${esc(text)}</modus-wc-badge>`;
+const ALERT={info:['info','Hinweis'],grey:['neutral','Hinweis'],amber:['warning','Prüfen'],red:['error','Achtung'],green:['success','OK']};
+const alert=(kind,html,title)=>{const [variant,def]=ALERT[kind]||ALERT.info;return `<modus-wc-alert class="banner banner-${kind}" variant="${variant}" alert-title="${esc(title||t(def))}"><span slot="content" class="banner-text">${html}</span></modus-wc-alert>`;};
+const icon=(name,size='sm')=>`<modus-wc-icon name="${esc(name)}" size="${size}" decorative="true" aria-hidden="true"></modus-wc-icon>`;
 function statusPill(group,status,extra){const e=(LABELS[group]||{})[status];return e?pill(e[1],t(e[0]),extra):pill('grey',status||'–',extra);}
 const statusLabel=(group,status)=>{const e=(LABELS[group]||{})[status];return e?t(e[0]):status;};
 const confBadge=c=>c==null?'':`<span class="conf ${c>=0.9?'hi':c>=0.7?'mid':'lo'}" title="${t('Konfidenz')}">${fmt.conf(c)}</span>`;
 const srcBadge=s=>s?`<span class="src src-${esc(s)}">${esc(s==='ocr'?'OCR':s==='text'?'Text':s==='manual'?t('manuell'):s)}</span>`:'';
-const button=(label,action,data={},cls='',attrs='')=>`<button type="button" class="${cls}" data-action="${esc(action)}" ${Object.entries(data).map(([k,v])=>`data-${k}="${esc(v)}"`).join(' ')} ${attrs}>${label}</button>`;
+/* button(): a Modus button for actions; native <button> for tabs, ghost close buttons and row controls (which have
+   their own styling) — all carry data-action for the app's event delegation. */
+function button(label,action,data={},cls='',attrs=''){
+  const ds=Object.entries(data).map(([k,v])=>`data-${k}="${esc(v)}"`).join(' ');const c=' '+cls+' ';
+  if(/ (tab|ghost|row-main|photo) /.test(c))return `<button type="button" class="${cls}" data-action="${esc(action)}" ${ds} ${attrs}>${label}</button>`;
+  const color=/ danger /.test(c)?'danger':/ (warn|offline) /.test(c)?'warning':/ (green|online) /.test(c)?'success':/ ghostbar /.test(c)?'tertiary':'primary';
+  const variant=/ (link|borderless) /.test(c)?'borderless':/ (primary|danger|green|nav|online|offline) /.test(c)?'filled':'outlined';
+  const size=/ big /.test(c)?'lg':/ small /.test(c)?'sm':'md';const full=/ big /.test(c)?' full-width="true"':'';
+  return `<modus-wc-button class="${cls}" color="${color}" variant="${variant}" size="${size}"${full} data-action="${esc(action)}" ${ds} ${attrs}>${label}</modus-wc-button>`;
+}
 const select=(name,options,value,attrs='')=>`<select name="${esc(name)}" ${attrs}>${options.map(o=>{const [v,l]=Array.isArray(o)?o:[o,o];return `<option value="${esc(v)}"${String(v)===String(value)?' selected':''}>${esc(l)}</option>`;}).join('')}</select>`;
 const empty=text=>`<div class="empty">${esc(text)}</div>`;
 const kv=rows=>`<dl class="kv">${rows.filter(r=>r).map(([k,v])=>`<dt>${esc(k)}</dt><dd>${v==null||v===''?'<span class="muted">–</span>':v}</dd>`).join('')}</dl>`;
@@ -64,14 +79,14 @@ function fieldCell(f,opts={}){if(!f)return `<span class="muted">${esc(t('nicht g
 function locationText(st){if(st.confirmed)return `${fmt.num(st.confirmed.lat,4)}, ${fmt.num(st.confirmed.lon,4)} · ${esc(methodLabel(st.confirmed.method))}`;if(st.location&&st.location.address)return esc(st.location.address);if(st.location&&st.location.raw)return `<span class="raw">${esc(st.location.raw)}</span>`;return `<span class="muted">${esc(t('keine Koordinate gedruckt'))}</span>`;}
 /* photos: thumbnails that open a lightbox; a camera/file input for dialogs */
 function photoStrip(photos,opts={}){if(!photos||!photos.length)return opts.emptyText?`<span class="muted small">${esc(opts.emptyText)}</span>`:'';return `<div class="photos">${photos.slice(0,opts.max||6).map((p,i)=>`<button type="button" class="photo" data-action="photo-open" data-src="${esc(p.url)}" data-caption="${esc([p.kind?t({pickup:'Abholung',cleared:'geräumt',problem:'Problem',ticket_photo:'Werksschein',arrived:'Ankunft',unloaded:'Abladung'}[p.kind]||p.kind):'',p.at?fmt.dt(p.at):''].filter(Boolean).join(' · '))}" title="${esc(t('Foto öffnen'))}"><img src="${esc(p.url)}" alt="${esc(t('Foto'))} ${i+1}" loading="lazy"></button>`).join('')}${photos.length>(opts.max||6)?`<span class="muted small">+${photos.length-(opts.max||6)}</span>`:''}</div>`;}
-const photoInput=(name='photo')=>`<label class="photo-btn"><span>📷 ${t('Foto aufnehmen oder wählen')}</span><input type="file" name="${esc(name)}" accept="image/*" capture="environment" multiple></label>`;
+const photoInput=(name='photo')=>`<label class="photo-btn"><span><i class="modus-icons" aria-hidden="true">camera</i> ${t('Foto aufnehmen oder wählen')}</span><input type="file" name="${esc(name)}" accept="image/*" capture="environment" multiple></label>`;
 /* navigation and phone links (external apps; the pin is still no proof of truck access) */
-function navLinks(lat,lon,label){if(lat==null||lon==null)return '';const ll=`${Number(lat).toFixed(6)},${Number(lon).toFixed(6)}`;return `<a class="btn small nav" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${ll}&travelmode=driving">🧭 ${esc(label||t('Navigation'))}</a> <a class="btn small link" href="geo:${ll}?q=${ll}">geo:</a>`;}
-function telLink(value){const m=String(value||'').match(/(\+?[\d][\d\s()\/-]{6,}\d)/);if(!m)return esc(value||'');const tel=m[1].replace(/[^\d+]/g,'');return esc(String(value).slice(0,m.index))+`<a class="tel" href="tel:${esc(tel)}">📞 ${esc(m[1].trim())}</a>`+esc(String(value).slice(m.index+m[1].length));}
+function navLinks(lat,lon,label){if(lat==null||lon==null)return '';const ll=`${Number(lat).toFixed(6)},${Number(lon).toFixed(6)}`;return `<a class="btn small nav" target="_blank" rel="noopener" href="https://www.google.com/maps/dir/?api=1&destination=${ll}&travelmode=driving"><i class="modus-icons" aria-hidden="true">location-arrow</i> ${esc(label||t('Navigation'))}</a> <a class="btn small link" href="geo:${ll}?q=${ll}">geo:</a>`;}
+function telLink(value){const m=String(value||'').match(/(\+?[\d][\d\s()\/-]{6,}\d)/);if(!m)return esc(value||'');const tel=m[1].replace(/[^\d+]/g,'');return esc(String(value).slice(0,m.index))+`<a class="tel" href="tel:${esc(tel)}"><i class="modus-icons" aria-hidden="true">phone-call</i> ${esc(m[1].trim())}</a>`+esc(String(value).slice(m.index+m[1].length));}
 function progressBar(collected,planned,unit){const pct=planned&&collected!=null?Math.max(0,Math.min(100,Math.round(collected/planned*100))):0;return `<div class="prog" title="${esc(t('abgeholt'))} ${fmt.qty(collected,unit)} / ${fmt.qty(planned,unit)}"><div class="prog-bar"><i style="width:${pct}%"></i></div><span class="prog-txt">${collected!=null?fmt.qty(collected,unit):'0'} / ${fmt.qty(planned,unit)}</span></div>`;}
 const METHODS={printed:'gedruckte Koordinate bestätigt',suggestion:'Lesart bestätigt',manual:'manuell gesetzt',address:'Werksadresse','manual-from-map':'aus Kartenbild platziert'};
 const methodLabel=m=>t(METHODS[m]||m||'–');
-const api={esc,t,lang,fmt,LABELS,pill,statusPill,statusLabel,confBadge,srcBadge,button,select,empty,kv,table,party,userName,truckReg,stackRef,timber,orderRef,deadline,dueClass,facsimile,mapPage,exceptions,fieldCell,locationText,methodLabel,photoStrip,photoInput,navLinks,telLink,progressBar};
+const api={esc,t,lang,fmt,LABELS,pill,alert,icon,statusPill,statusLabel,confBadge,srcBadge,button,select,empty,kv,table,party,userName,truckReg,stackRef,timber,orderRef,deadline,dueClass,facsimile,mapPage,exceptions,fieldCell,locationText,methodLabel,photoStrip,photoInput,navLinks,telLink,progressBar};
 (globalThis.TransportViews=globalThis.TransportViews||{}).shared=api;
 if(typeof module!=='undefined')module.exports=api;
 })();
