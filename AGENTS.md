@@ -9,7 +9,11 @@ Two active tracks (October 2026):
 - **Game simplification** — `docs/GAME_SIMPLIFICATION_PLAN.md`: replace every decision dropdown with choice toggles that show the direct euro impact (certain vs. at-risk) and a one-line reason, with a live planning total. Presentation only; simulation untouched.
 - **CFHarvest replica** — `cfharvest/PLAN.md`, `cfharvest/SPEC_PLANNING.md`, `cfharvest/EVIDENCE.md`: a separate Planning-app replica in `cfharvest/app/` that shares the game's state through `cfharvest/app/bridge.js`. The **drone site check** `cfharvest/sitecheck/` (`cfharvest/SPEC_SITECHECK.md`) is a second separate app of this track: a Biodrone-Portal-style drone-image analysis workflow for the CFHarvest pre-/post-harvest checks, opened from the replica's order detail. REA (reverse-engineering MCP) is registered in `.mcp.json`; `cfharvest/scripts/setup-rea.sh` installs it. Follow the lawful-scope rules in `cfharvest/PLAN.md §2`.
 
-File ownership while both tracks are open: the simplification track owns `dist/app.js`, `dist/journey-ui.js`, `dist/style.css`, `translations.tsv` and `tests/*`; the replica track owns `cfharvest/**` and makes only the three additive integration edits listed in `cfharvest/PLAN.md` Phase 2.
+- **Holztransport (carrier-first timber transport)** — `transport/PLAN.md`, `transport/SPEC.md`, `transport/SAMPLES.md`, `transport/RESEARCH.md`: a **separate, standalone demo app** in `transport/` (no shared state or scripts with the game or the replica) that implements the carrier-first timber transport workflow and data model of 16 October 2026: e-mail PDF intake → profile-driven extraction with page provenance → exception review → confirmed stack locations on a map → publication and allocation to drivers → offline mobile pickups and clearance → delivery notes → mill-ticket matching → quantity ledger and reconciliation → Abfuhrmeldung/Fertigmeldung export. Fixtures are anonymised facsimiles of the five sample orders; the originals are not in the repository.
+
+File ownership while the tracks are open: the transport track owns `transport/**` and `tests/transport-*.cjs` and makes only additive edits to `package.json`, `scripts/assemble-site.sh`, `vercel.json`, `README.md` and this file.
+
+File ownership while both game tracks are open: the simplification track owns `dist/app.js`, `dist/journey-ui.js`, `dist/style.css`, `translations.tsv` and `tests/*`; the replica track owns `cfharvest/**` and makes only the three additive integration edits listed in `cfharvest/PLAN.md` Phase 2.
 
 ## Development
 
@@ -18,6 +22,7 @@ File ownership while both tracks are open: the simplification track owns `dist/a
 - Build catalogues and embedded artwork: npm run build.
 - Verify behaviour: npm test. The existing tests verify simulation and DOM contracts (including `tests/cfharvest-sitecheck.cjs`); they do not verify browser layout.
 - Serve the replica and the site check: npm run dev:cfharvest, then open http://localhost:3001/cfharvest/app/ or /cfharvest/sitecheck/.
+- Serve the transport demo: npm run dev:transport, then open http://localhost:3002/transport/ (standalone; `tests/transport-model.cjs` and `tests/transport-ui.cjs` are part of `npm test`).
 - Core simulation: dist/game.js. Journey and contract logic: dist/journey.js. Interface: dist/app.js and dist/journey-ui.js. Map: dist/routes.js and dist/flyover.js.
 - Edit illustrated scenes in src/scenes.js; regenerate dist/scenes.js with the build command.
 - Add source-language UI phrases and English/French translations to translations.tsv, then rebuild the catalogue.

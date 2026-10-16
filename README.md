@@ -18,6 +18,10 @@ The six images are AI-generated illustrations, not real machine photography, ani
 
 `cfharvest/app/` is a demo replica of CFHarvest planning (`cfharvest/README.md`); `cfharvest/sitecheck/` is a drone pre-/post-harvest site check in the style of a drone-image analysis portal (`cfharvest/SPEC_SITECHECK.md`). Both share the game state and are reachable from the game header ("CFHarvest Planung") and the replica's order detail ("Hiebsprüfung (Drohne)"). Serve them with `npm run dev:cfharvest` on port 3001.
 
+## Holztransport · carrier-first timber transport (separate app)
+
+`transport/` is a standalone demonstration of the carrier-first timber transport workflow (draft specification and data model of 16 October 2026): a small haulier's mixed inbox of e-mailed transport orders, profile-driven extraction with page provenance, exception review, confirmed stack pins, publication and allocation, an offline-capable driver view, delivery notes, mill-ticket matching and quantity reconciliation. It shares nothing with the game. Read `transport/PLAN.md`, `transport/SPEC.md`, `transport/SAMPLES.md` and `transport/RESEARCH.md`; serve it with `npm run dev:transport` and open http://localhost:3002/transport/.
+
 ## Checks
 
 - `node tests/ui-smoke.cjs` checks the full journey and handover gates using a lightweight DOM contract model.

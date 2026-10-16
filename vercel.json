@@ -10,7 +10,8 @@
     { "source": "/cfharvest", "destination": "/cfharvest/app/", "permanent": false },
     { "source": "/cfharvest/", "destination": "/cfharvest/app/", "permanent": false },
     { "source": "/sitecheck", "destination": "/cfharvest/sitecheck/", "permanent": false },
-    { "source": "/sitecheck/", "destination": "/cfharvest/sitecheck/", "permanent": false }
+    { "source": "/sitecheck/", "destination": "/cfharvest/sitecheck/", "permanent": false },
+    { "source": "/holztransport", "destination": "/transport/", "permanent": false }
   ],
   "headers": [
     { "source": "/(.*)", "headers": [{ "key": "X-Content-Type-Options", "value": "nosniff" }] }
