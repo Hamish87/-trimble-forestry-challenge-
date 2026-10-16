@@ -6,7 +6,8 @@
 'use strict';
 (function(){
 const req=(ns,name,path)=>(globalThis[ns]&&globalThis[ns][name])||(typeof require!=='undefined'?require(path):null);
-const SAMPLES=req('TransportData','samples','../data/samples.js');
+const SAMPLES=req('TransportData','samples','../data/samples.js');const PH=req('TransportCore','photos','./photos.js');
+const photo=(key,kind,label)=>PH?[PH.illustration(key,kind,label)]:[];
 const T=(d,t)=>`2026-10-${String(d).padStart(2,'0')}T${t}:00+02:00`;
 const STEPS=[
  {id:'deliver',title:'Demo-E-Mails zustellen',run(s){s.setClock(T(13,'12:00'));s.store.apply('deliverDemoMail');}},
@@ -29,8 +30,8 @@ const STEPS=[
    s.as('U-DISPO');}},
  {id:'reserve',title:'Flottenarbeit reservieren (nur online)',run(s){s.setClock(T(14,'17:30'));const o=s.orders();const ttw10=o.ttw.stackKeys.find(k=>s.state.stacks[k].tempKey==='124_501/10');s.as('U-D3');s.store.apply('reserve',ttw10);s.as('U-D1');try{s.store.apply('reserve',ttw10);}catch(e){s.log.push('Zweite Reservierung abgewiesen: '+e.message);}s.as('U-DISPO');}},
  {id:'drive-offline',title:'Fahrer 1 offline: Abholungen, Räumung, Lieferschein',run(s){const o=s.orders();const k=t=>o.htl.stackKeys.find(x=>s.state.stacks[x].tempKey===t);s.as('U-D1');s.setClock(T(19,'06:40'));s.store.download('U-D1');s.store.setOnline(false);
-   s.store.driverEvent({kind:'pickup',stackKey:k('5816/57/1'),truckId:'T-2',qty:10.5,unit:'fm',pieces:10,eventTime:T(19,'07:35')}); // queued: no load id yet
-   s.store.driverEvent({kind:'cleared',stackKey:k('5816/57/1'),eventTime:T(19,'07:50')});
+   s.store.driverEvent({kind:'pickup',stackKey:k('5816/57/1'),truckId:'T-2',qty:10.5,unit:'fm',pieces:10,eventTime:T(19,'07:35'),photos:photo('htl1','stack','Polter 1 · Hieb 5816 · vor der Aufnahme')}); // queued: no load id yet
+   s.store.driverEvent({kind:'cleared',stackKey:k('5816/57/1'),eventTime:T(19,'07:50'),photos:photo('htl1c','cleared','Polter 1 · geräumt')});
    s.store.driverEvent({kind:'pickup',stackKey:k('5816/57/4'),truckId:'T-2',qty:11,unit:'fm',pieces:13,eventTime:T(19,'08:20')}); // joins the open load of this truck trip
    s.store.driverEvent({kind:'cleared',stackKey:k('5816/57/4'),eventTime:T(19,'08:30')});
    s.pending=s.state.ui.queue.length;}},
@@ -38,12 +39,12 @@ const STEPS=[
    s.ids.loadHtl1=Object.values(s.state.loads).find(l=>l.driverId==='U-D1'&&l.state==='Planned').id; // the load exists only once the queue was applied
    s.store.driverEvent({kind:'note_issued',loadId:s.ids.loadHtl1,eventTime:T(19,'09:10'),transportComplete:false});}},
  {id:'deliver-htl',title:'Ankunft und Abladung im Sägewerk',run(s){s.as('U-D1');s.store.driverEvent({kind:'arrived',loadId:s.ids.loadHtl1,eventTime:T(21,'10:30')});s.store.driverEvent({kind:'unloaded',loadId:s.ids.loadHtl1,acceptance:'accepted',eventTime:T(21,'11:10')});s.as('U-DISPO');}},
- {id:'drive-pellet',title:'Fahrerin 2: Ladenummer Montag → Pelletwerk',run(s){const o=s.orders();s.as('U-D2');s.setClock(T(19,'05:30'));const r=s.store.driverEvent({kind:'pickup',stackKey:o.pellet.stackKeys[0],truckId:'T-3',qty:1,unit:'ldg',eventTime:T(19,'06:15')});s.ids.loadPellet=r.event.loadId;
+ {id:'drive-pellet',title:'Fahrerin 2: Ladenummer Montag → Pelletwerk',run(s){const o=s.orders();s.as('U-D2');s.setClock(T(19,'05:30'));const r=s.store.driverEvent({kind:'pickup',stackKey:o.pellet.stackKeys[0],truckId:'T-3',qty:1,unit:'ldg',eventTime:T(19,'06:15'),photos:photo('pellet1','load','Ladenummer 0727603001 · Schubboden beladen')});s.ids.loadPellet=r.event.loadId;
    s.store.driverEvent({kind:'cleared',stackKey:o.pellet.stackKeys[0],eventTime:T(19,'06:20')});s.store.driverEvent({kind:'note_issued',loadId:s.ids.loadPellet,eventTime:T(19,'06:25'),form:'photo',customerNoteNo:'0727603001'});
    s.store.driverEvent({kind:'arrived',loadId:s.ids.loadPellet,eventTime:T(20,'08:50')});s.store.driverEvent({kind:'unloaded',loadId:s.ids.loadPellet,acceptance:'accepted',eventTime:T(20,'09:40')});s.as('U-DISPO');}},
- {id:'partial',title:'Teilabholung lässt Polter offen · Problemmeldung',run(s){const o=s.orders();const k=t=>o.htl.stackKeys.find(x=>s.state.stacks[x].tempKey===t);s.as('U-D1');s.setClock(T(22,'07:00'));const r=s.store.driverEvent({kind:'pickup',stackKey:k('5816/57/5'),truckId:'T-2',qty:8,unit:'fm',pieces:7,eventTime:T(22,'07:45')});s.ids.loadHtl2=r.event.loadId;
+ {id:'partial',title:'Teilabholung lässt Polter offen · Problemmeldung',run(s){const o=s.orders();const k=t=>o.htl.stackKeys.find(x=>s.state.stacks[x].tempKey===t);s.as('U-D1');s.setClock(T(22,'07:00'));const r=s.store.driverEvent({kind:'pickup',stackKey:k('5816/57/5'),truckId:'T-2',qty:8,unit:'fm',pieces:7,eventTime:T(22,'07:45'),photos:photo('htl5','stack','Polter 5 · Teilabholung')});s.ids.loadHtl2=r.event.loadId;
    s.store.driverEvent({kind:'note_issued',loadId:s.ids.loadHtl2,eventTime:T(22,'07:55')});s.store.driverEvent({kind:'arrived',loadId:s.ids.loadHtl2,eventTime:T(22,'13:40')});s.store.driverEvent({kind:'unloaded',loadId:s.ids.loadHtl2,acceptance:'accepted',eventTime:T(22,'14:05')});
-   s.as('U-D3');const ttw10=o.ttw.stackKeys.find(x=>s.state.stacks[x].tempKey==='124_501/10');s.store.driverEvent({kind:'problem',stackKey:ttw10,problemKind:'Zufahrt blockiert',note:'Forstweg nach Regen gesperrt, Schranke zu',eventTime:T(22,'09:15')});
+   s.as('U-D3');const ttw10=o.ttw.stackKeys.find(x=>s.state.stacks[x].tempKey==='124_501/10');s.store.driverEvent({kind:'problem',stackKey:ttw10,problemKind:'Zufahrt blockiert',note:'Forstweg nach Regen gesperrt, Schranke zu',photo:true,photos:photo('ttw10','blocked','Polter 10 · Zufahrt gesperrt'),eventTime:T(22,'09:15')});
    const ttw9=o.ttw.stackKeys.find(x=>s.state.stacks[x].tempKey==='124_501/9');s.as('U-D1');const r2=s.store.driverEvent({kind:'pickup',stackKey:ttw9,truckId:'T-2',qty:42,unit:'rm',eventTime:T(23,'07:30')});s.ids.loadTtw=r2.event.loadId;s.as('U-DISPO');}},
  {id:'withdraw-offline',title:'Entzug erreicht offline Fahrerin nicht sofort → Konflikt',run(s){const o=s.orders();const m35=o.mengen.stackKeys.find(k=>s.state.stacks[k].tempKey==='9110/991/35');s.as('U-D2');s.setClock(T(23,'06:00'));s.store.setOnline(false);
    s.as('U-DISPO');const a=Object.values(s.state.allocations).find(x=>x.stackKey===m35&&x.driverId==='U-D2');s.store.apply('withdraw',a.id,{driverId:'U-D3',truckId:'T-4'});

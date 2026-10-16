@@ -11,7 +11,9 @@ function create(opts={}){
   let state=null;let seqEvent=0;
   let clockValue=null;const clock=opts.clock||(()=>clockValue||new Date().toISOString());
   function fresh(){const s=M.initialState({settings:opts.settings});s.clock=clock;return s;}
-  function load(){if(storage){try{const raw=storage.getItem(key);if(raw){const parsed=JSON.parse(raw);if(parsed&&parsed.schema===1){state=parsed;state.clock=clock;return state;}}}catch(e){/* corrupt or unavailable storage → start fresh */}}state=fresh();return state;}
+  function load(){if(storage){try{const raw=storage.getItem(key);if(raw){const parsed=JSON.parse(raw);if(parsed&&parsed.schema===1){state=parsed;state.clock=clock;migrate(state);return state;}}}catch(e){/* corrupt or unavailable storage → start fresh */}}state=fresh();return state;}
+  /* additive migrations for workspaces saved by earlier versions of this demo */
+  function migrate(st){for(const x of Object.values(st.stacks||{}))if(!Array.isArray(x.photos))x.photos=[];for(const l of Object.values(st.loads||{}))if(!Array.isArray(l.photos))l.photos=[];for(const d of Object.values(st.documents||{})){if(d.original===undefined)d.original=null;if(d.driverOriginal===undefined)d.driverOriginal=!(d.extraction&&d.extraction.exceptions||[]).some(e=>e.code==='E-RESTRICTED');}if(!st.ui.offlineDrivers)st.ui.offlineDrivers=[];}
   function save(){if(!storage)return;try{const {clock:_c,...plain}=state;storage.setItem(key,JSON.stringify(plain));}catch(e){/* quota or private mode: keep working in memory */}}
   function reset(){state=fresh();save();emit({type:'reset'});return state;}
   function emit(action){for(const fn of listeners)fn(state,action);}
@@ -65,6 +67,8 @@ function create(opts={}){
     upsertTruck(t){const i=state.trucks.findIndex(x=>x.id===t.id);if(i>=0)state.trucks[i]=Object.assign(state.trucks[i],t);else state.trucks.push(t);M.audit(state,by(),'truck.upserted',t.id,null,t);},
     updateProfile(id,patch){const p=state.profiles.find(x=>x.id===id);const before=structuredClone(p);Object.assign(p,patch);M.audit(state,by(),'profile.updated',id,before,patch);return p;},
     addProfileSynonym(id,key,syn){const p=state.profiles.find(x=>x.id===id);p.labels[key]=p.labels[key]||[];if(!p.labels[key].includes(syn))p.labels[key].push(syn);M.audit(state,by(),'profile.synonymLearned',id,null,{key,syn});return p;},
+    setDocumentOriginal(docId,meta){return M.setDocumentOriginal(state,docId,meta,by());},
+    setDriverOriginal(docId,allowed){return M.setDriverOriginal(state,docId,allowed,by());},
     setStackField(key,field,value){const st=state.stacks[key];const before=structuredClone(st[field]);if(field==='planned')st.planned=Object.assign({},st.planned,value);else st[field]=value;M.audit(state,by(),'stack.edited',key,before,st[field]);return st;}
   };
   function apply(type,...args){if(!actions[type])throw new Error('unknown action '+type);const r=actions[type](...args);save();emit({type,args});return r;}

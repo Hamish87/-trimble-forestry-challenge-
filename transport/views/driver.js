@@ -21,32 +21,47 @@ function render(ctx){
       <div class="phone-foot muted small">${online?esc(t('Verbunden — Aktionen werden sofort quittiert.')):esc(t('Offline — Aktionen werden lokal gespeichert und beim Verbinden einmalig übertragen.'))}</div></div></section>`;
 }
 function distanceKm(state,st){const base=state.parties.find(p=>p.id===state.carrierId);if(!st.confirmed||!base)return null;return C().haversineKm(base.lat,base.lon,st.confirmed.lat,st.confirmed.lon);}
-function jobCard(ctx,w,dl){
+const M=()=>globalThis.TransportCore.model;
+function docOf(state,o){return state.documents[o.documentIds[o.documentIds.length-1]]||null;}
+function originalButton(ctx,o,cls='small link'){const d=docOf(ctx.state,o);if(!d)return '';if(d.original&&d.driverOriginal)return button(`📄 ${t('Original öffnen')}`,'original-open',{doc:d.id},cls);return button(`📄 ${t('Auszug')}`,'excerpt-open',{doc:d.id},cls);}
+function rank(w){const a=w.allocation,st=w.stack;if(a&&['Accepted','Reserved'].includes(a.state)&&st.progress!=='Cleared')return 0;if(a&&a.state==='Proposed')return 1;if(w.shared&&st.progress!=='Cleared')return 2;return 3;}
+/* the big card for the task the driver is on now: one glance, thumb-sized actions */
+function heroCard(ctx,w,dl){
   const {state}=ctx;const st=w.stack,o=w.order,a=w.allocation;const dist=distanceKm(state,st);const active=a&&['Accepted','Reserved'].includes(a.state);
-  const contact=(o.contacts||[]).find(c=>/Revier|Einsatz|vor Ort/i.test(c.role))||(o.contacts||[])[0];
+  const contact=(o.contacts||[]).find(c=>/Revier|Einsatz|vor Ort/i.test(c.role))||(o.contacts||[])[0];const es=M().ledgerFor(state,{stackKey:st.key});const col=M().sumBasis(es,'driverEstimate');
   const stale=dl&&!dl.stackKeys.includes(st.key);
-  return `<article class="job${active?' active':''}${st.progress==='Cleared'?' done':''}" data-stack="${esc(st.key)}">
-    <header><strong>${esc(S.party(state,o.customerId)||o.issuer||'')}</strong> ${statusPill('stack',st.progress,'small')}${w.shared?pill('blue',t('Flottenarbeit'),'small'):a?statusPill('alloc',a.state,'small'):''}${a&&a.deliveredToDriver===false?pill('amber',t('Änderung durch Disposition'),'small'):''}</header>
-    <div class="job-ref">${S.stackRef(st)} <span class="muted">· ${S.orderRef(o)}</span></div>
-    <div class="job-facts">${S.timber(st)} · <strong>${fmt.qty(st.planned.qty,st.planned.unit)}</strong>${st.pieces.value?` · ${st.pieces.value} ${t('Stück')}`:''}${a&&a.share&&a.share.kind!=='whole'?` · ${t('Anteil')}: ${esc(a.share.value)} ${esc(t(a.share.kind==='loads'?'Fuhren':a.share.kind))}`:''}</div>
-    <div class="job-facts muted small">${t('Frist')} ${S.deadline(o)} · ${t('Ziel')} ${esc(o.destination||t('unbestätigt'))}${dist!=null?` · ${fmt.num(dist,0)} km ${t('ab Standort')}`:''}${stale?` · <span class="warn-text">${esc(t('nicht im Download'))}</span>`:''}</div>
-    ${st.location.status==='confirmed'?`<div class="job-facts small">${S.locationText(st)} ${button(t('Karte'),'driver-map',{stack:st.key},'link small')}</div>`:`<div class="job-facts small warn-text">${esc(t('Standort noch nicht bestätigt — Disposition'))}</div>`}
-    ${contact?`<div class="job-facts small">${esc(contact.role)}: ${esc(contact.value)}</div>`:''}
-    <div class="row wrap">
-      ${a&&a.state==='Proposed'?button(t('Annehmen'),'driver-accept',{alloc:a.id},'small primary'):''}
-      ${w.shared&&!a&&st.progress!=='Cleared'?button(t('Übernehmen'),'driver-reserve',{stack:st.key},'small primary',state.ui.online===false?'disabled title="'+esc(t('Verbindung nötig'))+'"':''):''}
-      ${active&&st.progress!=='Cleared'?button(t('Abholung erfassen'),'pickup-open',{stack:st.key},'small primary')+button(t('Polter geräumt'),'cleared-open',{stack:st.key},'small')+button(t('Problem melden'),'problem-open',{stack:st.key},'small'):''}
-      ${button(t('Auszug'),'excerpt-open',{doc:o.documentIds[o.documentIds.length-1]},'small link')}</div>
-    ${(ctx.ui.jobEvents||{})[st.key]?'':''}${eventsOf(ctx,st)}</article>`;
+  return `<article class="job hero${active?' active':''}${st.progress==='Cleared'?' done':''}" data-stack="${esc(st.key)}">
+    <header><span class="hero-kicker">${esc(t(active?'Jetzt dran':a&&a.state==='Proposed'?'Neue Zuteilung':w.shared?'Für die Flotte sichtbar':'Erledigt'))}</span><div class="hero-pills">${statusPill('stack',st.progress,'small')}${w.shared?pill('blue',t('Flottenarbeit'),'small'):a?statusPill('alloc',a.state,'small'):''}${a&&a.deliveredToDriver===false?pill('amber',t('Änderung durch Disposition'),'small'):''}${stale?pill('amber',t('nicht im Download'),'small'):''}</div></header>
+    <h3 class="hero-title">${S.stackRef(st)}</h3>
+    <div class="hero-sub">${esc(S.party(state,o.customerId)||o.issuer||'')} · ${S.orderRef(o)}</div>
+    <div class="hero-facts"><div><b>${fmt.qty(st.planned.qty,st.planned.unit)}</b><span>${esc(t('Menge'))}${st.pieces.value?` · ${st.pieces.value} ${t('Stück')}`:''}</span></div><div><b class="${S.dueClass(o,ctx.now)}">${S.deadline(o)}</b><span>${esc(t('Frist'))}</span></div><div><b>${dist!=null?fmt.num(dist,0)+' km':'–'}</b><span>${esc(t('ab Standort'))}</span></div></div>
+    <div class="hero-facts2">${S.timber(st)}${a&&a.share&&a.share.kind!=='whole'?` · ${t('Anteil')}: ${esc(a.share.value)} ${esc(t(a.share.kind==='loads'?'Fuhren':a.share.kind))}`:''}<br><span class="muted">${t('Ziel')}: ${esc(S.party(state,o.destinationId)||o.destination||t('unbestätigt'))}</span></div>
+    ${S.progressBar(col?col.value:null,st.planned.qty,st.planned.unit)}
+    ${st.location.status==='confirmed'?`<div class="hero-nav">${st.confirmed?S.navLinks(st.confirmed.lat,st.confirmed.lon,t('Navigation starten')):''}${button(t('Karte'),'driver-map',{stack:st.key},'small')}</div>`:`<div class="hero-nav warn-text small">${esc(t('Standort noch nicht bestätigt — Disposition'))}</div>`}
+    ${contact?`<div class="hero-contact small">${esc(contact.role)}: ${S.telLink(contact.value)}</div>`:''}
+    ${st.problem?`<div class="hero-contact small warn-text">⚠ ${esc(st.problem.kind)}${st.problem.note?' — '+esc(st.problem.note):''}</div>`:''}
+    <div class="hero-actions">
+      ${a&&a.state==='Proposed'?button(`✔ ${t('Annehmen')}`,'driver-accept',{alloc:a.id},'big primary'):''}
+      ${w.shared&&!a&&st.progress!=='Cleared'?button(`✔ ${t('Übernehmen')}`,'driver-reserve',{stack:st.key},'big primary',state.ui.online===false?'disabled title="'+esc(t('Verbindung nötig'))+'"':''):''}
+      ${active&&st.progress!=='Cleared'?button(`🪵 ${t('Abholung erfassen')}`,'pickup-open',{stack:st.key},'big primary')+button(`✅ ${t('Polter geräumt')}`,'cleared-open',{stack:st.key},'big')+button(`⚠ ${t('Problem melden')}`,'problem-open',{stack:st.key},'big warn'):''}
+    </div>
+    <div class="row wrap hero-more">${originalButton(ctx,o)}${S.photoStrip(M().stackPhotos(state,st.key),{max:4})}</div>
+    ${eventsOf(ctx,st)}</article>`;
+}
+function jobRow(ctx,w){
+  const {state}=ctx;const st=w.stack,o=w.order,a=w.allocation;
+  return `<article class="job row-card${st.progress==='Cleared'?' done':''}" data-stack="${esc(st.key)}"><button type="button" class="row-main" data-action="driver-job" data-stack="${esc(st.key)}"><strong>${S.stackRef(st)}</strong><span class="muted small">${esc(S.party(state,o.customerId)||'')} · ${fmt.qty(st.planned.qty,st.planned.unit)} · ${t('Frist')} ${S.deadline(o)}</span></button>
+    <div class="row-side">${statusPill('stack',st.progress,'small')}${a&&a.state==='Proposed'?button(t('Annehmen'),'driver-accept',{alloc:a.id},'small primary'):''}${w.shared&&!a&&st.progress!=='Cleared'?button(t('Übernehmen'),'driver-reserve',{stack:st.key},'small primary',state.ui.online===false?'disabled':''):''}</div></article>`;
 }
 function eventsOf(ctx,st){const {state}=ctx;const evs=[...state.events.filter(e=>e.stackKey===st.key),...state.ui.queue.filter(e=>e.stackKey===st.key)].slice(-4);if(!evs.length)return '';return `<ul class="job-events small">${evs.map(e=>`<li>${esc(t({pickup:'Abholung',cleared:'geräumt',problem:'Problem'}[e.kind]||e.kind))}${e.qty!=null?` ${fmt.qty(e.qty,e.unit)}`:''} · ${fmt.dt(e.eventTime)} ${statusPill('sync',e.sync,'small')}</li>`).join('')}</ul>`;}
 function workTab(ctx,drv,dl){
   const {state}=ctx;let work=ctx.store.visibleWork(drv.id);
   if(state.ui.online===false&&dl)work=work.filter(w=>dl.stackKeys.includes(w.stack.key)).concat(work.filter(w=>!dl.stackKeys.includes(w.stack.key)&&w.allocation));
-  const mine=work.filter(w=>w.allocation),shared=work.filter(w=>!w.allocation);
+  work.sort((x,y)=>rank(x)-rank(y)||(x.order.window.to||'9').localeCompare(y.order.window.to||'9'));
+  let hero=work.find(w=>w.stack.key===ctx.ui.driverJob)||work[0]||null;const rest=work.filter(w=>w!==hero);
   return `${state.ui.online===false&&!dl?`<div class="banner banner-amber">${esc(t('Offline ohne Download: Arbeit zuerst online herunterladen.'))}</div>`:''}
-    <h3>${t('Zugeteilt')} <span class="muted">(${mine.length})</span></h3>${mine.length?mine.map(w=>jobCard(ctx,w,dl)).join(''):`<p class="muted">${esc(t('Keine zugeteilte Arbeit.'))}</p>`}
-    <h3>${t('Für die Flotte sichtbar')} <span class="muted">(${shared.length})</span></h3>${shared.length?shared.map(w=>jobCard(ctx,w,dl)).join(''):`<p class="muted">${esc(t('Keine freigegebene Flottenarbeit.'))}</p>`}`;
+    ${hero?heroCard(ctx,hero,dl):`<div class="empty">${esc(t('Keine Arbeit zugeteilt oder freigegeben.'))}</div>`}
+    ${rest.length?`<h3 class="list-head">${t('Weitere Aufgaben')} <span class="muted">(${rest.length})</span></h3>${rest.map(w=>jobRow(ctx,w)).join('')}`:''}`;
 }
 function loadTab(ctx,drv){
   const {state}=ctx;const loads=Object.values(state.loads).filter(l=>l.driverId===drv.id).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
@@ -62,6 +77,7 @@ function loadCard(ctx,l){
     <ul class="small">${l.lines.map(x=>`<li>${S.stackRef(state.stacks[x.stackKey]||{refs:{},tempKey:x.stackKey})}: ${x.qty!=null?fmt.qty(x.qty,x.unit):`<em>${esc(t('Menge unbekannt'))}</em>`}${x.pieces!=null?` · ${x.pieces} ${t('Stück')}`:''}</li>`).join('')}</ul>
     ${note?`<div class="job-facts small">${t('Lieferschein')} <strong>${esc(note.number)}</strong>${note.customerNumber?` · ${t('Kundenformular')} ${esc(note.customerNumber)}`:''} · ${fmt.dt(note.issuedAt)} <a class="btn link small" href="#/print/note/${esc(note.id)}">${t('Anzeigen')}</a></div>`:''}
     ${l.arrivedAt?`<div class="job-facts small">${t('Ankunft')} ${fmt.dt(l.arrivedAt)}${l.unloadedAt?` · ${t('Abladung')} ${fmt.dt(l.unloadedAt)} (${esc(t(l.acceptance||''))})`:''}</div>`:''}
+    ${S.photoStrip(l.photos||[],{max:4})}
     ${rec.length?rec.map(r=>`<div class="job-facts small">${t('Werksschein')} ${esc(r.ticketNo||'')} ${statusPill('match',r.matchState,'small')} ${r.weighbridge&&r.weighbridge.net?fmt.qty(r.weighbridge.net.value,r.weighbridge.net.unit):''} ${r.measuredLines.map(m=>fmt.qty(m.qty.value,m.qty.unit)).join(', ')}</div>`).join(''):(['Unloaded'].includes(l.state)?`<div class="job-facts small muted">${esc(t('Abgeladen — Werksmaß ausstehend (Werksschein kann Tage später kommen).'))}</div>`:'')}
     <div class="row wrap">${actions}</div></article>`;
 }
@@ -83,13 +99,13 @@ function pickupDialog(ctx,st){const {state}=ctx;const o=state.orders[st.orderId]
     <label>${t('Menge')} (${esc(label)}) <input type="number" name="qty" step="0.01" min="0" placeholder="${esc(t('Schätzung'))}"></label>
     <label>${t('Stück')} <input type="number" name="pieces" min="0" placeholder="${esc(t('optional'))}"></label>
     <label>${t('Fahrzeug')} ${select('truck',state.trucks.map(x=>[x.id,x.reg+' · '+x.kind]),ctx.user.truckId||state.trucks[0].id)}</label>
-    <label>${t('Hinweis')} <input name="note" placeholder="${esc(t('optional'))}"></label>
+    <label>${t('Hinweis')} <input name="note" placeholder="${esc(t('optional'))}"></label>${S.photoInput('photo')}
     <input type="hidden" name="stack" value="${esc(st.key)}"><div class="dlg-actions">${button(t('Abbrechen'),'dialog-close',{},'')}<button type="submit" class="primary">${t('Erfassen')}</button></div></form>`;}
 function clearedDialog(ctx,st){const {state}=ctx;const o=state.orders[st.orderId];
   return `<form method="dialog" class="dlg" data-form="cleared"><h2>${t('Polter geräumt melden')}</h2><p>${esc(t('Ich bestätige, dass das Holz dieser Anweisung vollständig abgefahren ist:'))} <strong>${S.stackRef(st)}</strong>, ${S.orderRef(o)}, ${esc(S.party(state,o.customerId)||'')}.</p><p class="muted small">${esc(t('Die Räumung gilt nur für den Umfang dieses Auftrags — nicht für fremdes Holz am selben Lagerplatz. Sie ist kein Liefernachweis.'))}</p>
-    <label><input type="checkbox" name="confirm" required> ${t('Vollständig abgefahren')}</label><input type="hidden" name="stack" value="${esc(st.key)}"><div class="dlg-actions">${button(t('Abbrechen'),'dialog-close',{},'')}<button type="submit" class="primary">${t('Geräumt melden')}</button></div></form>`;}
+    <label><input type="checkbox" name="confirm" required> ${t('Vollständig abgefahren')}</label>${S.photoInput('photo')}<input type="hidden" name="stack" value="${esc(st.key)}"><div class="dlg-actions">${button(t('Abbrechen'),'dialog-close',{},'')}<button type="submit" class="primary">${t('Geräumt melden')}</button></div></form>`;}
 function problemDialog(ctx,st){return `<form method="dialog" class="dlg" data-form="problem"><h2>${t('Problem melden')} <small class="muted">${S.stackRef(st)}</small></h2>
-    <label>${t('Art')} ${select('kind',[t('Zufahrt blockiert'),t('Holz nicht gefunden'),t('falscher Standort'),t('Mengenabweichung'),t('Sonstiges')],t('Zufahrt blockiert'))}</label><label>${t('Hinweis')} <textarea name="note" rows="3"></textarea></label><label><input type="checkbox" name="photo"> ${t('Foto beigefügt (Demo-Platzhalter)')}</label>
+    <label>${t('Art')} ${select('kind',[t('Zufahrt blockiert'),t('Holz nicht gefunden'),t('falscher Standort'),t('Mengenabweichung'),t('Sonstiges')],t('Zufahrt blockiert'))}</label><label>${t('Hinweis')} <textarea name="note" rows="3"></textarea></label>${S.photoInput('photo')}
     <input type="hidden" name="stack" value="${esc(st.key)}"><div class="dlg-actions">${button(t('Abbrechen'),'dialog-close',{},'')}<button type="submit" class="primary">${t('Melden')}</button></div></form>`;}
 function noteDialog(ctx,l){const {state}=ctx;const o=state.orders[l.orderId];const dests=state.parties.filter(p=>(p.roles||[]).some(r=>['mill','receivingSite'].includes(r)));
   return `<form method="dialog" class="dlg" data-form="note"><h2>${t('Lieferschein ausstellen')} <small class="muted">${esc(l.id)}</small></h2><p class="muted small">${esc(t('Je Fuhre ein Lieferschein unmittelbar nach dem Beladen. Vorbelegt aus der Zuteilung; alternativ das Kundenformular fotografieren — der Datensatz bleibt derselbe.'))}</p>
@@ -110,8 +126,10 @@ function ticketDialog(ctx,l){const {state}=ctx;
     <label>${t('Belegnummer')} <input name="ticketNo" required></label>
     <fieldset><legend>${t('Werksmaß oder Wiegung')}</legend><label>${t('Menge')} <input type="number" step="0.01" min="0" name="qty"> ${select('unit',[['fm','fm'],['rm','rm'],['m3','m³'],['t','t']],'fm')}</label><label>${t('Netto')} (kg) <input type="number" min="0" name="net"></label><label>${t('Brutto')} (kg) <input type="number" min="0" name="gross"></label><label>${t('Tara')} (kg) <input type="number" min="0" name="tare"></label></fieldset>
     <input type="hidden" name="load" value="${esc(l.id)}"><div class="dlg-actions">${button(t('Abbrechen'),'dialog-close',{},'')}<button type="submit" class="primary">${t('Erfassen')}</button></div></form>`;}
-function mapDialog(ctx,st){const {state}=ctx;const o=state.orders[st.orderId];return `<div class="dlg"><h2>${S.stackRef(st)}</h2><div id="driverMap" class="map small"></div><p class="small">${S.locationText(st)}</p><p class="muted small">${esc(t('Ein Pin ist kein Nachweis, dass ein beladener Holz-Lkw den Polter erreicht; Forstwege und Tonnagegrenzen vor Ort prüfen. Revier:'))} ${esc((o.contacts.find(c=>/Revier|vor Ort/i.test(c.role))||{}).value||'–')}</p><div class="dlg-actions">${button(t('Schließen'),'dialog-close',{},'primary')}</div></div>`;}
-const api={render,pickupDialog,clearedDialog,problemDialog,noteDialog,unloadDialog,ticketDialog,mapDialog,jobCard,loadCard};
+function mapDialog(ctx,st){const {state}=ctx;const o=state.orders[st.orderId];return `<div class="dlg wide"><h2>${S.stackRef(st)} <small class="muted">${esc(S.party(state,o.customerId)||'')}</small></h2><div id="driverMap" class="map"></div><p class="small">${S.locationText(st)} ${st.confirmed?S.navLinks(st.confirmed.lat,st.confirmed.lon,t('Navigation starten')):''}</p><p class="muted small">${esc(t('Ein Pin ist kein Nachweis, dass ein beladener Holz-Lkw den Polter erreicht; Forstwege und Tonnagegrenzen vor Ort prüfen. Revier:'))} ${S.telLink((o.contacts.find(c=>/Revier|vor Ort/i.test(c.role))||{}).value||'–')}</p><div class="dlg-actions">${button(t('Schließen'),'dialog-close',{},'primary')}</div></div>`;}
+function originalDialog(ctx,docId){const d=ctx.state.documents[docId];if(!d)return '';return `<div class="dlg wide orig-dialog"><h2>📄 ${t('Original')} <small class="muted">${esc(d.subject)}</small></h2><p class="muted small">${esc(t('Die Originaldatei wird aus dem Browser-Speicher gerendert; sie wurde nie hochgeladen.'))}${d.original?` · ${esc(d.original.name)} · ${Math.round((d.original.size||0)/1024)} KB`:''}</p><div class="orig-pages" data-doc="${esc(d.id)}">${d.original?`<div class="orig-fallback muted">${esc(t('Original wird gerendert …'))}</div>`:`<div class="empty">${esc(t('Kein Original hinterlegt.'))}</div>`}</div><div class="dlg-actions">${button(t('Schließen'),'dialog-close',{},'primary')}</div></div>`;}
+function photoDialog(ctx,src,caption){return `<div class="dlg wide photo-dialog"><img src="${esc(src)}" alt="${esc(t('Foto'))}"><div class="row"><span class="muted small">${esc(caption||'')}</span><span class="grow"></span>${button(t('Schließen'),'dialog-close',{},'primary')}</div></div>`;}
+const api={render,pickupDialog,clearedDialog,problemDialog,noteDialog,unloadDialog,ticketDialog,mapDialog,originalDialog,photoDialog,heroCard,jobRow,loadCard};
 (globalThis.TransportViews=globalThis.TransportViews||{}).driver=api;
 if(typeof module!=='undefined')module.exports=api;
 })();

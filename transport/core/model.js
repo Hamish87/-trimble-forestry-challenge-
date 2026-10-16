@@ -35,7 +35,8 @@ function ingestDocument(state,doc,opts={}){
   const prof=profile(state,prof0.profileId);const extraction=X.extractDocument(doc,{profiles:state.profiles,existingDocs:existing,existingStacks:existingStackIndex(state),now:now(state),tolerancePct:state.settings.tolerancePct,reviewedCount:prof.reviewedDocuments});
   const rec={id:doc.id,sender:doc.sender,senderName:doc.senderName,subject:doc.subject,receivedAt:doc.receivedAt||now(state),storedAt:now(state),attachments:doc.attachments,note:doc.note||null,sample:doc.sample||null,scenario:doc.scenario||null,source:opts.source||'email',
     profileId:extraction.profileId,partyId:extraction.partyId,contentHash:extraction.contentHash,pages:extraction.pages,extraction,documentNumberNormalized:extraction.orders[0]&&extraction.orders[0].documentNumber?extraction.orders[0].documentNumber.normalized:null,
-    status:'Received',duplicateOf:extraction.duplicateOf||null,amendmentOf:extraction.amendmentOf||null,orderIds:[],receiptIds:[],reviewedBy:null,reviewedAt:null,decisions:{}};
+    status:'Received',duplicateOf:extraction.duplicateOf||null,amendmentOf:extraction.amendmentOf||null,orderIds:[],receiptIds:[],reviewedBy:null,reviewedAt:null,decisions:{},
+    original:opts.original||null,driverOriginal:!extraction.exceptions.some(e=>e.code==='E-RESTRICTED')};
   if(rec.duplicateOf){rec.status='Duplicate';}
   else if(extraction.tickets.length){for(const t of extraction.tickets){const r=createReceipt(state,t,'email',rec.id);rec.receiptIds.push(r.id);}rec.status=rec.receiptIds.every(id=>state.receipts[id].matchState==='Matched')?'Ready':'NeedsReview';}
   else if(extraction.orders.length)rec.status='NeedsReview';
@@ -81,7 +82,7 @@ function createStack(state,order,rec,s,d,by){
     timber:{species:s.timber.species.value,assortment:s.timber.assortment.value,lengthM:s.timber.lengthM.value,grade:s.timber.grade.value,raw:[s.timber.species.raw,s.timber.assortment.raw,s.timber.lengthM.raw,s.timber.grade.raw].filter(Boolean).join(' · ')},
     planned:{qty:d.qty!==undefined?d.qty:s.planned.value,unit:d.unit||s.planned.unit,raw:s.planned.raw,derivedFromTotal:!!s.planned.derivedFromTotal},pieces:{value:s.pieces.value,raw:s.pieces.raw,confirmed:false},breakdown:s.breakdown,
     location:{raw:[s.coords.xRaw,s.coords.yRaw].filter(Boolean).join(' / ')||null,format:s.coords.parsed?s.coords.parsed.format:null,crs:s.coords.parsed?s.coords.parsed.crs:null,parsed:s.coords.parsed?{ok:s.coords.parsed.ok,lat:s.coords.parsed.lat,lon:s.coords.parsed.lon,verdicts:s.coords.parsed.verdicts,suggestion:s.coords.parsed.suggestion}:null,address:s.coords.address||null,status:'needed'},
-    confirmed:null,progress:'Available',blocked:null,problem:null,publication:{scope:'none',targets:[]},sourceRef:{docId:rec.id,page:s.page,line:s.line},createdAt:now(state),resolved:false,eudrRef:null};
+    confirmed:null,progress:'Available',blocked:null,problem:null,publication:{scope:'none',targets:[]},sourceRef:{docId:rec.id,page:s.page,line:s.line},createdAt:now(state),resolved:false,eudrRef:null,photos:[]};
   if(s.kind==='industrial'&&s.coords.address){const pickup=state.parties.find(p=>(p.roles||[]).includes('pickupSite')&&s.coords.address.includes(p.name));st.location.status='address';if(pickup){st.confirmed={lat:pickup.lat,lon:pickup.lon,method:'address',by,at:now(state),note:'Werksadresse (industrielle Abholung)'};st.location.status='confirmed';}}
   else if(s.coords.parsed&&s.coords.parsed.ok){st.location.status='proposed';}
   if(d.location){confirmLocation(state,key,Object.assign({by},d.location),st);}
@@ -165,6 +166,7 @@ function applyEvent(state,ev){
   if(!ev.id)throw new Error('event id required');if(state.eventIds[ev.id])return {duplicate:true,event:state.events.find(e=>e.id===ev.id)};
   const e=Object.assign({},ev,{receivedTime:now(state),sync:'acked',conflicts:[]});state.eventIds[e.id]=true;state.events.push(e);
   const st=e.stackKey?state.stacks[e.stackKey]:null;
+  if(Array.isArray(e.photos)&&e.photos.length){const target=st||(e.loadId?state.loads[e.loadId]:null);if(target){target.photos=target.photos||[];for(const url of e.photos)target.photos.push({url,by:e.driverId,at:e.eventTime,kind:e.kind,eventId:e.id});}}
   switch(e.kind){
     case 'pickup':{if(!st)throw new Error('stack');const alloc=Object.values(state.allocations).find(a=>a.stackKey===st.key&&a.driverId===e.driverId);
       if(alloc&&['Withdrawn','Reassigned'].includes(alloc.state)){const c=conflict(state,'pickupAfterWithdrawal',{eventId:e.id,stackKey:st.key,allocationId:alloc.id},`Abholung an Polter ${st.tempKey} durch ${user(state,e.driverId)?.name} nach Entzug der Zuteilung (${alloc.state}) — Disposition prüft`);e.conflicts.push(c.id);}
@@ -281,8 +283,11 @@ function driverExcerpt(state,docId){
   const pages=d.attachments.flatMap(a=>a.pages).map(p=>({n:p.n,kind:p.kind,title:p.title||null,pins:p.pins||null,lines:p.lines.map((l,li)=>restrictedLines.has(p.n+':'+li)?'█ redigiert (kommerzielle Angabe)':l.replace(/\b(\d{1,3}(?:[.,]\d{2})?)\s*(EUR|€)(\s*(pro|\/)\s*\S+)?/gi,'█ redigiert'))}));
   return {docId,subject:d.subject,pages,redactedLines:restrictedLines.size,generatedAt:now(state),note:'Fahrerauszug — geprüft, kommerzielle Angaben geschwärzt'};
 }
+function setDocumentOriginal(state,docId,meta,by){const d=state.documents[docId];if(!d)throw new Error('document');const before=d.original;d.original=meta?{name:meta.name,size:meta.size,type:meta.type,pages:meta.pages||null,storedAt:meta.storedAt||now(state)}:null;audit(state,by,'document.original',docId,before,d.original);return d;}
+function setDriverOriginal(state,docId,allowed,by){const d=state.documents[docId];if(!d)throw new Error('document');const before=d.driverOriginal;d.driverOriginal=!!allowed;audit(state,by,'document.driverOriginal',docId,before,d.driverOriginal);return d;}
+function stackPhotos(state,key){const st=state.stacks[key];if(!st)return [];return (st.photos||[]).slice().sort((a,b)=>String(b.at).localeCompare(String(a.at)));}
 function can(stateOrUser,action){const u=stateOrUser&&stateOrUser.roles?stateOrUser:null;if(!u)return false;const r=u.roles;const map={review:'dispatcher',publish:'dispatcher',allocate:'dispatcher',resolve:'dispatcher',match:'dispatcher',report:'dispatcher',admin:'admin',drive:'driver',seeRates:'dispatcher'};return r.includes(map[action])||r.includes('admin')&&action!=='drive';}
-const api={INTAKE,STACK,LOAD,ORDER,ALLOC,ELDAT_STATUS,initialState,nextId,audit,party,user,truck,profile,ingestDocument,reviewDocument,diffOrders,confirmLocation,clearLocation,publish,allocate,acceptAllocation,reserve,withdrawAllocation,activeAllocations,openLoadFor,visibleTo,visibleWorkFor,applyEvent,createLoad,createReceipt,matchReceipt,assignReceipt,addLedger,ledgerFor,sumBasis,compareQty,reconcileLoad,reconcileOrder,reconcileQuotas,deriveOrderStatus,resolveStack,blockStack,resolveConflict,collectionReport,markReportSent,exportOrder,driverExcerpt,can,existingStackIndex};
+const api={INTAKE,STACK,LOAD,ORDER,ALLOC,ELDAT_STATUS,initialState,nextId,audit,party,user,truck,profile,ingestDocument,reviewDocument,diffOrders,confirmLocation,clearLocation,publish,allocate,acceptAllocation,reserve,withdrawAllocation,activeAllocations,openLoadFor,visibleTo,visibleWorkFor,applyEvent,createLoad,createReceipt,matchReceipt,assignReceipt,addLedger,ledgerFor,sumBasis,compareQty,reconcileLoad,reconcileOrder,reconcileQuotas,deriveOrderStatus,resolveStack,blockStack,resolveConflict,collectionReport,markReportSent,exportOrder,driverExcerpt,setDocumentOriginal,setDriverOriginal,stackPhotos,can,existingStackIndex};
 (globalThis.TransportCore=globalThis.TransportCore||{}).model=api;
 if(typeof module!=='undefined')module.exports=api;
 })();

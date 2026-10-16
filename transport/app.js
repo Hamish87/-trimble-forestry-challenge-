@@ -4,7 +4,8 @@
 (function(){
 const TC=globalThis.TransportCore,TV=globalThis.TransportViews;const S=TV.shared;const {esc,t,fmt}=S;
 const store=TC.store.create();const I=TC.i18n;
-const ui={inboxFilter:'all',dispatch:{},selection:[],driverTab:'work',tiles:'osm',place:null,ledgerBasis:'',auditQ:'',editUser:null,mapFitted:false,focusSeen:null};
+const ui={inboxFilter:'all',dispatch:{},selection:[],driverTab:'work',tiles:'osm',place:null,ledgerBasis:'',auditQ:'',editUser:null,mapFitted:false,focusSeen:null,reviewOriginal:false,driverJob:null};
+const ORIG=TC.originals,PH=TC.photos;
 let drafts={};let dialogFn=null;let map=null,mapEl=null,placeMap=null,placeEl=null,driverMap=null,driverEl=null;
 const $=sel=>document.querySelector(sel);
 const api={navigate:h=>{if(location.hash!==h)location.hash=h;render();},print:()=>window.print(),download:(name,text)=>{try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'application/json'}));a.download=name;a.click();}catch(e){console.warn(e);}},confirm:msg=>typeof window.confirm==='function'?window.confirm(msg):true};
@@ -30,6 +31,7 @@ function render(){
 }
 function afterRender(c){
   const el=$('#dispatchMap');if(el)mountDispatchMap(c,el);
+  const oc=$('#originalCanvas');if(oc)renderOriginal(oc.closest('.orig-view'));
   const hl=$('.fx-line.hl');if(hl&&hl.scrollIntoView)hl.scrollIntoView({block:'center'});
   const focusRow=$('.stack-row.focus');if(focusRow&&c.route.query.stack!==ui.focusSeen){ui.focusSeen=c.route.query.stack;if(focusRow.scrollIntoView)focusRow.scrollIntoView({block:'center'});}
 }
@@ -49,12 +51,28 @@ function mountDispatchMap(c,container){
   const pts=ms.filter(m=>!m.id.startsWith('dest-')&&m.id!=='base').map(m=>[m.lat,m.lon]);
   if(!ui.mapFitted&&pts.length){map.fitBounds(pts,13);ui.mapFitted=true;}
   const focus=c.route.query.stack&&c.state.stacks[c.route.query.stack];if(focus&&focus.confirmed&&ui.lastFocus!==focus.key){ui.lastFocus=focus.key;map.setView(focus.confirmed.lat,focus.confirmed.lon,Math.max(map.state.zoom,14));}
+  if(focus&&focus.confirmed)map.setPopup({key:focus.key,lat:focus.confirmed.lat,lon:focus.confirmed.lon,html:TV.dispatch.pinCard(c,focus)});else map.setPopup(null);
 }
+/* original documents: render a stored PDF page (or image) into the review canvas / the original dialog */
+async function renderOriginal(view){
+  if(!view||!ORIG)return;const docId=view.dataset.doc,page=Number(view.dataset.page||1);const canvas=view.querySelector('canvas'),fb=view.querySelector('.orig-fallback');const rec=await ORIG.get(docId);
+  if(!rec){if(fb)fb.textContent=t('Kein Original im Browser-Speicher — bitte erneut hinterlegen.');return;}
+  if(!/pdf/i.test(rec.type)){const url=await ORIG.objectUrl(docId);if(canvas)canvas.hidden=true;if(fb)fb.innerHTML=`<img class="orig-img" src="${url}" alt="${t('Original')}">`;return;}
+  if(!globalThis.pdfjsLib){if(fb)fb.textContent=t('PDF-Anzeige nicht verfügbar (pdf.js nicht geladen) — Nachbildung verwenden.');return;}
+  try{const r=await ORIG.renderPage(docId,page,canvas,Math.min(900,view.clientWidth||800));if(fb)fb.textContent=r?`${t('Seite')} ${Math.min(page,r.pages)} / ${r.pages}`:'';}catch(e){if(fb)fb.textContent=t('Original konnte nicht gerendert werden')+': '+e.message;}
+}
+async function renderOriginalPages(container){
+  if(!container||!ORIG)return;const docId=container.dataset.doc;const rec=await ORIG.get(docId);if(!rec){container.innerHTML=`<div class="empty">${esc(t('Kein Original im Browser-Speicher.'))}</div>`;return;}
+  if(!/pdf/i.test(rec.type)){const url=await ORIG.objectUrl(docId);container.innerHTML=`<img class="orig-img" src="${url}" alt="${t('Original')}">`;return;}
+  if(!globalThis.pdfjsLib){container.innerHTML=`<div class="empty">${esc(t('PDF-Anzeige nicht verfügbar (pdf.js nicht geladen) — Nachbildung verwenden.'))}</div>`;return;}
+  const doc=await ORIG.pdf(docId);if(!doc)return;container.innerHTML='';for(let n=1;n<=doc.numPages;n++){const wrap=document.createElement('div');wrap.className='orig-page';const cv=document.createElement('canvas');wrap.appendChild(cv);const cap=document.createElement('div');cap.className='muted small';cap.textContent=`${t('Seite')} ${n} / ${doc.numPages}`;wrap.appendChild(cap);container.appendChild(wrap);await ORIG.renderPage(docId,n,cv,Math.min(900,container.clientWidth||800));}
+}
+async function readPhotos(files){const out=[];if(!files||!PH)return out;for(const f of [...files].slice(0,4)){try{out.push(await PH.fromFile(f));}catch(e){console.warn(e);}}return out;}
 function fitMap(){if(!map)return;const c=ctx();const pts=markersFor(c).filter(m=>!m.id.startsWith('dest-')&&m.id!=='base').map(m=>[m.lat,m.lon]);map.fitBounds(pts,13);}
 /* ---------- dialogs & toast ---------- */
 function dialog(fn){dialogFn=fn;renderDialog();const d=$('#tpDialog');if(!d.open)d.showModal();relayout();if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>relayout());}
 function relayout(){for(const m of [map,placeMap,driverMap])if(m)try{m.render();}catch(e){}}
-function renderDialog(){const d=$('#tpDialog');if(!dialogFn)return;d.innerHTML=dialogFn(ctx());const pm=d.querySelector('#placeMap');if(pm)mountPlaceMap(pm);const dm=d.querySelector('#driverMap');if(dm)mountDriverMap(dm);}
+function renderDialog(){const d=$('#tpDialog');if(!dialogFn)return;d.innerHTML=dialogFn(ctx());const pm=d.querySelector('#placeMap');if(pm)mountPlaceMap(pm);const dm=d.querySelector('#driverMap');if(dm)mountDriverMap(dm);const op=d.querySelector('.orig-pages[data-doc]');if(op&&op.querySelector('.orig-fallback'))renderOriginalPages(op);}
 function closeDialog(){const d=$('#tpDialog');dialogFn=null;if(d.open)d.close();d.innerHTML='';}
 let toastTimer=null;function toast(msg,kind='ok'){const el=$('#tpToast');el.textContent=msg;el.className='tp-toast show '+kind;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{el.className='tp-toast';},4500);}
 function mountPlaceMap(container){if(!placeEl){placeEl=document.createElement('div');placeEl.className='map-inner';}container.appendChild(placeEl);
@@ -66,7 +84,7 @@ function mountPlaceMap(container){if(!placeEl){placeEl=document.createElement('d
   for(const s of Object.values(c.state.stacks))if(s.confirmed&&(!st||s.key!==st.key))ms.push({id:s.key,lat:s.confirmed.lat,lon:s.confirmed.lon,className:'pin faint',html:`<span class="tm-pin faint"><b>${esc(s.refs.polter||'')}</b></span>`,noCluster:true,button:false,title:s.tempKey});
   placeMap.setMarkers(ms);
 }
-function mountDriverMap(container){if(!driverEl){driverEl=document.createElement('div');driverEl.className='map-inner';}container.appendChild(driverEl);const st=ui.driverMapStack?store.state.stacks[ui.driverMapStack]:null;if(!driverMap)driverMap=TC.tilemap.create(driverEl,{tiles:ui.tiles,zoom:14,cluster:false});if(st&&st.confirmed){driverMap.setView(st.confirmed.lat,st.confirmed.lon,14);driverMap.setMarkers([{id:st.key,lat:st.confirmed.lat,lon:st.confirmed.lon,className:'pin c0',html:`<span class="tm-pin"><b>${esc(st.refs.polter||st.refs.ladenummer||'')}</b></span>`,noCluster:true,button:false}]);}}
+function mountDriverMap(container){if(!driverEl){driverEl=document.createElement('div');driverEl.className='map-inner';}container.appendChild(driverEl);const st=ui.driverMapStack?store.state.stacks[ui.driverMapStack]:null;if(!driverMap)driverMap=TC.tilemap.create(driverEl,{tiles:ui.tiles,zoom:14,cluster:false});if(st&&st.confirmed){driverMap.setView(st.confirmed.lat,st.confirmed.lon,14);driverMap.setMarkers([{id:st.key,lat:st.confirmed.lat,lon:st.confirmed.lon,className:'pin c0',html:`<span class="tm-pin"><b>${esc(st.refs.polter||st.refs.ladenummer||'')}</b></span>`,noCluster:true,button:false}]);driverMap.setPopup({key:st.key,lat:st.confirmed.lat,lon:st.confirmed.lon,html:TV.dispatch.pinCard(ctx(),st,{driver:store.state.ui.persona})});}}
 function openPlace(){ui.place.centered=false;dialog(c=>TV.dispatch.placeDialog(c,ui.place.stackKey||null,ui.place.docId?{docId:ui.place.docId,tempKey:ui.place.tempKey}:null));}
 /* ---------- helpers ---------- */
 function draftToDecisions(d){const out={fields:{},lines:d.lines,destinationId:d.destinationId||undefined,note:d.note||undefined};for(const [k,v] of Object.entries(d.fields||{}))if(v!==''&&v!=null)out.fields[k]=v;return out;}
@@ -149,6 +167,13 @@ const actions={
   'audit-filter':withRender((d,el)=>{ui.auditQ=el.value;}),
   'demo-run':withRender(()=>{if(!api.confirm(t('Alle Daten zurücksetzen und den Demo-Durchlauf abspielen?')))return;store.reset();drafts={};ui.selection=[];ui.mapFitted=false;TC.tour.run(store);toast(t('Demo-Durchlauf abgespielt'));api.navigate('#/dispatch');}),
   'data-reset':withRender(()=>{if(!api.confirm(t('Alle Daten dieses Arbeitsbereichs löschen?')))return;store.reset();drafts={};ui.selection=[];ui.mapFitted=false;toast(t('Zurückgesetzt'));}),
+  'review-original':withRender(d=>{ui.reviewOriginal=d.on==='1';}),
+  'original-attach':async(d,el)=>{const f=el.files&&el.files[0];if(!f)return;try{const rec=await ORIG.store(d.doc,f);let pages=null;try{const doc=await ORIG.pdf(d.doc);pages=doc?doc.numPages:null;}catch(e){}store.apply('setDocumentOriginal',d.doc,{name:rec.name,size:rec.size,type:rec.type,pages});ui.reviewOriginal=true;toast(t('Original im Browser hinterlegt'));}catch(e){fail(e);}render();},
+  'driver-original-toggle':withRender((d,el)=>{store.apply('setDriverOriginal',d.doc,el.checked);}),
+  'original-open':d=>dialog(c=>TV.driver.originalDialog(c,d.doc)),
+  'photo-open':d=>dialog(()=>TV.driver.photoDialog(ctx(),d.src,d.caption)),
+  'map-popup-close':()=>setQuery({stack:undefined}),
+  'driver-job':withRender(d=>{ui.driverJob=d.stack;}),
   'dialog-close':()=>closeDialog(),
   'noop':()=>{}
 };
@@ -158,13 +183,13 @@ const forms={
   import:async f=>{const sender=F(f,'sender').value.trim(),subject=F(f,'subject').value.trim();let pages=[];const file=f.pdf&&F(f,'pdf').files&&F(f,'pdf').files[0];
     if(file&&globalThis.pdfjsLib){pages=await pdfPages(file);}else{const txt=F(f,'text').value;pages=txt.split(/\n---+\n|\f/).map((blk,i)=>({n:i+1,kind:'text',lines:blk.split('\n').map(l=>l.replace(/ {3,}/g,'\t').trimEnd()).filter(l=>l.trim())})).filter(p=>p.lines.length);}
     if(!pages.length)throw new Error(t('Kein Text gefunden'));const doc={id:'DOC-IMP-'+Date.now().toString(36).toUpperCase(),sender,senderName:sender,subject,receivedAt:store.clock(),attachments:[{name:file?file.name:'import.txt',pages}],source:file?'upload':'paste',note:t('manueller Import')};
-    const rec=store.apply('importDocument',doc);closeDialog();api.navigate('#/inbox/'+rec.id);toast(`${t('Importiert')}: ${rec.status}`);},
+    const rec=store.apply('importDocument',doc);if(file&&ORIG){try{const saved=await ORIG.store(rec.id,file,{pages:pages.length});store.apply('setDocumentOriginal',rec.id,{name:saved.name,size:saved.size,type:saved.type,pages:pages.length});}catch(e){console.warn(e);}}closeDialog();api.navigate('#/inbox/'+rec.id);toast(`${t('Importiert')}: ${rec.status}`);},
   publish:f=>{const keys=F(f,'keys').value.split('|').filter(Boolean);const scope=radio(f,'scope','fleet');const targets=scope==='group'?[F(f,'group').value]:scope==='named'?[...f.querySelectorAll('[name=driver]:checked')].map(x=>x.value):[];if(scope==='named'&&!targets.length)throw new Error(t('Mindestens einen Fahrer wählen'));store.apply('publish',keys,scope,targets);closeDialog();ui.selection=[];toast(`${keys.length} ${t('Polter veröffentlicht')}`);},
   allocate:f=>{const keys=F(f,'keys').value.split('|').filter(Boolean);const driver=F(f,'driver').value,truck=F(f,'truck').value||undefined;const kind=radio(f,'share','whole');const share=kind==='whole'?{kind:'whole'}:kind==='loads'?{kind:'loads',value:Number(F(f,'loads').value)||1}:{kind:'qty',value:num(F(f,'qty').value)};
     if(F(f,'reassign').value){store.apply('withdraw',F(f,'reassign').value,{driverId:driver,truckId:truck});}else for(const k of keys)store.apply('allocate',k,driver,truck,share);closeDialog();ui.selection=[];toast(t('Zugeteilt'));},
-  pickup:f=>{const st=store.state.stacks[F(f,'stack').value];const unknown=F(f,'unknown').checked;const qty=unknown?null:num(F(f,'qty').value);const r=store.driverEvent({kind:'pickup',stackKey:st.key,truckId:F(f,'truck').value,qty,unit:qty!=null?(st.planned.unit||null):null,pieces:num(F(f,'pieces').value),note:F(f,'note').value||null});closeDialog();toast(r.queued?t('Abholung lokal gespeichert — ausstehende Synchronisierung'):t('Abholung erfasst'));},
-  cleared:f=>{if(!F(f,'confirm').checked)throw new Error(t('Bitte bestätigen'));const r=store.driverEvent({kind:'cleared',stackKey:F(f,'stack').value});closeDialog();toast(r.queued?t('Räumung lokal gespeichert'):t('Polter als geräumt gemeldet'));},
-  problem:f=>{const r=store.driverEvent({kind:'problem',stackKey:F(f,'stack').value,problemKind:F(f,'kind').value,note:F(f,'note').value||null,photo:F(f,'photo').checked});closeDialog();toast(r.queued?t('Meldung lokal gespeichert'):t('Problem gemeldet'));},
+  pickup:async f=>{const st=store.state.stacks[F(f,'stack').value];const unknown=F(f,'unknown').checked;const qty=unknown?null:num(F(f,'qty').value);const photos=await readPhotos(F(f,'photo').files);const r=store.driverEvent({kind:'pickup',stackKey:st.key,truckId:F(f,'truck').value,qty,unit:qty!=null?(st.planned.unit||null):null,pieces:num(F(f,'pieces').value),note:F(f,'note').value||null,photos});closeDialog();toast(r.queued?t('Abholung lokal gespeichert — ausstehende Synchronisierung'):t('Abholung erfasst'));},
+  cleared:async f=>{if(!F(f,'confirm').checked)throw new Error(t('Bitte bestätigen'));const photos=await readPhotos(F(f,'photo').files);const r=store.driverEvent({kind:'cleared',stackKey:F(f,'stack').value,photos});closeDialog();toast(r.queued?t('Räumung lokal gespeichert'):t('Polter als geräumt gemeldet'));},
+  problem:async f=>{const photos=await readPhotos(F(f,'photo').files);const r=store.driverEvent({kind:'problem',stackKey:F(f,'stack').value,problemKind:F(f,'kind').value,note:F(f,'note').value||null,photo:photos.length>0,photos});closeDialog();toast(r.queued?t('Meldung lokal gespeichert'):t('Problem gemeldet'));},
   note:f=>{const l=store.state.loads[F(f,'load').value];const lines=l.lines.map((x,i)=>({stackKey:x.stackKey,qty:num(F(f,'qty_'+i).value),unit:x.unit,pieces:num(F(f,'pcs_'+i).value)}));const r=store.driverEvent({kind:'note_issued',loadId:l.id,form:radio(f,'form','generated'),customerNoteNo:F(f,'customerNoteNo').value||null,declaredLines:lines,transportComplete:F(f,'transportComplete').checked,eudrRef:F(f,'eudrRef').value||null,destinationId:F(f,'destination').value||null});closeDialog();toast(r.queued?t('Lieferschein lokal gespeichert'):t('Lieferschein ausgestellt'));},
   unload:f=>{const r=store.driverEvent({kind:'unloaded',loadId:F(f,'load').value,acceptance:radio(f,'acceptance','accepted'),reason:F(f,'reason').value||null,newDestinationId:F(f,'newDestination').value||null,photo:F(f,'photo').checked});closeDialog();toast(t('Abladung gemeldet'));},
   ticket:f=>{const qty=num(F(f,'qty').value),net=num(F(f,'net').value),gross=num(F(f,'gross').value),tare=num(F(f,'tare').value);const measured=qty!=null?[{species:null,assortment:null,lengthM:null,qty:{value:qty,unit:F(f,'unit').value,raw:String(F(f,'qty').value)},method:'Werksmaß (Foto)'}]:[];const weigh=net!=null?{net:{value:net,unit:'kg',raw:String(net)},...(gross!=null?{gross:{value:gross,unit:'kg',raw:String(gross)}}:{}),...(tare!=null?{tare:{value:tare,unit:'kg',raw:String(tare)}}:{})}:null;if(!measured.length&&!weigh)throw new Error(t('Menge oder Nettogewicht eintragen'));store.driverEvent({kind:'ticket_photo',loadId:F(f,'load').value,ticketNo:F(f,'ticketNo').value,measuredLines:measured,weighbridge:weigh});closeDialog();toast(t('Werksschein erfasst und der Fuhre zugeordnet'));},
@@ -200,7 +225,7 @@ function help(c){return `<section class="help"><h2>${t('Hilfe')}</h2><p>${esc(t(
   <p class="muted small">${esc(t('Demo-Hinweis: Dokumente sind anonymisierte Nachbildungen der Beispielsammlung; keine Daten verlassen den Browser (außer Kartenkacheln).'))} <a href="README.md">README</a> · <a href="SPEC.md">SPEC</a> · <a href="RESEARCH.md">RESEARCH</a></p></section>`;}
 /* ---------- events ---------- */
 function onClick(ev){const el=ev.target.closest('[data-action]');if(!el)return;if(el.tagName==='SELECT'||el.tagName==='INPUT'||el.tagName==='TEXTAREA')return;const a=actions[el.dataset.action];if(!a)return;ev.preventDefault();try{a(el.dataset,el,ev);}catch(e){fail(e);}}
-function onChange(ev){const el=ev.target.closest('[data-action]');if(!el)return;if(!(el.tagName==='SELECT'||el.type==='checkbox'||el.type==='radio'||el.type==='date'||el.type==='number'))return;const a=actions[el.dataset.action];if(a)try{a(el.dataset,el,ev);}catch(e){fail(e);}}
+function onChange(ev){const el=ev.target.closest('[data-action]');if(!el)return;if(!(el.tagName==='SELECT'||el.type==='checkbox'||el.type==='radio'||el.type==='date'||el.type==='number'||el.type==='file'))return;const a=actions[el.dataset.action];if(a)try{a(el.dataset,el,ev);}catch(e){fail(e);}}
 let inputTimer=null;function onInput(ev){const el=ev.target.closest('[data-action]');if(!el||!(el.tagName==='INPUT'&&['text','search','number','date',''].includes(el.type)||el.tagName==='TEXTAREA'))return;const a=actions[el.dataset.action];if(!a)return;const live=['review-field','review-note','place-coord'];if(live.includes(el.dataset.action)){a(el.dataset,el,ev);return;}clearTimeout(inputTimer);inputTimer=setTimeout(()=>{try{a(el.dataset,el,ev);}catch(e){fail(e);}},250);}
 async function onSubmit(ev){const f=ev.target.closest('form[data-form]');if(!f)return;ev.preventDefault();const fn=forms[f.dataset.form];if(!fn)return;try{await fn(f);}catch(e){fail(e);}render();}
 function onKey(ev){if(ev.key==='Enter'&&ev.target.closest('li.doc[data-action]')){ev.target.closest('li.doc').click();}}

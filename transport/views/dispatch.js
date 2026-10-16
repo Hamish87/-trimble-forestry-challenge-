@@ -73,8 +73,26 @@ function focusCard(ctx){
   const {state}=ctx;const key=ctx.route.query.stack;const st=key?state.stacks[key]:null;if(!st)return '';const o=state.orders[st.orderId];const M=globalThis.TransportCore.model;const loads=Object.values(state.loads).filter(l=>l.lines.some(x=>x.stackKey===st.key));
   return `<section class="card focus-card"><header><h3>${S.stackRef(st)} <span class="muted">${esc(o.id)}</span></h3>${button('✕','dispatch-focus',{stack:''},'ghost')}</header>
     ${kv([[t('Kunde'),esc(S.party(state,o.customerId)||'')],[t('Auftrag'),`${S.orderRef(o)} · ${statusPill('order',o.status,'small')}`],[t('Holz'),S.timber(st)],[t('Menge'),`${fmt.qty(st.planned.qty,st.planned.unit)} <span class="muted">(${esc(st.planned.raw||'')})</span>`],[t('Stück'),st.pieces.value==null?null:String(st.pieces.value)+(st.pieces.value===0?' *':'')],[t('Frist'),S.deadline(o)],[t('Standort'),`${statusPill('location',st.location.status,'small')} ${S.locationText(st)}${st.confirmed?`<div class="muted small">${t('bestätigt von')} ${esc(S.userName(state,st.confirmed.by))} · ${fmt.dt(st.confirmed.at)}${st.confirmed.note?' · '+esc(st.confirmed.note):''}</div>`:''}`],[t('Veröffentlichung'),pubCell(ctx,st)],[t('Zuteilung'),allocCell(ctx,st)],[t('Fortschritt'),progressCell(ctx,st)],[t('Fuhren'),loads.length?loads.map(l=>`<a href="#/receipts/loads?load=${esc(l.id)}">${esc(l.id)}</a> ${statusPill('load',l.state,'small')}`).join('<br>'):null],[t('Quelle'),`<a href="#/inbox/${esc(st.sourceRef.docId)}">${esc(st.sourceRef.docId)}</a> · ${t('Seite')} ${st.sourceRef.page}, ${t('Zeile')} ${st.sourceRef.line+1}`]])}
-    <p class="muted small">${esc(t('Ein Pin oder eine Straßenroute ist kein Nachweis, dass ein beladener Holz-Lkw den Polter erreicht. Bei Zweifel Revier kontaktieren:'))} ${esc((o.contacts.find(c=>/Revier|Einsatz|vor Ort/i.test(c.role))||{}).value||'–')}</p>
+    <div class="row wrap"><strong class="small">${t('Fotos')}</strong>${S.photoStrip(M.stackPhotos(state,st.key),{max:8,emptyText:t('noch kein Foto')})}</div>
+    <p class="muted small">${esc(t('Ein Pin oder eine Straßenroute ist kein Nachweis, dass ein beladener Holz-Lkw den Polter erreicht. Bei Zweifel Revier kontaktieren:'))} ${S.telLink((o.contacts.find(c=>/Revier|Einsatz|vor Ort/i.test(c.role))||{}).value||'–')} ${st.confirmed?S.navLinks(st.confirmed.lat,st.confirmed.lon):''}</p>
     <div class="row wrap">${button(t('Veröffentlichen'),'publish-open',{stack:st.key},'small primary')}${button(t('Zuteilen'),'allocate-open',{stack:st.key},'small')}${button(st.progress==='Blocked'?t('Blockierung aufheben'):t('Blockieren'),'block-toggle',{stack:st.key,on:st.progress==='Blocked'?'0':'1'},'small')}${st.progress!=='Cleared'?button(t('Durch Disposition erledigt'),'resolve-stack',{stack:st.key},'small link'):''}</div></section>`;
+}
+/* the card shown in the map popup when a pin is clicked (also used by the driver's map dialog) */
+function pinCard(ctx,st,opts={}){
+  const {state}=ctx;const o=state.orders[st.orderId];const M=globalThis.TransportCore.model;const es=M.ledgerFor(state,{stackKey:st.key});const col=M.sumBasis(es,'driverEstimate');
+  const contact=(o.contacts||[]).find(c=>/Revier|Einsatz|vor Ort/i.test(c.role))||(o.contacts||[])[0];const driver=opts.driver;const alloc=driver?Object.values(state.allocations).find(a=>a.stackKey===st.key&&a.driverId===driver&&['Accepted','Reserved'].includes(a.state)):null;
+  const customers=[...new Set(Object.values(state.orders).map(x=>x.customerId))];const ci=customers.indexOf(o.customerId)%6;
+  return `<article class="pin-card" data-stack="${esc(st.key)}"><header><span class="pin-dot c${ci}"></span><strong>${S.stackRef(st)}</strong>${statusPill('stack',st.progress,'small')}${button('✕','map-popup-close',{},'ghost small','aria-label="'+esc(t('Schließen'))+'"')}</header>
+    <div class="pc-sub">${esc(S.party(state,o.customerId)||o.issuer||'')} · ${S.orderRef(o)}</div>
+    <div class="pc-facts">${S.timber(st)}</div>
+    ${S.progressBar(col?col.value:null,st.planned.qty,st.planned.unit)}
+    <div class="pc-facts small"><span class="${S.dueClass(o,ctx.now)}">${t('Frist')} ${S.deadline(o)}</span> · ${t('Ziel')} ${esc(S.party(state,o.destinationId)||o.destination||t('unbestätigt'))}${st.pieces.value?` · ${st.pieces.value} ${t('Stück')}`:''}</div>
+    <div class="pc-facts small muted">${S.locationText(st)}</div>
+    ${st.problem?`<div class="pc-facts small warn-text">⚠ ${esc(st.problem.kind)}${st.problem.note?' — '+esc(st.problem.note):''}</div>`:''}
+    ${contact?`<div class="pc-facts small">${esc(contact.role)}: ${S.telLink(contact.value)}</div>`:''}
+    ${S.photoStrip(M.stackPhotos(state,st.key),{max:4,emptyText:t('noch kein Foto')})}
+    <div class="row wrap pc-actions">${st.confirmed?S.navLinks(st.confirmed.lat,st.confirmed.lon):''}${driver?(alloc&&st.progress!=='Cleared'?button(t('Abholung'),'pickup-open',{stack:st.key},'small primary')+button(t('Geräumt'),'cleared-open',{stack:st.key},'small')+button(t('Problem'),'problem-open',{stack:st.key},'small'):''):button(t('Details'),'dispatch-focus',{stack:st.key,focus:'1'},'small')+button(t('Veröffentlichen'),'publish-open',{stack:st.key},'small')+button(t('Zuteilen'),'allocate-open',{stack:st.key},'small')}</div>
+    <div class="pc-note muted small">${esc(t('Ein Pin ist kein Nachweis der Lkw-Befahrbarkeit.'))}</div></article>`;
 }
 function render(ctx){
   const {state}=ctx;const all=Object.values(state.stacks);const stacks=applyFilters(ctx,all);const orders=[...new Set(stacks.map(s=>s.orderId))].map(id=>state.orders[id]).sort((a,b)=>(a.window.to||'9').localeCompare(b.window.to||'9'));
@@ -83,7 +101,7 @@ function render(ctx){
   return `<section class="dispatch">
     ${filters(ctx,stacks)}
     <div class="dispatch-grid">
-      <div class="map-col"><div class="map-tools">${button('+','map-zoom',{dir:'1'},'','aria-label="'+t('Vergrößern')+'"')}${button('−','map-zoom',{dir:'-1'},'','aria-label="'+t('Verkleinern')+'"')}${button(t('Alle anzeigen'),'map-fit',{},'')}<label>${t('Hintergrund')} ${select('tiles',[['osm','OpenStreetMap'],['none',t('kein Hintergrund (offline)')]],ctx.ui.tiles||'osm','data-action="map-source"')}</label><span class="muted small">${t('zuletzt aktualisiert')}: ${fmt.time(ctx.now)}</span></div>
+      <div class="map-col"><div class="map-tools">${button('+','map-zoom',{dir:'1'},'','aria-label="'+t('Vergrößern')+'"')}${button('−','map-zoom',{dir:'-1'},'','aria-label="'+t('Verkleinern')+'"')}${button(t('Alle anzeigen'),'map-fit',{},'')}<label>${t('Hintergrund')} ${select('tiles',globalThis.TransportCore.tilemap.sources().map(([k,l])=>[k,t(l)]),ctx.ui.tiles||'osm','data-action="map-source"')}</label><span class="muted small">${t('zuletzt aktualisiert')}: ${fmt.time(ctx.now)}</span></div>
         <div id="dispatchMap" class="map" role="application" aria-label="${t('Karte der bestätigten Polter')}"></div>${legend}
         ${focusCard(ctx)}
         ${queuePanel(ctx)}</div>
@@ -118,7 +136,7 @@ function placeDialog(ctx,stackKey,draftDoc){
         <label>${t('Vermerk')} <input name="note" value="${esc(pd.note||'')}" placeholder="${esc(pages.length?t('aus Kartenseite platziert'):t('telefonisch mit Revier bestätigt'))}"></label></div></div>
     <div class="dlg-actions">${button(t('Abbrechen'),'dialog-close',{},'')}${button(t('Übernehmen'),'place-save',{stack:stackKey||'',doc:draftDoc?draftDoc.docId:'',temp:draftDoc?draftDoc.tempKey:'',method:pages.length?'manual-from-map':'manual'},'primary',pd.lat==null?'disabled':'')}</div></div>`;
 }
-const api={render,applyFilters,publishDialog,allocateDialog,placeDialog,queuePanel};
+const api={render,applyFilters,publishDialog,allocateDialog,placeDialog,queuePanel,pinCard};
 (globalThis.TransportViews=globalThis.TransportViews||{}).dispatch=api;
 if(typeof module!=='undefined')module.exports=api;
 })();

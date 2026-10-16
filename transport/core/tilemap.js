@@ -6,8 +6,10 @@
 (function(){
 const TILE=256;
 const SOURCES={
-  osm:{url:(z,x,y)=>`https://tile.openstreetmap.org/${z}/${x}/${y}.png`,attribution:'© OpenStreetMap-Mitwirkende',maxZoom:19},
-  none:{url:null,attribution:'Kein Kartenhintergrund (offline)',maxZoom:19}
+  osm:{url:(z,x,y)=>`https://tile.openstreetmap.org/${z}/${x}/${y}.png`,attribution:'© OpenStreetMap-Mitwirkende',maxZoom:19,label:'OpenStreetMap'},
+  basemapde:{url:(z,x,y)=>`https://sgx.geodatenzentrum.de/wmts_basemapde/tile/1.0.0/de_basemapde_web_raster_farbe/default/GLOBAL_WEBMERCATOR/${z}/${y}/${x}.png`,attribution:'© GeoBasis-DE / BKG (2026) CC BY 4.0',maxZoom:18,label:'basemap.de (BKG)'},
+  topo:{url:(z,x,y)=>`https://${['a','b','c'][(x+y)%3]}.tile.opentopomap.org/${z}/${x}/${y}.png`,attribution:'Kartendaten: © OpenStreetMap-Mitwirkende, SRTM | Kartendarstellung: © OpenTopoMap (CC-BY-SA)',maxZoom:17,label:'OpenTopoMap'},
+  none:{url:null,attribution:'Kein Kartenhintergrund (offline)',maxZoom:19,label:'kein Hintergrund (offline)'}
 };
 const clampLat=lat=>Math.max(-85.0511,Math.min(85.0511,lat));
 function project(lat,lon,z){const n=Math.pow(2,z)*TILE;const x=(lon+180)/360*n;const r=clampLat(lat)*Math.PI/180;const y=(1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*n;return {x,y};}
@@ -20,10 +22,10 @@ function boundsCenterZoom(points,w,h,pad=40,maxZoom=16){
   return {lat:(minLat+maxLat)/2,lon:(minLon+maxLon)/2,zoom};
 }
 function create(el,opts={}){
-  const doc=el.ownerDocument;const state={lat:opts.lat??48.6,lon:opts.lon??9.6,zoom:opts.zoom??8,source:SOURCES[opts.tiles||'osm']||SOURCES.osm,markers:[],placeMode:false,width:opts.width||0,height:opts.height||0,tilesFailed:0,tilesOk:0};
-  el.classList.add('tm');el.innerHTML='<div class="tm-tiles"></div><div class="tm-markers"></div><div class="tm-scale"></div><div class="tm-attribution"></div><div class="tm-place-hint" hidden>Klicken, um den Polter zu platzieren</div>';
-  const tilesEl=el.querySelector('.tm-tiles'),markersEl=el.querySelector('.tm-markers'),scaleEl=el.querySelector('.tm-scale'),attrEl=el.querySelector('.tm-attribution'),hintEl=el.querySelector('.tm-place-hint');
-  attrEl.textContent=state.source.attribution;
+  const doc=el.ownerDocument;const state={lat:opts.lat??48.6,lon:opts.lon??9.6,zoom:opts.zoom??8,source:SOURCES[opts.tiles||'osm']||SOURCES.osm,markers:[],placeMode:false,width:opts.width||0,height:opts.height||0,tilesFailed:0,tilesOk:0,popup:null};
+  el.classList.add('tm');el.innerHTML='<div class="tm-tiles"></div><div class="tm-markers"></div><div class="tm-popup" hidden></div><div class="tm-scale"></div><div class="tm-attribution"></div><div class="tm-place-hint" hidden>Klicken, um den Polter zu platzieren</div>';
+  const tilesEl=el.querySelector('.tm-tiles'),markersEl=el.querySelector('.tm-markers'),popupEl=el.querySelector('.tm-popup'),scaleEl=el.querySelector('.tm-scale'),attrEl=el.querySelector('.tm-attribution'),hintEl=el.querySelector('.tm-place-hint');
+  attrEl.textContent=state.source.attribution;popupEl.addEventListener('pointerdown',ev=>ev.stopPropagation());popupEl.addEventListener('wheel',ev=>ev.stopPropagation());popupEl.addEventListener('dblclick',ev=>ev.stopPropagation());
   const size=()=>({w:el.clientWidth||state.width||640,h:el.clientHeight||state.height||420});
   const tileCache=new Map();
   function render(){
@@ -35,7 +37,7 @@ function create(el,opts={}){
       img.style.transform=`translate(${Math.round(x*TILE-left)}px,${Math.round(y*TILE-top)}px)`;}}
     for(const [key,img] of tileCache)if(!keep.has(key)){img.remove();tileCache.delete(key);}
     el.classList.toggle('tm-no-tiles',!state.source.url);
-    renderMarkers(left,top,w,h);
+    renderMarkers(left,top,w,h);renderPopup(left,top,w,h);
     const mpp=metresPerPixel(state.lat,z);const targets=[25,50,100,250,500,1000,2500,5000,10000,25000,50000,100000];const metres=targets.find(t=>t/mpp>=60)||100000;scaleEl.style.width=Math.round(metres/mpp)+'px';scaleEl.textContent=metres>=1000?(metres/1000)+' km':metres+' m';
     if(opts.onMove)opts.onMove({lat:state.lat,lon:state.lon,zoom:z});
   }
@@ -48,6 +50,14 @@ function create(el,opts={}){
       const m=ms[0];const d=doc.createElement(m.button===false?'div':'button');if(m.button!==false)d.type='button';d.className='tm-marker '+(m.className||'');d.style.transform=`translate(${Math.round(m.px)}px,${Math.round(m.py)}px)`;d.dataset.id=m.id;if(m.title)d.title=m.title;d.innerHTML=m.html||'<span class="tm-pin"></span>';
       if(m.onClick)d.addEventListener('click',ev=>{ev.stopPropagation();m.onClick(m,ev);});markersEl.appendChild(d);
     }
+  }
+  function renderPopup(left,top,w,h){
+    const p=state.popup;if(!p){popupEl.hidden=true;return;}
+    const pt=project(p.lat,p.lon,state.zoom);const x=pt.x-left,y=pt.y-top;
+    if(popupEl.dataset.key!==p.key){popupEl.innerHTML=p.html;popupEl.dataset.key=p.key;}
+    popupEl.hidden=false;const pw=popupEl.offsetWidth||300,ph=popupEl.offsetHeight||160;
+    let px=Math.round(x-pw/2),py=Math.round(y-ph-34);let below=false;if(py<4){py=Math.round(y+14);below=true;}px=Math.max(4,Math.min(Math.max(4,w-pw-4),px));
+    popupEl.style.transform=`translate(${px}px,${py}px)`;popupEl.classList.toggle('below',below);
   }
   // interaction
   let drag=null;
@@ -63,13 +73,16 @@ function create(el,opts={}){
     zoomBy(d){state.zoom=Math.max(2,Math.min(state.source.maxZoom,state.zoom+d));render();},
     fitBounds(points,maxZoom){const {w,h}=size();const v=boundsCenterZoom(points,w,h,40,maxZoom||15);api.setView(v.lat,v.lon,v.zoom);},
     setMarkers(ms){state.markers=ms.slice();render();},
+    setPopup(p){state.popup=p?Object.assign({key:String(p.key||p.lat+','+p.lon)},p):null;if(!p){popupEl.hidden=true;popupEl.innerHTML='';popupEl.dataset.key='';}render();},
+    panTo(lat,lon){state.lat=lat;state.lon=lon;render();},
     setPlaceMode(on){state.placeMode=!!on;el.classList.toggle('tm-placing',!!on);hintEl.hidden=!on;},
     setSource(name){state.source=SOURCES[name]||SOURCES.osm;attrEl.textContent=state.source.attribution;for(const img of tileCache.values())img.remove();tileCache.clear();render();},
     destroy(){el.innerHTML='';}
   };
   render();return api;
 }
-const api={TILE,SOURCES,project,unproject,metresPerPixel,boundsCenterZoom,create};
+const sources=()=>Object.entries(SOURCES).map(([k,v])=>[k,v.label]);
+const api={TILE,SOURCES,sources,project,unproject,metresPerPixel,boundsCenterZoom,create};
 (globalThis.TransportCore=globalThis.TransportCore||{}).tilemap=api;
 if(typeof module!=='undefined')module.exports=api;
 })();

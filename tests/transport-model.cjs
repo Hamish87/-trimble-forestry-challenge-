@@ -99,6 +99,12 @@ const rep=M.collectionReport(st,htl.id);assert.equal(rep.kind,'Abfuhrmeldung');a
 const expo=M.exportOrder(st,htl.id);assert.equal(expo.sources[0].contentHash,st.documents['DOC-HTL-1'].contentHash);assert(expo.disclaimer.includes('nicht automatisch'));
 const exTtw=M.driverExcerpt(st,'DOC-TTW-1');assert.equal(exTtw.redactedLines,2);assert(exTtw.pages[1].lines.some(l=>/redigiert/.test(l)),'Skonto line redacted');assert(!exTtw.pages.flat().some(l=>/Frachtsatz:\s*\S/.test(JSON.stringify(l))));
 const exBay=M.driverExcerpt(st,'DOC-BAYSF-1');assert(!exBay.pages[0].lines.some(l=>/8,80/.test(l)),'freight rate redacted');assert(exBay.pages[0].lines.some(l=>/redigiert/.test(l)));
+/* ---------- photos on events, originals on documents ---------- */
+const PH=TC.photos;assert(PH.illustration('a','stack','x').startsWith('data:image/svg+xml'));
+const photoStacks=Object.values(st.stacks).filter(s=>s.photos.length);assert.equal(photoStacks.length,4,'demo run attaches photos to four stacks');assert(photoStacks.some(s=>s.photos.some(p=>p.kind==='problem')),'problem report photo');
+assert.deepEqual(M.stackPhotos(st,s1.key).map(p=>p.kind),['cleared','pickup'],'newest photo first');
+assert.equal(st.documents['DOC-TTW-1'].driverOriginal,false,'commercial fields → original not released to drivers by default');assert.equal(st.documents['DOC-HTL-1'].driverOriginal,true);
+M.setDocumentOriginal(st,'DOC-HTL-1',{name:'HTL.pdf',size:1234,type:'application/pdf',pages:3},'U-DISPO');assert.equal(st.documents['DOC-HTL-1'].original.pages,3);M.setDriverOriginal(st,'DOC-TTW-1',true,'U-DISPO');assert.equal(st.documents['DOC-TTW-1'].driverOriginal,true);assert(st.audit.some(a=>a.action==='document.driverOriginal'));
 /* ---------- persistence and audit ---------- */
 const storage=mem();const s2=TC.store.create({storage});TC.tour.run(s2);const s3=TC.store.create({storage});assert.equal(Object.keys(s3.state.orders).length,5);assert.equal(s3.state.events.length,s2.state.events.length);
 assert(st.audit.some(a=>a.action==='document.released'&&a.ref==='DOC-MENGEN-1'));assert(st.audit.some(a=>a.action==='stack.locationConfirmed'));assert(st.audit.some(a=>a.action==='report.markedSent'));
