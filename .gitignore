@@ -15,3 +15,5 @@ cfharvest/evidence/specs/*.pdf
 cfharvest/evidence/screenshots/*.png
 .claude/
 site/
+.vercel
+.env*
