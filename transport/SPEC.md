@@ -177,6 +177,12 @@ Berichte; tenant name; persona switch (Administrator · Disponent · Fahrer: nam
 driver persona); language DE/EN/FR; "Demo" tag. Footer: demo disclaimer and data provenance line.
 
 ### 7.2 Posteingang & Prüfung [WF §1–2]
+**Originals.** A document's original file (PDF or photo) is kept **in the browser** (IndexedDB, memory fallback) when a
+PDF is imported or attached with „Original hinterlegen"; nothing is uploaded and the sample originals are not in the
+repository (they contain personal data). The review toggles between the facsimile and the original rendered page by
+page with pdf.js; „Original für Fahrer freigegeben" (default off when commercial fields were detected) decides whether
+drivers open the original or the redacted excerpt. [DEMO]
+
 Left: document list (sender, subject, received, pages, class chips, status, exceptions count), filters (status,
 customer), "Demo-E-Mails zustellen" (delivers the five fixtures as five e-mails, plus the resend and the amendment
 scenario on demand), "PDF/Text importieren" (drop a PDF when pdf.js is available, or paste text lines). Right: the
@@ -191,10 +197,20 @@ reference, Hieb/Los/Polter, species/assortment, planned qty/unit, pieces, deadli
 allocation, progress). Filters: customer, due date, driver, availability. Actions on selection: Veröffentlichen
 (Flotte / Gruppe / Fahrer), Zuteilen (driver, truck, share: whole / n loads / qty), Zurückziehen, Neu zuteilen,
 Blockieren, Standort bestätigen / platzieren, Fahrerauszug (driver-safe excerpt). Panels: offene Arbeit, blockierte
-Polter, Räumungsmeldungen, Konflikte, Pending sync counts, "zuletzt aktualisiert".
+Polter, Räumungsmeldungen, Konflikte, Pending sync counts, "zuletzt aktualisiert". Clicking a pin opens a **pin card**
+anchored to the marker: stack reference, customer and order, timber, planned-vs-collected progress bar, deadline,
+destination, location and how it was confirmed, problem flag, district contact as a tel: link, photos (lightbox), a
+navigation link to the pin (external maps app, with the reminder that a pin is no proof of truck access) and the
+dispatcher actions. Backgrounds: OpenStreetMap, basemap.de (BKG, CC BY 4.0), OpenTopoMap, none. [DEMO]
 
 ### 7.4 Mobil — „Meine Arbeit" [WF §5]
-Phone-frame on desktop, full width below 700 px. Header: driver, truck, connectivity toggle (Online / Offline),
+Phone-frame on desktop, full width below 700 px. Truck-driver first: the **hero card** shows the task at hand (next
+accepted or reserved stack; tap another row to switch) with the three facts that matter at the wheel (quantity,
+deadline, distance), a progress bar, one big **Navigation starten** button (external maps app), the district contact
+as a call link, and thumb-sized primary actions; the other tasks are compact rows. Pickup, clearance and problem dialogs
+take **photos** (camera or file, downscaled in the browser) that attach to the stack and appear in the hero, the pin
+card and the dispatch focus card. **Original öffnen** shows the stored original document when the dispatcher released
+it for drivers, otherwise the redacted excerpt. [DEMO] Header: driver, truck, connectivity toggle (Online / Offline),
 "zuletzt aktualisiert", pending-sync badge. "Herunterladen" stores assigned jobs, confirmed locations, driver-safe
 excerpts and contacts for offline use. Job cards (not office forms): customer, reference, stack, quantity/unit,
 deadline, distance from a chosen base, open/partly/cleared pill, map thumbnail, contacts, excerpt. Primary actions:

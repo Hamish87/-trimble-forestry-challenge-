@@ -35,13 +35,17 @@ other branches get preview deployments. The game site keeps its own project; it 
    differing lengths, conflicting instructions, blank forms, commercial fields). Confirm printed coordinates, adopt a
    suggested reading, place a pin from the document's map page, or leave the line in „Standort erforderlich". Freigeben.
    „Szenario" delivers an exact resend (→ Duplikat) and a revised order (→ version diff, field work preserved).
-   „PDF/Text importieren" runs the same extraction on pasted text or, with pdf.js, on a dropped PDF's text layer.
-2. **Disposition**: confirmed stacks on the map (clusters, customer colours, deadline rings), the order/stack list,
+   „PDF/Text importieren" runs the same extraction on pasted text or, with pdf.js, on a dropped PDF's text layer; the
+   dropped file stays in the browser as the document's original (also „Original hinterlegen" on any document) and can be
+   viewed page by page beside the extracted fields and released to drivers.
+2. **Disposition**: confirmed stacks on the map (clusters, customer colours, deadline rings; click a pin for the card with
+   progress, contacts, photos and a navigation link), the order/stack list,
    filters, publication (Flotte / Gruppe / Fahrer), allocation (ganzer Polter / Fuhren / Menge), withdraw and
    reassign, block, the „Standort erforderlich" queue, conflicts, problem and clearance reports, driver-safe excerpts.
-3. **Mobil**: choose a driver persona, download work, go offline, record pickups (unknown quantity stays unknown),
-   report „Polter geräumt", report problems, issue the delivery note, report arrival and unloading, photograph the
-   mill ticket, reconnect: the queue is transmitted once; conflicts (double claim, pickup after withdrawal) surface
+3. **Mobil**: choose a driver persona; the hero card shows the task at hand with navigation, call and big action
+   buttons; download work, go offline, record pickups with photos (unknown quantity stays unknown), report „Polter
+   geräumt", report problems, open the original order (when released) or the excerpt, issue the delivery note, report
+   arrival and unloading, photograph the mill ticket, reconnect: the queue is transmitted once; conflicts (double claim, pickup after withdrawal) surface
    for dispatch instead of „last update wins".
 4. **Belege & Abgleich**: delivery notes (A4 print), mill tickets („Demo-Werksscheine zustellen": one matches by note
    number, one by vehicle + mill + arrival window, one needs manual matching), the quantity ledger, reconciliation per

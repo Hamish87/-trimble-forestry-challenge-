@@ -2,6 +2,10 @@
 'use strict';
 (function(){
 const LONG={
+"Kein Original im Browser-Speicher — bitte erneut hinterlegen.":["No original in browser storage — please attach it again.","Aucun original dans le stockage du navigateur — veuillez le joindre à nouveau."],
+"PDF-Anzeige nicht verfügbar (pdf.js nicht geladen) — Nachbildung verwenden.":["PDF viewer unavailable (pdf.js not loaded) — use the facsimile.","Affichage PDF indisponible (pdf.js non chargé) — utiliser le fac-similé."],
+"Die Datei bleibt im Browser (IndexedDB); nichts wird hochgeladen oder eingecheckt.":["The file stays in the browser (IndexedDB); nothing is uploaded or committed.","Le fichier reste dans le navigateur (IndexedDB) ; rien n'est téléversé ni versionné."],
+"Die Originaldatei wird aus dem Browser-Speicher gerendert; sie wurde nie hochgeladen.":["The original file is rendered from browser storage; it was never uploaded.","Le fichier original est affiché depuis le stockage du navigateur ; il n'a jamais été téléversé."],
 "Abholung lokal gespeichert — ausstehende Synchronisierung":["Pickup saved locally — pending sync","Enlèvement enregistré localement — synchronisation en attente"],
 "Alle Daten zurücksetzen und den Demo-Durchlauf abspielen?":["Reset all data and play the demo run?","Réinitialiser toutes les données et jouer le parcours de démo ?"],
 "kein eindeutiger Treffer — Zuordnung in Belege & Abgleich":["no unique match — assign under Receipts & reconciliation","aucune correspondance unique — associer sous Justificatifs & rapprochement"],
