@@ -18,6 +18,15 @@ No build step. The app is plain HTML/CSS/JS; the only network requests are OpenS
 optional pdf.js script for importing a real PDF's text layer. Everything else stays in the browser
 (`localStorage['transport-demo-v1']`).
 
+## Hosting
+
+Vercel project **holztransport-demo** (team hamishbruce87-7880s-projects), connected to this GitHub repository with
+Root Directory `transport` and "include source files outside the root directory" switched off, so Vercel reads only
+`transport/vercel.json` (static, no build) and ignores the game site's root `vercel.json`. Production URL:
+https://holztransport-demo.vercel.app/ — first production deployment made from branch `claude/elegant-hodgkin-ab437b`
+on 16 Oct 2026 (git-sourced); the project's production branch is `main`, so merging the branch keeps it current, and
+other branches get preview deployments. The game site keeps its own project; it also serves this app at `/transport/`.
+
 ## Tour (what a visitor does)
 
 1. **Posteingang**: „Demo-E-Mails zustellen" delivers the five anonymised sample orders. Open one: the page facsimile

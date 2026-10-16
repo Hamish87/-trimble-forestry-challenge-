@@ -91,7 +91,7 @@ export links (A6), ticket matching (A7) — all in `tests/transport-model.cjs`.
 (Karte & Liste), Mobil „Meine Arbeit", Belege & Abgleich, Verwaltung, Berichte, Lieferschein print. Acceptance:
 `tests/transport-ui.cjs` drives the end-to-end tour in DE/EN/FR; a real-browser pass at 1280 px and 390 px.
 
-### Phase 3 — Repository integration (done 16 Oct 2026)
+### Phase 3 — Repository integration and hosting (done 16 Oct 2026; own Vercel project `holztransport-demo`, root directory `transport`, see README "Hosting")
 `package.json` (`dev:transport` on :3002, tests in `npm test`), `scripts/assemble-site.sh` (copy `transport/`),
 `vercel.json` (`/transport` redirect), `README.md`, `AGENTS.md` (third track and file ownership).
 
