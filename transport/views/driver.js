@@ -14,8 +14,8 @@ function render(ctx){
   const body=tab==='work'?workTab(ctx,drv,dl):tab==='load'?loadTab(ctx,drv):tab==='docs'?docsTab(ctx,drv):moreTab(ctx,drv,dl);
   return `<section class="driver">${picker}
     <div class="phone"><div class="phone-bar"><strong>${esc(drv.name)}</strong> <span class="muted">${esc(S.truckReg(state,drv.truckId))}</span>
-      ${button(online?`<i class="modus-icons" aria-hidden="true">wifi</i> ${t('Online')}`:`<i class="modus-icons" aria-hidden="true">wifi-off</i> ${t('Offline')}`,'driver-online',{},online?'small online':'small offline')}${q?`<span class="pill pill-amber small" title="${t('Ausstehende Synchronisierung')}">${q} ${t('ausstehend')}</span>`:''}</div>
-      <div class="phone-sub muted small">${dl?`${t('Daten vom')} ${fmt.dt(dl.at)}`:esc(t('noch nicht heruntergeladen'))} · ${t('letzte Übertragung')} ${fmt.time(state.ui.lastSync)} ${button(`<i class="modus-icons" aria-hidden="true">cloud-download</i> ${t('Herunterladen')}`,'driver-download',{},'link small',online?'':'disabled')} ${button(`<i class="modus-icons" aria-hidden="true">sync</i> ${t('Synchronisieren')}`,'driver-sync',{},'link small',online&&q?'':'disabled')}</div>
+      ${button(online?`<i class="modus-icons" aria-hidden="true">wifi</i> ${t('Online')}`:`<i class="modus-icons" aria-hidden="true">wifi_off</i> ${t('Offline')}`,'driver-online',{},online?'small online':'small offline')}${q?`<span class="pill pill-amber small" title="${t('Ausstehende Synchronisierung')}">${q} ${t('ausstehend')}</span>`:''}</div>
+      <div class="phone-sub muted small">${dl?`${t('Daten vom')} ${fmt.dt(dl.at)}`:esc(t('noch nicht heruntergeladen'))} · ${t('letzte Übertragung')} ${fmt.time(state.ui.lastSync)} ${button(`<i class="modus-icons" aria-hidden="true">cloud_download</i> ${t('Herunterladen')}`,'driver-download',{},'link small',online?'':'disabled')} ${button(`<i class="modus-icons" aria-hidden="true">sync</i> ${t('Synchronisieren')}`,'driver-sync',{},'link small',online&&q?'':'disabled')}</div>
       <nav class="phone-tabs">${[['work',t('Meine Arbeit'),'list-bulleted'],['load',t('Fuhre'),'delivery-truck'],['docs',t('Belege'),'document'],['more',t('Mehr'),'menu']].map(([k,l,ic])=>button(`<i class="modus-icons" aria-hidden="true">${ic}</i><span>${l}</span>`,'driver-tab',{tab:k},k===tab?'tab active':'tab')).join('')}</nav>
       <div class="phone-body">${body}</div>
       <div class="phone-foot muted small">${online?esc(t('Verbunden — Aktionen werden sofort quittiert.')):esc(t('Offline — Aktionen werden lokal gespeichert und beim Verbinden einmalig übertragen.'))}</div></div></section>`;
@@ -23,7 +23,7 @@ function render(ctx){
 function distanceKm(state,st){const base=state.parties.find(p=>p.id===state.carrierId);if(!st.confirmed||!base)return null;return C().haversineKm(base.lat,base.lon,st.confirmed.lat,st.confirmed.lon);}
 const M=()=>globalThis.TransportCore.model;
 function docOf(state,o){return state.documents[o.documentIds[o.documentIds.length-1]]||null;}
-function originalButton(ctx,o,cls='small link'){const d=docOf(ctx.state,o);if(!d)return '';if(d.original&&d.driverOriginal)return button(`<i class="modus-icons" aria-hidden="true">file-type-pdf</i> ${t('Original öffnen')}`,'original-open',{doc:d.id},cls);return button(`<i class="modus-icons" aria-hidden="true">document</i> ${t('Auszug')}`,'excerpt-open',{doc:d.id},cls);}
+function originalButton(ctx,o,cls='small link'){const d=docOf(ctx.state,o);if(!d)return '';if(d.original&&d.driverOriginal)return button(`<i class="modus-icons" aria-hidden="true">file_type_pdf</i> ${t('Original öffnen')}`,'original-open',{doc:d.id},cls);return button(`<i class="modus-icons" aria-hidden="true">document</i> ${t('Auszug')}`,'excerpt-open',{doc:d.id},cls);}
 function rank(w){const a=w.allocation,st=w.stack;if(a&&['Accepted','Reserved'].includes(a.state)&&st.progress!=='Cleared')return 0;if(a&&a.state==='Proposed')return 1;if(w.shared&&st.progress!=='Cleared')return 2;return 3;}
 /* the big card for the task the driver is on now: one glance, thumb-sized actions */
 function heroCard(ctx,w,dl){
@@ -41,9 +41,9 @@ function heroCard(ctx,w,dl){
     ${contact?`<div class="hero-contact small">${esc(contact.role)}: ${S.telLink(contact.value)}</div>`:''}
     ${st.problem?`<div class="hero-contact small warn-text">⚠ ${esc(st.problem.kind)}${st.problem.note?' — '+esc(st.problem.note):''}</div>`:''}
     <div class="hero-actions">
-      ${a&&a.state==='Proposed'?button(`<i class="modus-icons" aria-hidden="true">check-bold</i> ${t('Annehmen')}`,'driver-accept',{alloc:a.id},'big primary'):''}
-      ${w.shared&&!a&&st.progress!=='Cleared'?button(`<i class="modus-icons" aria-hidden="true">check-bold</i> ${t('Übernehmen')}`,'driver-reserve',{stack:st.key},'big primary',state.ui.online===false?'disabled title="'+esc(t('Verbindung nötig'))+'"':''):''}
-      ${active&&st.progress!=='Cleared'?button(`<i class="modus-icons" aria-hidden="true">delivery-truck</i> ${t('Abholung erfassen')}`,'pickup-open',{stack:st.key},'big primary')+button(`<i class="modus-icons" aria-hidden="true">check-circle</i> ${t('Polter geräumt')}`,'cleared-open',{stack:st.key},'big')+button(`<i class="modus-icons" aria-hidden="true">warning</i> ${t('Problem melden')}`,'problem-open',{stack:st.key},'big warn'):''}
+      ${a&&a.state==='Proposed'?button(`<i class="modus-icons" aria-hidden="true">check_bold</i> ${t('Annehmen')}`,'driver-accept',{alloc:a.id},'big primary'):''}
+      ${w.shared&&!a&&st.progress!=='Cleared'?button(`<i class="modus-icons" aria-hidden="true">check_bold</i> ${t('Übernehmen')}`,'driver-reserve',{stack:st.key},'big primary',state.ui.online===false?'disabled title="'+esc(t('Verbindung nötig'))+'"':''):''}
+      ${active&&st.progress!=='Cleared'?button(`<i class="modus-icons" aria-hidden="true">delivery_truck</i> ${t('Abholung erfassen')}`,'pickup-open',{stack:st.key},'big primary')+button(`<i class="modus-icons" aria-hidden="true">check_circle</i> ${t('Polter geräumt')}`,'cleared-open',{stack:st.key},'big')+button(`<i class="modus-icons" aria-hidden="true">warning</i> ${t('Problem melden')}`,'problem-open',{stack:st.key},'big warn'):''}
     </div>
     <div class="row wrap hero-more">${originalButton(ctx,o)}${S.photoStrip(M().stackPhotos(state,st.key),{max:4})}</div>
     ${eventsOf(ctx,st)}</article>`;
