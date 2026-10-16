@@ -17,7 +17,7 @@ twice (Notion attachment id and original file name); duplicates were confirmed b
 | S-PELLET | claus rodenberg waldkontor gmbh (timber trader, Kastorf) | Waldkontor Nord GmbH | KER Kaiser Entsorgung & Recycling GmbH | Pelletsproduktion Sachsen-Anhalt Nord GmbH, Oranienbaum → Pelletwerk Anhalt GmbH, Oranienbaum; pickup KLENK HOLZ AG, Baruth/Mark → Sägewerk Baruth AG |
 | S-HTL | KRAFFT KG, Aalen-Ebnat (timber trader) | Holzhandel Krafft-Ebnat KG | addressed to Lacker Sägewerk GmbH, Polsingen (the buyer; the file name says HTL 14452) | Lacker Sägewerk → Sägewerk Polsingen GmbH |
 | S-BAYSF | Bayerische Staatsforsten, Forstbetrieb Kaisheim | Bayerische Staatsforsten, Forstbetrieb Kaisheim (public enterprise, kept) | Burzler Holz GmbH Transporte-Handel | Binder Holz Deutschland GmbH, Kösching → Sägewerk Kösching GmbH |
-| S-TTW | Holz-Achatz GmbH, Teisnach (Auftraggeber); Revier Stadt Aach | Holzwerke Achental GmbH; Revier Stadt Aach | TTW Waldpflege GmbH, Wolfegg | "Zielwerk" blank on page 1; page 5 lists the Auftraggeber under Empfänger/Zielwerk → kept blank + flagged |
+| S-TTW | TTW Waldpflege GmbH, Wolfegg (Auftraggeber; letterhead logo and sender of the page-5 form); Revier blank | Waldpflege Oberschwaben GmbH, Wolfegg (placeholder street); Revier blank | Holz-Achatz GmbH, Teisnach | Zielwerk Stadt Aach, Hauptstraße, 78267 Aach (municipality, kept) → Stadt Aach as receiving site; page 5 repeats it under Empfänger / Zielwerk |
 
 ## 1. S-MENGEN — `6706_fehlende_Lossummen_Transportauftrag.pdf` (1 page, scan)
 
@@ -106,27 +106,36 @@ the customer profile's reference format.
 
 ## 5. S-TTW — `TransportauftragTTW.pdf` (5 pages, text layer + two map pages)
 
-Page 1 "Fuhrauftrag Nr. 3311" — Auftraggeber (timber works) · Frachtführer (carrier) · Revier: Stadt Aach · Zielwerk: blank ·
-Partie-Nr 124_501 · Kauf-Nr blank · Abrechnungsmaß **WA** · Sorte **Ind. Schichtholz 3m-lang** · Frachtsatz blank ·
+Page 1 "Fuhrauftrag Nr. 3311" (letterhead logo TTW Waldpflege) — Auftraggeber: TTW Waldpflege GmbH, Wolfegg · Frachtführer: Holz-Achatz GmbH,
+Teisnach · Revier: blank · Zielwerk: **Stadt Aach, Hauptstraße, 78267 Aach** (bold) · Partie-Nr 124_501 · Kauf-Nr 0 (a printed zero;
+the fixture leaves it blank) · Abrechnungsmaß **WA** · Sorte **Ind. Schichtholz 3m-lang** · Frachtsatz blank ·
 Abfuhrbeginn 23.08.2017 · Abfuhrende 06.09.2017 · Priorität normal · Zertifiziert nach PEFC Nummer HW-CoC-0220-13 ·
-Bemerkung **"test"** · Disponent / Einsatzleiter/Revierleiter / Ansprechpartner vor Ort (removed). Polterliste (Auftrag + Los ·
-Polter · Baumart · Menge · Stück · GPS-Koordinaten · Länge · Güte): **Polter 9** FI 230,636 rm, Länge 4,00, Güte BC, GPS blank
+Bemerkung **"test"** · Disponent / Einsatzleiter/Revierleiter / Ansprechpartner vor Ort (persons removed; the original itself prints a
+placeholder in the third cell). Polterliste (Auftrag + Los · Polter · Baumart · Länge · Güte · Menge · Stück · GPS-Koordinaten):
+**Polter 9** FI 230,636 rm, Länge 4,0, Güte BC, Stück 0, GPS blank
 with Polterinfo NFI 93 %/85 % 182,318 · FFI 93 %/15 % 32,174 · NTA 7 %/85 % 13,723 · FTA 7 %/15 % 2,422; **Polter 10** FI
 234,060 rm, 4,00, BC, with Polterinfo BFI 10 % 23,406 · DFI 90 % 210,654. "Sortenzusammenfassung Los 501" lists the six
 codes and "Summe: 464,696 rm". Page 2: instructions — separate Partien, fill the attached Abfuhrbericht at every pickup,
 **fax the report weekly** and on completion, "poltergenaue Abfuhr", credit notes twice a month (14 days, 2 % Skonto), a
 copy of the order on every truck, **"Lieferscheine sind unmittelbar nach dem Beladen auszufüllen"**, early notice when the
 deadline cannot be met, legal rules for roundwood transport. Pages 3–4: maps with pins 9 and 10 at two scales. Page 5:
-"Abfuhrmeldung / Fertigmeldung" form — **"Abfuhrmeldung jeweils am Monatsende senden"** · Gesamtmasse laut Auftrag 464,696 rm ·
+"Abfuhrmeldung / Fertigmeldung" form, sender TTW Waldpflege GmbH (Tel/Fax) — **"Abfuhrmeldung jeweils am Monatsende senden"** ·
+Auftragsname/Nr. 124_501 · Verkaufsnummer blank · Gesamtmasse laut Auftrag 464,696 rm · Gesamtstückzahl 0 · Forstort blank ·
+Fuhrauftrag Nr. 3311 · Empfänger / Zielwerk **Stadt Aach** · Fuhrunternehmer Holz-Achatz GmbH · Verantwortlicher Fahrer blank ·
 rows Fuhre Nr 1–10 (Datum · FZ-Nr. · Vol. gesch. FM/RM · Stückzahl · Verwend. im Werk · Bemerkung) · Summe · Soll · Differenz ·
 Gründe für Mengenabweichungen · Abfuhr restlos beendet am · "Wenn Posten vollständig abgefahren, letzte Fuhre einringeln".
 
 Findings → fixture expectations: **two** stack lines (9 and 10), 464,696 rm; the six Polterinfo lines and the
 Sortenzusammenfassung are informational breakdowns (`breakdown[]`), not stacks (A1); header "3m-lang" vs line length
 4,00 → `E-LEN`; weekly vs month-end reporting → `E-INSTR`, both shown; blank GPS + map pages → `E-COORD-NONE` +
-`E-MAP-ONLY`; Zielwerk blank while page 5 prints the Auftraggeber under "Empfänger / Zielwerk" → destination unconfirmed;
+`E-MAP-ONLY`; Zielwerk printed on page 1 and repeated on page 5 → destination party Stadt Aach, no `E-DEST` (the Revier is
+blank, so the pickup area comes from the map pages only);
 Frachtsatz blank but the field exists → `restricted` slot; PEFC number kept; the "Bemerkung: test" is kept and the
 fixture is tagged as a test document; the Abfuhrmeldung form is the template for the report export (SPEC §7.7).
+
+Correction (16 Oct 2026): an earlier revision of this section and of the fixture had the parties swapped — the carrier block
+was read as the Auftraggeber and the Zielwerk block as the Revier, because the text layer interleaves the two address columns.
+Corrected against the rendered original (page images); the extractor had read the real text layer correctly all along.
 
 ## 6. Cross-document observations
 - Two issuers print the same software footer (`abfuhr32`, Savcor IT GmbH, 2009 and 2014 versions): the HTL and Mengen

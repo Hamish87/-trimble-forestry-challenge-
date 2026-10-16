@@ -174,17 +174,16 @@ const DOCS=[
    'Verteilung Durchschreibesätze: weiß für Empfänger, grün für BaySF, gelb für Frächter, rosa verbleibt im Block'
   ],{ocrConfidence:0.88})]}],
   note:'Nachbildung · anonymisiert · umdatiert'},
- ttw('DOC-TTW-1','base','Fuhrauftrag Nr. 3311 · Partie 124_501 · Revier Stadt Aach','2026-10-12T14:35:00+02:00',{})
+ ttw('DOC-TTW-1','base','Fuhrauftrag Nr. 3311 · Partie 124_501 · Zielwerk Stadt Aach','2026-10-12T14:35:00+02:00',{})
 ];
 function ttwPages(v){
  const polter10=v.amend?'180,000 rm':'234,060 rm',info10=v.amend?['10\tBFI\t10,00 %\t18,000 rm','10\tDFI\t90,00 %\t162,000 rm']:['10\tBFI\t10,00 %\t23,406 rm','10\tDFI\t90,00 %\t210,654 rm'];
  const p1=[
    'Fuhrauftrag Nr. 3311',
-   'Holzwerke Achental GmbH','Altenmais 9','94244 Teisnach',
+   'Auftraggeber:\tWaldpflege Oberschwaben GmbH','\tForstweg 10','\t88364 Wolfegg',
    'Frachtführer :\tMusterholz Transporte GmbH','\tIndustriestraße 12','\t88339 Bad Waldsee',
-   'Auftraggeber:\tHolzwerke Achental GmbH',
-   'Revier:\tStadt Aach','\tHauptstraße','\t78267 Aach',
-   'Zielwerk:',
+   'Revier:',
+   'Zielwerk:\tStadt Aach','\tHauptstraße','\t78267 Aach',
    'Partie-Nr:\t124_501\tKauf-Nr.:',
    'Abrechnungsmaß:\tWA',
    'Sorte:\tInd. Schichtholz 3m-lang\tFrachtsatz:',
@@ -192,16 +191,16 @@ function ttwPages(v){
    'Zertifiziert nach PEFC Nummer HW-CoC-0220-13',
    v.amend?'Bemerkung:\tÄnderung zu Fuhrauftrag 3311 vom 12.10.2026: Polter 10 Menge geändert, Polter 11 neu, Abfuhrende verlängert. test':'Bemerkung:\ttest',
    'Disponent:\tEinsatzleiter/Revierleiter:\tAnsprechpartner vor Ort:',
-   'Disposition Holzwerke (Demo)\tRevierleitung Aach (Demo)\tForstwirt vor Ort (Demo)',
-   '+49 9403 000-00\t+49 7774 000-00\t+49 160 000000-0',
+   'Disposition Waldpflege (Demo)\tEinsatzleitung Waldpflege (Demo)\tForstwirt vor Ort (Demo)',
+   '+49 7527 000-00\t+49 160 000000-1\t+49 160 000000-0',
    'Polterliste:',
-   'Auftrag + Los\tPolter\tBaumart\tMenge\tStück\tGPS - Koordinaten\tLänge\tGüte',
-   '124_501\t9\tFI\t230,636 rm\t\t\t4,00\tBC',
+   'Auftrag + Los\tPolter\tBaumart\tLänge\tGüte\tMenge\tStück\tGPS - Koordinaten',
+   '124_501\t9\tFI\t4,00\tBC\t230,636 rm\t0\t',
    'Polterinfo:',
    '9\tNFI\t93,00 % / 85,00 %\t182,318 rm','9\tFFI\t93,00 % / 15,00 %\t32,174 rm','9\tNTA\t7,00 % / 85,00 %\t13,723 rm','9\tFTA\t7,00 % / 15,00 %\t2,422 rm',
-   `124_501\t10\tFI\t${polter10}\t\t\t4,00\tBC`,
+   `124_501\t10\tFI\t4,00\tBC\t${polter10}\t0\t`,
    'Polterinfo:',...info10,
-   ...(v.amend?['124_501\t11\tFI\t60,500 rm\t\t\t4,00\tBC','Polterinfo:','11\tNFI\t100,00 %\t60,500 rm']:[]),
+   ...(v.amend?['124_501\t11\tFI\t4,00\tBC\t60,500 rm\t0\t','Polterinfo:','11\tNFI\t100,00 %\t60,500 rm']:[]),
    'Sortenzusammenfassung Los : 501',
    'FFI\t32,174 rm',`NFI\t${v.amend?'242,817 rm':'182,318 rm'}`,'FTA\t2,422 rm','NTA\t13,723 rm',`BFI\t${v.amend?'18,000 rm':'23,406 rm'}`,`DFI\t${v.amend?'162,000 rm':'210,654 rm'}`,
    `Summe:\t${v.amend?'471,136 rm':'464,696 rm'}`,
@@ -218,12 +217,13 @@ function ttwPages(v){
    `Partie-Nr:\t124_501\tKauf-Nr.:\tAuftragsdatum:\t${v.amend?'15.10.2026':'12.10.2026'}`,
    'Seite 2 von 5'];
  const p5=[
-   'Holzwerke Achental GmbH\tTel: +49 9403 000-00\tFax: +49 9403 000-01',
+   'Waldpflege Oberschwaben GmbH\tTel: +49 7527 000-00\tFax: +49 7527 000-01',
    'Abfuhrmeldung / Fertigmeldung',
    'Abfuhrmeldung jeweils am Monatsende senden / Fertigmeldung senden, wenn Auftrag abgeschlossen ist.',
-   'Auftragsname/Nr.:\tFuhrauftrag Nr. 3311\tVerkaufsnummer:\t124_501',
+   'Auftragsname/Nr.:\t124_501\tVerkaufsnummer:',
    `Gesamtmasse laut Auftrag:\t${v.amend?'471,136 rm':'464,696 rm'}\tGesamtstückzahl laut Auftrag:\t0`,
-   'Forstort:\tStadt Aach\tEmpfänger / Zielwerk:\tHolzwerke Achental GmbH\tFuhrunternehmer:\tMusterholz Transporte GmbH',
+   'Forstort:\t\tFuhrauftrag Nr.\t3311',
+   'Empfänger / Zielwerk:\tStadt Aach\tFuhrunternehmer:\tMusterholz Transporte GmbH',
    'Sorte:\tInd. Schichtholz 3m-lang\tVerantwortlicher Fahrer:',
    'Fuhre Nr\tDatum\tFZ-Nr.\tVol. gesch. FM/RM\tStückzahl\tVerwend. im Werk\tBemerkung\tAnlage\tLager',
    ...Array.from({length:10},(_,i)=>`${i+1}\t\t\t\t\t\t\t\t`),
@@ -237,7 +237,7 @@ function ttwPages(v){
  const maps=[page(3,'map',['Fuhrauftrag Nr. 3311\tPartie 124_501'],{title:'Kartenausschnitt 1 : 25 000',pins:[{label:'9',fx:0.76,fy:0.49},{label:'10',fx:0.25,fy:0.51}]}),page(4,'map',['Fuhrauftrag Nr. 3311\tPartie 124_501'],{title:'Kartenausschnitt 1 : 50 000',pins:[{label:'9',fx:0.60,fy:0.48},{label:'10',fx:0.42,fy:0.50}]})];
  return [page(1,'text',p1),page(2,'text',p2),...maps,page(5,'text',p5)];
 }
-function ttw(id,scenario,subject,receivedAt,v){return {id,scenario,sample:'S-TTW',sender:'disposition@holzwerke-achental.demo',senderName:'Holzwerke Achental GmbH · Disposition',subject,receivedAt,attachments:[{name:v.amend?'Fuhrauftrag_3311_Aenderung.pdf':'Fuhrauftrag_3311.pdf',pages:ttwPages(v)}],note:'Nachbildung · anonymisiert · umdatiert'+(v.amend?' · Änderungsszenario [DEMO]':'')};}
+function ttw(id,scenario,subject,receivedAt,v){return {id,scenario,sample:'S-TTW',sender:'disposition@waldpflege-oberschwaben.demo',senderName:'Waldpflege Oberschwaben GmbH · Disposition',subject,receivedAt,attachments:[{name:v.amend?'Fuhrauftrag_3311_Aenderung.pdf':'Fuhrauftrag_3311.pdf',pages:ttwPages(v)}],note:'Nachbildung · anonymisiert · umdatiert'+(v.amend?' · Änderungsszenario [DEMO]':'')};}
 /* Scenario documents on demand (SPEC §7.2): exact resend and a revised order. */
 const SCENARIOS={
  resend:()=>ttw('DOC-TTW-RESEND','resend','WG: Fuhrauftrag Nr. 3311 · Partie 124_501','2026-10-14T09:05:00+02:00',{}),

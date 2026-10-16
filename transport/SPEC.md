@@ -140,7 +140,7 @@ Preserve source meaning: leading zeroes (`0727603001`), German decimal notation 
 | E-NEWCUST | first document of a customer → full review | info / document | all five |
 | E-SCAN | page has no text layer → manual capture | block / document | [S-MENGEN][S-PELLET][S-BAYSF] |
 | E-ADDR | an office/mill address would be the only location → never used as pickup | block / line | guard (the model refuses `method:'address'` for roadside stacks) |
-| E-DEST | destination (Zielwerk/Empfänger) not printed or only on a form page → confirm before release | warn / order | [S-TTW] blank Zielwerk, page 5 names the issuer; [S-MENGEN] [S-HTL] |
+| E-DEST | destination (Zielwerk/Empfänger) not printed or only on a form page → confirm before release | warn / order | [S-MENGEN] none printed; [S-HTL] buyer address only; [S-TTW] prints Stadt Aach on page 1 and page 5 → no exception, party matched by name |
 | E-CARRIER | carrier not printed; delivery to our inbox counts as addressing | info / order | [S-MENGEN][S-HTL] |
 | E-PIECES | piece count printed as 0 → kept as "0 (laut Dokument)", never a confirmed zero | info / line | [S-MENGEN] |
 | E-MAP | map page found → supporting evidence, not a coordinate source | info / document | [S-HTL][S-TTW] |

@@ -58,9 +58,9 @@ const stateOf=p=>p.js('TransportApp.store.state');
   q(p,'#tpDialog [name="note"]').value='aus Kartenseite 3 platziert';await click(p,'#tpDialog [data-action="place-save"]');assert(!dlg(p).open);assert(text(q(p,'.stacks tr[data-stack="124_501/9"]')).includes('Standort bestätigt'));
   // second stack: skip it, then reset
   await click(p,'.stacks tr[data-stack="124_501/10"] [data-action="review-line-skip"]');assert(q(p,'.stacks tr[data-stack="124_501/10"].skipped'));await click(p,'.stacks tr[data-stack="124_501/10"] [data-action="review-line-reset"]');assert(!q(p,'.stacks tr[data-stack="124_501/10"].skipped'));
-  await change(p,'select[name="destinationId"]','P-ACHENTAL');await input(p,'[data-action="review-note"]','Zielwerk telefonisch bestätigt');
+  assert.equal(q(p,'select[name="destinationId"]').value,'P-STADT-AACH','printed Zielwerk pre-selected');await change(p,'select[name="destinationId"]','P-STADT-AACH');await input(p,'[data-action="review-note"]','Zielwerk telefonisch bestätigt');
   await click(p,'[data-action="review-release"]');await ticks(3);
-  let st=stateOf(p);assert.equal(Object.keys(st.orders).length,1);const ttw=Object.values(st.orders)[0];assert.equal(ttw.destinationId,'P-ACHENTAL');assert.equal(st.documents['DOC-TTW-1'].status,'Ready');
+  let st=stateOf(p);assert.equal(Object.keys(st.orders).length,1);const ttw=Object.values(st.orders)[0];assert.equal(ttw.destinationId,'P-STADT-AACH');assert.equal(st.documents['DOC-TTW-1'].status,'Ready');
   assert(p.w.location.hash.startsWith('#/dispatch'),'release navigates to dispatch');
   /* ---------- dispatch ---------- */
   await p.go('#/dispatch?order='+ttw.id);assert(q(p,'#dispatchMap .tm'),'tile map mounted');assert(q(p,'.tm-attribution')&&text(q(p,'.tm-attribution')).includes('OpenStreetMap'));
