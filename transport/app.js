@@ -4,7 +4,7 @@
 (function(){
 const TC=globalThis.TransportCore,TV=globalThis.TransportViews;const S=TV.shared;const {esc,t,fmt}=S;
 const store=TC.store.create();const I=TC.i18n;
-const ui={inboxFilter:'all',dispatch:{},selection:[],driverTab:'work',tiles:'osm',mapStyle:(globalThis.TransportConfig&&globalThis.TransportConfig.mapboxStyle)||'outdoors',place:null,ledgerBasis:'',auditQ:'',editUser:null,mapFitted:false,focusSeen:null,reviewOriginal:false,driverJob:null,drawer:null,mapTall:false,boxMode:false,expanded:{}};
+const ui={inboxFilter:'all',dispatch:{},selection:[],driverTab:'work',tiles:'osm',mapStyle:(globalThis.TransportConfig&&globalThis.TransportConfig.mapboxStyle)||'outdoors',place:null,ledgerBasis:'',auditQ:'',editUser:null,mapFitted:false,focusSeen:null,reviewOriginal:false,driverJob:null,drawer:null,mapTall:false,boxMode:false,expanded:{},dash:{days:'0',driver:''}};
 const ORIG=TC.originals,PH=TC.photos;
 let drafts={};let dialogFn=null;let map=null,mapEl=null,placeMap=null,placeEl=null,driverMap=null,driverEl=null;
 /* map engine: Mapbox GL JS when a public token is configured and the library loaded, else the built-in tile map (PLAN D13) */
@@ -23,7 +23,7 @@ function ctx(){const state=store.state;const user=state.users.find(u=>u.id===sta
 /* ---------- header ---------- */
 function header(c){
   const {state}=c;const needs=Object.values(state.documents).filter(d=>d.status==='NeedsReview').length;const loc=Object.values(state.stacks).filter(s=>s.location.status!=='confirmed'&&s.progress!=='Blocked').length+state.conflicts.filter(x=>!x.resolved).length;const match=Object.values(state.receipts).filter(r=>r.matchState!=='Matched').length;
-  const items=[['inbox',t('Posteingang'),needs,'email'],['dispatch',t('Disposition'),loc,'map_marker_multiple'],['driver',t('Mobil'),state.ui.queue.length,'phone_mobile'],['receipts',t('Belege & Abgleich'),match,'clipboard_check'],['reports',t('Berichte'),0,'document'],['admin',t('Verwaltung'),0,'settings'],['help',t('Hilfe'),0,'help_outlined']];
+  const items=[['inbox',t('Posteingang'),needs,'email'],['dispatch',t('Disposition'),loc,'map_marker_multiple'],['driver',t('Mobil'),state.ui.queue.length,'phone_mobile'],['receipts',t('Belege & Abgleich'),match,'clipboard_check'],['dashboard',t('Dashboard'),0,'dashboard'],['reports',t('Berichte'),0,'document'],['admin',t('Verwaltung'),0,'settings'],['help',t('Hilfe'),0,'help_outlined']];
   $('#tpNav').innerHTML=items.map(([k,l,n,ic])=>`<a href="#/${k}" class="${c.route.name===k?'active':''}" title="${l}"><i class="modus-icons" aria-hidden="true">${ic}</i><span class="lbl">${l}</span>${n?` <span class="cnt cnt-red">${n}</span>`:''}</a>`).join('');
   const roles=c.user.roles.map(r=>t({admin:'Administrator',dispatcher:'Disponent',driver:'Fahrer'}[r])).join(' + ');
   $('#tpPersona').innerHTML=`<label>${t('Persona')} ${S.select('persona',state.users.map(u=>[u.id,`${u.name} · ${u.title}`]),state.ui.persona,'data-action="persona-switch"')}</label>`;
@@ -33,7 +33,7 @@ function header(c){
 /* ---------- render ---------- */
 function render(){
   const c=ctx();const r=c.route;document.documentElement.lang=I?I.lang():'de';header(c);const main=$('#tpMain');document.body.classList.toggle('print-route',r.name==='print');
-  let html;try{switch(r.name){case 'inbox':html=TV.inbox.render(c);break;case 'dispatch':html=TV.dispatch.render(c);break;case 'driver':html=TV.driver.render(c);break;case 'receipts':html=TV.receipts.render(c);break;case 'admin':html=TV.admin.render(c);break;case 'reports':html=TV.reports.render(c);break;case 'print':html=r.parts[1]==='note'?TV.reports.printNote(c,r.parts[2]):c.state.orders[r.parts[2]]?TV.reports.orderReport(c,c.state.orders[r.parts[2]],true):S.empty(t('Nicht gefunden'));break;case 'help':html=help(c);break;default:html=TV.inbox.render(c);}}catch(e){console.error(e);html=`${S.alert('amber',`${esc(t('Darstellungsfehler'))}: ${esc(e.message)}`)}`;}
+  let html;try{switch(r.name){case 'inbox':html=TV.inbox.render(c);break;case 'dispatch':html=TV.dispatch.render(c);break;case 'driver':html=TV.driver.render(c);break;case 'receipts':html=TV.receipts.render(c);break;case 'admin':html=TV.admin.render(c);break;case 'reports':html=TV.reports.render(c);break;case 'dashboard':html=TV.dashboard.render(c);break;case 'print':html=r.parts[1]==='note'?TV.reports.printNote(c,r.parts[2]):c.state.orders[r.parts[2]]?TV.reports.orderReport(c,c.state.orders[r.parts[2]],true):S.empty(t('Nicht gefunden'));break;case 'help':html=help(c);break;default:html=TV.inbox.render(c);}}catch(e){console.error(e);html=`${S.alert('amber',`${esc(t('Darstellungsfehler'))}: ${esc(e.message)}`)}`;}
   main.innerHTML=html;afterRender(c);
 }
 function afterRender(c){
@@ -162,6 +162,7 @@ const actions={
   'map-fit':()=>fitMap(),
   'map-source':(d,el)=>{if(mapboxActive())ui.mapStyle=el.value;else ui.tiles=el.value;for(const m of [map,placeMap,driverMap])if(m)m.setSource(el.value);},
   'drawer-toggle':withRender(d=>{ui.drawer=ui.drawer===d.key?null:d.key;}),
+  'dash-filter':(d,el)=>{ui.dash=ui.dash||{};ui.dash[el.name]=el.value;render();},
   'map-tall':withRender(()=>{ui.mapTall=!ui.mapTall;}),
   'map-box':withRender(()=>{ui.boxMode=!ui.boxMode;if(map&&map.setBoxMode)map.setBoxMode(ui.boxMode);}),
   'order-toggle':withRender(d=>{ui.expanded[d.order]=!TV.dispatch.isOpen(ctx(),store.state.orders[d.order]);}),
