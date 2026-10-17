@@ -11,12 +11,12 @@ function render(ctx){
   const picker=`<div class="drv-pick"><label>${t('Fahrer (Persona)')} ${select('persona',[['',t('– wählen –')],...drivers.map(d=>[d.id,d.name+(d.truckId?' · '+S.truckReg(state,d.truckId):'')])],drv?drv.id:'','data-action="persona-switch"')}</label><span class="muted small">${esc(t('Die Fahreransicht zeigt nur zugeteilte und freigegebene Arbeit; Frachtsätze bleiben verborgen.'))}</span></div>`;
   if(!drv)return `<section class="driver">${picker}${empty(t('Fahrer-Persona wählen, um die mobile Ansicht zu sehen.'))}</section>`;
   const tab=ctx.ui.driverTab||'work';const online=state.ui.online!==false;const q=state.ui.queue.length;const dl=state.ui.downloaded[drv.id];
-  const body=tab==='work'?workTab(ctx,drv,dl):tab==='load'?loadTab(ctx,drv):tab==='docs'?docsTab(ctx,drv):moreTab(ctx,drv,dl);
+  const body=tab==='work'?workTab(ctx,drv,dl):tab==='map'?mapTab(ctx,drv,dl):tab==='load'?loadTab(ctx,drv):tab==='docs'?docsTab(ctx,drv):moreTab(ctx,drv,dl);
   return `<section class="driver">${picker}
     <div class="phone"><div class="phone-bar"><strong>${esc(drv.name)}</strong> <span class="muted">${esc(S.truckReg(state,drv.truckId))}</span>
       ${button(online?`<i class="modus-icons" aria-hidden="true">wifi</i> ${t('Online')}`:`<i class="modus-icons" aria-hidden="true">wifi_off</i> ${t('Offline')}`,'driver-online',{},online?'small online':'small offline')}${q?`<span class="pill pill-amber small" title="${t('Ausstehende Synchronisierung')}">${q} ${t('ausstehend')}</span>`:''}</div>
       <div class="phone-sub muted small">${dl?`${t('Daten vom')} ${fmt.dt(dl.at)}`:esc(t('noch nicht heruntergeladen'))} · ${t('letzte Übertragung')} ${fmt.time(state.ui.lastSync)} ${button(`<i class="modus-icons" aria-hidden="true">cloud_download</i> ${t('Herunterladen')}`,'driver-download',{},'link small',online?'':'disabled')} ${button(`<i class="modus-icons" aria-hidden="true">sync</i> ${t('Synchronisieren')}`,'driver-sync',{},'link small',online&&q?'':'disabled')}</div>
-      <nav class="phone-tabs">${[['work',t('Meine Arbeit'),'list-bulleted'],['load',t('Fuhre'),'delivery-truck'],['docs',t('Belege'),'document'],['more',t('Mehr'),'menu']].map(([k,l,ic])=>button(`<i class="modus-icons" aria-hidden="true">${ic}</i><span>${l}</span>`,'driver-tab',{tab:k},k===tab?'tab active':'tab')).join('')}</nav>
+      <nav class="phone-tabs">${[['work',t('Meine Arbeit'),'list_bulleted'],['map',t('Karte'),'map'],['load',t('Fuhre'),'delivery_truck'],['docs',t('Belege'),'document'],['more',t('Mehr'),'menu']].map(([k,l,ic])=>button(`<i class="modus-icons" aria-hidden="true">${ic}</i><span>${l}</span>`,'driver-tab',{tab:k},k===tab?'tab active':'tab')).join('')}</nav>
       <div class="phone-body">${body}</div>
       <div class="phone-foot muted small">${online?esc(t('Verbunden — Aktionen werden sofort quittiert.')):esc(t('Offline — Aktionen werden lokal gespeichert und beim Verbinden einmalig übertragen.'))}</div></div></section>`;
 }
@@ -64,6 +64,16 @@ function workTab(ctx,drv,dl){
   return `${state.ui.online===false&&!dl?`${S.alert('amber',`${esc(t('Offline ohne Download: Arbeit zuerst online herunterladen.'))}`)}`:''}
     ${hero?heroCard(ctx,hero,dl):`<div class="empty">${esc(t('Keine Arbeit zugeteilt oder freigegeben.'))}</div>`}
     ${rest.length?`<h3 class="list-head">${t('Weitere Aufgaben')} <span class="muted">(${rest.length})</span></h3>${rest.map(w=>jobRow(ctx,w)).join('')}`:''}`;
+}
+/* the driver's map: every load he may take (assigned + fleet/group-visible, with a confirmed location); a pin opens the card with „Jetzt dran“ */
+function mapTab(ctx,drv,dl){
+  const {state}=ctx;let work=ctx.store.visibleWork(drv.id).filter(w=>w.stack.confirmed&&w.stack.progress!=='Cleared');
+  if(state.ui.online===false&&dl)work=work.filter(w=>dl.stackKeys.includes(w.stack.key)||w.allocation);
+  const mine=work.filter(w=>w.allocation).length,shared=work.length-mine;const sel=ctx.ui.driverMapStack?work.find(w=>w.stack.key===ctx.ui.driverMapStack):null;
+  return `<div class="drv-map-head small"><strong>${work.length} ${t('Polter')}</strong> · ${mine} ${t('mir zugeteilt')} · ${shared} ${t('für die Flotte verfügbar')}</div>
+    <div id="driverMap" class="map drv-map" data-all="1" role="application" aria-label="${esc(t('Karte der verfügbaren Polter'))}"></div>
+    <div class="legend"><span class="lg"><i class="pin-dot mine"></i>${t('mir zugeteilt')}</span><span class="lg"><i class="pin-dot shared"></i>${t('Flotte / Gruppe')}</span><span class="lg"><i class="pin-dot dest"></i>${t('Zielwerk')}</span></div>
+    ${sel?`<div class="drv-pin-card">${globalThis.TransportViews.dispatch.pinCard(ctx,sel.stack,{driver:drv.id,pick:true})}</div>`:`<p class="muted small">${esc(t('Pin antippen: Details, Navigation und „Jetzt dran“ — so wird der Polter die nächste Aufgabe (Vorschläge werden angenommen, Flottenarbeit reserviert).'))}</p>`}`;
 }
 function loadTab(ctx,drv){
   const {state}=ctx;const loads=Object.values(state.loads).filter(l=>l.driverId===drv.id).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
