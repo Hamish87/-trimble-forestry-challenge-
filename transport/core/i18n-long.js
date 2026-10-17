@@ -2,6 +2,7 @@
 'use strict';
 (function(){
 const LONG={
+"Demo eines vorgeschlagenen Arbeitsablaufs · keine Aussage über bestehende LOGIBALL- oder Trimble-Fähigkeiten · Dokumente sind anonymisierte Nachbildungen der Beispielsammlung · Kartenkacheln © OpenStreetMap-Mitwirkende":["Demo of a proposed workflow · no statement about existing LOGIBALL or Trimble capabilities · documents are anonymised facsimiles of the sample collection · map tiles © OpenStreetMap contributors","Démo d'un flux de travail proposé · aucune affirmation sur les capacités existantes de LOGIBALL ou Trimble · les documents sont des fac-similés anonymisés de la collection d'exemples · tuiles de carte © contributeurs OpenStreetMap"],
 "Polter antippen oder hier wählen — Details erscheinen neben der Karte.":["Tap a pin or pick a stack here — details appear beside the map.", "Touchez une épingle ou choisissez une pile ici — les détails s'affichent à côté de la carte."],
 "Noch nicht freigegeben — Angaben aus der Extraktion, Standorte folgen nach der Prüfung.":["Not released yet — data from the extraction; locations follow after review.", "Pas encore validé — données issues de l'extraction ; les emplacements suivront après vérification."],
 "Freigegebene Auftragsdaten für den Fahrer; Frachtsätze und Zahlungsbedingungen sind nicht enthalten.":["Released order data for the driver; freight rates and payment terms are not included.", "Données de commande validées pour le chauffeur ; les tarifs de fret et conditions de paiement n'y figurent pas."],

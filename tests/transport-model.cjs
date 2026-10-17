@@ -119,6 +119,11 @@ assert(st.audit.some(a=>a.action==='document.released'&&a.ref==='DOC-MENGEN-1'))
 assert(st.profiles.find(p=>p.id==='stadt-mengen').reviewedDocuments===1,'profile learned a reviewed document');
 /* ---------- i18n coverage ---------- */
 const I=TC.i18n;I.setLang('en');assert.equal(I.t('Posteingang'),'Inbox');assert.equal(I.t('Standort erforderlich'),'Location needed');I.setLang('fr');assert.equal(I.t('Belege & Abgleich'),'Justificatifs & rapprochement');I.setLang('de');assert.equal(I.t('Posteingang'),'Posteingang');
+// demo data written by core/tour.js and data/fleet.js stays German in the state; the views translate it, so every such string needs a catalogue entry
+for(const L of ['en','fr']){I.setLang(L);const same=x=>I.t(x)===x;const notes=Object.values(st.stacks).filter(s=>s.confirmed&&s.confirmed.note).map(s=>s.confirmed.note);assert(notes.length>=3&&!notes.some(same),L+': untranslated demo confirmation notes: '+[...new Set(notes.filter(same))].join(' | '));
+ const probs=Object.values(st.stacks).filter(s=>s.problem);assert(probs.length>0&&probs.every(s=>!same(s.problem.kind)&&(!s.problem.note||!same(s.problem.note))),L+': demo problem reports translate');
+ for(const u of st.users)assert(!same(u.title),L+': user title untranslated: '+u.title);assert(!same('Sprache')&&!same('Disposition · Carrier-first · Demo')&&!same('PLANEN. FAHREN. ABRECHNEN.'),L+': shell labels');}
+I.setLang('de');
 /* ---------- dashboard figures (core/stats) ---------- */
 {const DS=TC.stats.compute(st,{now:store.clock()});assert.equal(DS.fleet.loads,Object.keys(st.loads).length);assert.equal(DS.fleet.pickups,st.events.filter(e=>e.kind==='pickup').length);
  assert.equal(DS.fleet.collected.fm,st.events.filter(e=>e.kind==='pickup'&&e.unit==='fm').reduce((a,e)=>a+e.qty,0),'collected fm = sum of fm pickups');assert.equal(DS.fleet.netT,23.42,'weighbridge net in t');
