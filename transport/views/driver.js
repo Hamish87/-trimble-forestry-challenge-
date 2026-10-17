@@ -39,7 +39,7 @@ function heroCard(ctx,w,dl){
     ${S.progressBar(col?col.value:null,st.planned.qty,st.planned.unit)}
     ${st.location.status==='confirmed'?`<div class="hero-nav">${st.confirmed?S.navLinks(st.confirmed.lat,st.confirmed.lon,t('Navigation starten')):''}${button(`<i class="modus-icons" aria-hidden="true">map</i> ${t('Karte')}`,'driver-map',{stack:st.key},'small')}</div>`:`<div class="hero-nav warn-text small">${esc(t('Standort noch nicht bestätigt — Disposition'))}</div>`}
     ${contact?`<div class="hero-contact small">${esc(contact.role)}: ${S.telLink(contact.value)}</div>`:''}
-    ${st.problem?`<div class="hero-contact small warn-text">⚠ ${esc(st.problem.kind)}${st.problem.note?' — '+esc(st.problem.note):''}</div>`:''}
+    ${st.problem?`<div class="hero-contact small warn-text">⚠ ${esc(t(st.problem.kind))}${st.problem.note?' — '+esc(t(st.problem.note)):''}</div>`:''}
     <div class="hero-actions">
       ${claimed(ctx,a)?`<div class="row"><span class="pill pill-red">${esc(t('Doppelanspruch'))}</span> <span class="muted small">${esc(t('Disposition entscheidet'))}</span></div>`:a&&a.state==='Proposed'?button(`<i class="modus-icons" aria-hidden="true">check_bold</i> ${t('Annehmen')}`,'driver-accept',{alloc:a.id},'big primary'):''}
       ${w.shared&&!a&&st.progress!=='Cleared'?button(`<i class="modus-icons" aria-hidden="true">check_bold</i> ${t('Übernehmen')}`,'driver-reserve',{stack:st.key},'big primary',state.ui.online===false?'disabled title="'+esc(t('Verbindung nötig'))+'"':''):''}

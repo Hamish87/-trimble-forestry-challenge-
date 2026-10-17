@@ -153,7 +153,9 @@ const stateOf=p=>p.js('TransportApp.store.state');
   await click(p,'#tpDialog [data-action="dialog-close"]');
   /* ---------- language ---------- */
   await change(p,'#tpLang','en');assert(text(q(p,'#tpNav')).includes('Inbox')&&text(q(p,'#tpNav')).includes('Dispatch'));assert(text(q(p,'.inbox')).includes('Deliver demo e-mails'));
-  await change(p,'#tpLang','fr');assert(text(q(p,'#tpNav')).includes('Boîte de réception'));await change(p,'#tpLang','de');
+  assert.equal(text(q(p,'.tp-lang span')).trim(),'Language','static header label follows the language');assert.equal(text(q(p,'.tp-brand small')).trim(),'Dispatch · Carrier-first · Demo');assert(text(q(p,'.tp-footer')).includes('OpenStreetMap contributors'),'footer translated');assert.equal(q(p,'#tpNav').getAttribute('aria-label'),'Main navigation');
+  {const titles=[...q(p,'#tpPersona select').options].map(o=>o.textContent.split(' · ').slice(1).join(' · '));assert(titles.includes('Dispatcher')&&titles.includes('Owner · dispatch + driver')&&titles.includes('Driver')&&!titles.some(x=>/^(Disponent|Fahrer|Fahrerin|Inhaberin)\b/.test(x)),'persona titles translated: '+titles.join(' | '));}
+  await change(p,'#tpLang','fr');assert(text(q(p,'#tpNav')).includes('Boîte de réception'));assert.equal(text(q(p,'.tp-lang span')).trim(),'Langue');await change(p,'#tpLang','de');assert.equal(text(q(p,'.tp-lang span')).trim(),'Sprache');assert.equal(text(q(p,'.tp-brand small')).trim(),'Disposition · Carrier-first · Demo');
   /* ---------- demo run resets and replays everything ---------- */
   await p.go('#/admin/settings');await click(p,'[data-action="demo-run"]');st=stateOf(p);assert.equal(Object.keys(st.orders).length,5);assert(st.conflicts.length>=2);assert(p.w.location.hash.startsWith('#/dispatch'));
   await p.go('#/dispatch');assert.equal(qa(p,'.dispatch-table tr.stack-row').length,0,'orders collapsed by default');assert(qa(p,'.dispatch-table tr.order-row').length>=5);
