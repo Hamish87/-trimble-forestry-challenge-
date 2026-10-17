@@ -120,6 +120,7 @@ set the tolerance and pilot thresholds with the carriers instead of the placehol
 | D10 | UI on Trimble Modus Web Components 2.0 (pinned 1.20.0 from jsDelivr, light-DOM components; Modus tokens, Open Sans, Modus Icons 1.0) with `:not(:defined)` fallbacks | Trimble branding; buildless-compatible (ESM loader); the app still works offline/without the CDN (RESEARCH §3.7) |
 | D11 | Originals (PDF/photo) stay in the browser (IndexedDB), released to drivers per document; photos attach to driver events; demo photos are illustrations | personal data in the sample pack; driver needs the original and site evidence; no server |
 | D12 | First visit without a saved workspace plays the Demo-Durchlauf automatically; a saved empty workspace (after reset) stays empty | the shared demo link must open on populated screens, not an empty inbox |
+| D13 | Map engine behind one interface (`core/tilemap.js` built-in, `core/mapbox.js` Mapbox GL JS 3.33.0 loaded on demand when a public token is set in `config.js` or the workspace settings); box selection on both; Mapbox auth errors fall back to the tile map | robust vector basemap for the demo without making the app depend on an account; token is public by design, restricted by URL |
 
 ## 7. Execution model and ownership
 

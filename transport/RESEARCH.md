@@ -238,6 +238,20 @@ Rules of thumb: ≥ 5 200 000 is a northing; a 7-digit value < 5 000 000 is a GK
 - Modus publishes no map-marker guidance; status semantics success/warning/error/info plus the In-Field palette (information #019aeb, alert #ff8b00, error #da212c, avoidance #df4eb2, success #00d22f) and an 8-colour data-viz palette (#0063A3 #E49325 #1E8A44 #DA212C #0DCAF0 #7534C2 #c97d51 #89c6ed) are the closest published guidance; spacing baseline 8 px (scale 4/8/16/24/32/48); body 14/21, H1 24/36 … H6 12/18. [secondary]
 - Icon names: the repository lists SVGs with hyphens (`src/modus-outlined/delivery-truck.svg`), but the **published 1.x ligature font resolves underscore spellings only** (measured in the browser: `delivery_truck` renders as one 24 px glyph, `delivery-truck` does not). The demo uses: email, map_marker_multiple, phone_mobile, clipboard_check, document, settings, help_outlined, wifi, wifi_off, cloud_download, sync, list_bulleted, delivery_truck, menu, check_bold, check_circle, warning, file_type_pdf, map, location_arrow, phone_call, camera. [primary]
 
+### 3.10 Map engine: Mapbox GL JS (added 17 Oct 2026)
+
+- Current release **v3.33.0** (13 Oct 2026, GitHub releases of mapbox/mapbox-gl-js); the CDN serves
+  `https://api.mapbox.com/mapbox-gl-js/v3.33.0/mapbox-gl.{js,css}` (≈1.9 MB js). Pinned in `core/mapbox.js`. [primary]
+- Access tokens: a *public* token (`pk.`) is meant to be embedded in client code; URL restrictions limit misuse. Secret
+  tokens (`sk.`) must never ship to browsers. The demo takes the token from `config.js` or the workspace settings and
+  loads the library only when one is present. [primary: Mapbox account docs]
+- Mapbox's terms require Mapbox GL JS (not MapLibre) for Mapbox-hosted styles and tiles since v2; MapLibre GL JS 6
+  (July 2026, WebGL2 + ESM only) would need another tile provider. The built-in tile map remains the no-account path.
+- Used features: clustered GeoJSON source (`cluster`, `getClusterExpansionZoom`, `getClusterLeaves`), circle/symbol
+  layers with data-driven paint, HTML `Marker` for fixed points, `Popup` with the app's pin card, `queryRenderedFeatures`
+  over a pixel box for Shift+drag selection (Mapbox's own box-zoom is disabled), `setStyle` + `style.load` to re-add
+  layers after a style switch, `error` events with HTTP 401/403 to detect a rejected token.
+
 ## §4 What this demo adopted from the research
 
 | Research finding | Where it shows in the app | Tag |

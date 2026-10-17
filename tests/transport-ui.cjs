@@ -65,6 +65,8 @@ const stateOf=p=>p.js('TransportApp.store.state');
   /* ---------- dispatch ---------- */
   await p.go('#/dispatch?order='+ttw.id);assert(q(p,'#dispatchMap .tm'),'tile map mounted');assert(q(p,'.tm-attribution')&&text(q(p,'.tm-attribution')).includes('OpenStreetMap'));
   assert.equal(qa(p,'.dispatch-table tr.stack-row').length,2);assert.equal(qa(p,'.tm-marker.pin').filter(m=>!m.className.includes('dest')&&!m.className.includes('base')).length,1,'one confirmed stack pin');
+  // the queues live in the to-do drawer: collapsed by default, one chip per queue
+  assert(!q(p,'.drawer'),'drawer closed by default');assert(text(q(p,'.todo-bar')).includes('Standort erforderlich'));await click(p,'[data-action="drawer-toggle"][data-key="location"]');assert(q(p,'.drawer .panel'),'drawer open');
   assert(text(q(p,'.panel')).includes('Standort erforderlich')&&text(q(p,'.panel')).includes('Polter 10'),'location-needed queue lists the unconfirmed stack');
   // confirm the second location from the dispatch queue via the place dialog
   await click(p,qa(p,'.panel [data-action="location-place"]')[0]);assert(dlg(p).open);await input(p,'#tpDialog [name="lat"]','47.838');await input(p,'#tpDialog [name="lon"]','8.835');await click(p,'#tpDialog [data-action="place-save"]');
@@ -143,7 +145,15 @@ const stateOf=p=>p.js('TransportApp.store.state');
   await change(p,'#tpLang','fr');assert(text(q(p,'#tpNav')).includes('Boîte de réception'));await change(p,'#tpLang','de');
   /* ---------- demo run resets and replays everything ---------- */
   await p.go('#/admin/settings');await click(p,'[data-action="demo-run"]');st=stateOf(p);assert.equal(Object.keys(st.orders).length,5);assert(st.conflicts.length>=2);assert(p.w.location.hash.startsWith('#/dispatch'));
-  await p.go('#/dispatch');assert(qa(p,'.dispatch-table tr.stack-row').length>=20);assert(qa(p,'.tm-marker,.tm-cluster').length>0);assert(text(q(p,'.panels')).includes('Konflikte'));
+  await p.go('#/dispatch');assert.equal(qa(p,'.dispatch-table tr.stack-row').length,0,'orders collapsed by default');assert(qa(p,'.dispatch-table tr.order-row').length>=5);
+  await click(p,qa(p,'.order-row [data-action="order-toggle"]')[0]);assert(qa(p,'.dispatch-table tr.stack-row').length>0,'one order expanded');assert(q(p,'.order-row.open'));
+  await click(p,'[data-action="orders-expand"][data-on="1"]');assert(qa(p,'.dispatch-table tr.stack-row').length>=20,'all expanded');await click(p,'[data-action="orders-expand"][data-on="0"]');assert.equal(qa(p,'.dispatch-table tr.stack-row').length,0,'all collapsed');
+  assert(qa(p,'.tm-marker,.tm-cluster').length>0);await click(p,'[data-action="drawer-toggle"][data-key="conflicts"]');assert(text(q(p,'.panels')).includes('Konflikte'));await click(p,'[data-action="drawer-toggle"][data-key="conflicts"]');assert(!q(p,'.drawer'),'chip closes the drawer again');
+  // box selection on the built-in map: Shift+drag over the whole map selects every confirmed stack and expands their orders
+  {const tm=q(p,'#dispatchMap .tm');const ev=(type,x,y)=>tm.dispatchEvent(new p.w.MouseEvent(type,{bubbles:true,clientX:x,clientY:y,shiftKey:true,button:0}));ev('pointerdown',0,0);ev('pointermove',640,420);ev('pointerup',640,420);await ticks(2);
+   const sel=p.js('TransportApp.ui.selection');assert(sel.length>=10,'box selection picked the stacks: '+sel.length);assert(text(q(p,'.selbar')).includes('ausgewählt'));assert(qa(p,'.dispatch-table tr.stack-row').length>0,'selected orders expanded');assert(qa(p,'.tm-marker.pin.selected').length>0,'selected pins highlighted');await click(p,'[data-action="dispatch-clear"]');}
+  // map engine: no token → built-in map; the Mapbox adapter is present but idle
+  assert.equal(p.js('TransportCore.mapbox.token(TransportApp.store.state.settings)'),'');assert.equal(p.js('TransportCore.mapbox.sources().length'),4);assert.equal(p.js('TransportCore.mapbox.VERSION'),'3.33.0');assert(!p.js('globalThis.mapboxgl'),'mapbox-gl not loaded without a token');assert.equal(p.js('TransportConfig.mapboxToken'),'');
   /* ---------- persistence: a fresh page reloads the workspace ---------- */
   const raw=p.w.localStorage.getItem('transport-demo-v1');assert(raw&&raw.length>50000);
   const p2=await page('https://forestry.test/transport/#/reports');p2.w.localStorage.setItem('transport-demo-v1',raw);p2.js('TransportApp.store.load();TransportApp.render()');await tick();assert(qa(p2,'.reports tbody tr').length===5,'reloaded workspace');p2.close();

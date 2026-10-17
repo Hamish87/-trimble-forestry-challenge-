@@ -4,15 +4,22 @@
 (function(){
 const TC=globalThis.TransportCore,TV=globalThis.TransportViews;const S=TV.shared;const {esc,t,fmt}=S;
 const store=TC.store.create();const I=TC.i18n;
-const ui={inboxFilter:'all',dispatch:{},selection:[],driverTab:'work',tiles:'osm',place:null,ledgerBasis:'',auditQ:'',editUser:null,mapFitted:false,focusSeen:null,reviewOriginal:false,driverJob:null};
+const ui={inboxFilter:'all',dispatch:{},selection:[],driverTab:'work',tiles:'osm',mapStyle:(globalThis.TransportConfig&&globalThis.TransportConfig.mapboxStyle)||'outdoors',place:null,ledgerBasis:'',auditQ:'',editUser:null,mapFitted:false,focusSeen:null,reviewOriginal:false,driverJob:null,drawer:null,mapTall:false,boxMode:false,expanded:{}};
 const ORIG=TC.originals,PH=TC.photos;
 let drafts={};let dialogFn=null;let map=null,mapEl=null,placeMap=null,placeEl=null,driverMap=null,driverEl=null;
+/* map engine: Mapbox GL JS when a public token is configured and the library loaded, else the built-in tile map (PLAN D13) */
+let mapboxFailed=false;
+const mapToken=()=>TC.mapbox?TC.mapbox.token(store.state.settings):'';
+const mapboxActive=()=>!!(mapToken()&&!mapboxFailed&&globalThis.mapboxgl);
+function createMap(el,opts){if(mapboxActive())return TC.mapbox.create(el,Object.assign({style:ui.mapStyle,onAuthError:()=>{if(mapboxFailed)return;mapboxFailed=true;toast(t('Mapbox-Token abgelehnt — eingebaute Karte wird verwendet'),'error');resetMaps();render();}},opts));return TC.tilemap.create(el,Object.assign({tiles:ui.tiles},opts));}
+function resetMaps(){for(const m of [map,placeMap,driverMap])if(m)try{m.destroy();}catch(e){}map=placeMap=driverMap=null;for(const e of [mapEl,placeEl,driverEl])if(e)e.remove();mapEl=placeEl=driverEl=null;ui.mapFitted=false;ui.lastFocus=null;}
+function loadMapbox(){const tok=mapToken();if(!tok||mapboxFailed||!TC.mapbox||typeof document==='undefined')return;if(globalThis.mapboxgl){globalThis.mapboxgl.accessToken=tok;return;}TC.mapbox.load(tok).then(()=>{resetMaps();render();}).catch(e=>{console.warn(e);mapboxFailed=true;});}
 const $=sel=>document.querySelector(sel);
 const api={navigate:h=>{if(location.hash!==h)location.hash=h;render();},print:()=>window.print(),download:(name,text)=>{try{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'application/json'}));a.download=name;a.click();}catch(e){console.warn(e);}},confirm:msg=>typeof window.confirm==='function'?window.confirm(msg):true};
 function route(){const h=location.hash.replace(/^#\/?/,'');const [path,qs]=h.split('?');const parts=path.split('/').filter(Boolean);const query={};new URLSearchParams(qs||'').forEach((v,k)=>{query[k]=v;});return {name:parts[0]||'inbox',parts,query,hash:h};}
 function setQuery(patch){const r=route();const q=Object.assign({},r.query,patch);for(const k of Object.keys(q))if(q[k]===undefined||q[k]==='')delete q[k];const qs=new URLSearchParams(q).toString();api.navigate('#/'+r.parts.join('/')+(qs?'?'+qs:''));}
 const newDraft=()=>({page:null,highlight:null,fields:{},lines:{},destinationId:'',note:''});
-function ctx(){const state=store.state;const user=state.users.find(u=>u.id===state.ui.persona)||state.users[0];return {state,store,route:route(),ui,draft:id=>(drafts[id]=drafts[id]||newDraft()),persona:state.ui.persona,user,now:store.clock(),canSeeRates:TC.model.can(user,'seeRates')||state.settings.driverSeesRates,t};}
+function ctx(){const state=store.state;const user=state.users.find(u=>u.id===state.ui.persona)||state.users[0];return {state,store,route:route(),ui,draft:id=>(drafts[id]=drafts[id]||newDraft()),persona:state.ui.persona,user,now:store.clock(),canSeeRates:TC.model.can(user,'seeRates')||state.settings.driverSeesRates,t,mapboxActive:mapboxActive()};}
 /* ---------- header ---------- */
 function header(c){
   const {state}=c;const needs=Object.values(state.documents).filter(d=>d.status==='NeedsReview').length;const loc=Object.values(state.stacks).filter(s=>s.location.status!=='confirmed'&&s.progress!=='Blocked').length+state.conflicts.filter(x=>!x.resolved).length;const match=Object.values(state.receipts).filter(r=>r.matchState!=='Matched').length;
@@ -38,7 +45,7 @@ function afterRender(c){
 function markersFor(c){
   const {state}=c;const customers=[...new Set(Object.values(state.orders).map(o=>o.customerId))];const filtered=TV.dispatch.applyFilters(c,Object.values(state.stacks));const ms=[];
   for(const st of filtered){if(!st.confirmed)continue;const o=state.orders[st.orderId];const ci=customers.indexOf(o.customerId)%6;const due=S.dueClass(o,c.now);
-    ms.push({id:st.key,lat:st.confirmed.lat,lon:st.confirmed.lon,title:`${S.party(state,o.customerId)} · ${st.tempKey} · ${fmt.qty(st.planned.qty,st.planned.unit)} · ${S.statusLabel('stack',st.progress)}`,className:`pin c${ci} p-${st.progress.toLowerCase()} ${due} ${c.route.query.stack===st.key?'selected':''} ${st.publication.scope!=='none'?'published':''}`,html:`<span class="tm-pin"><b>${esc(st.refs.polter||st.refs.ladenummer||'')}</b></span>`,onClick:()=>setQuery({stack:st.key})});}
+    ms.push({id:st.key,lat:st.confirmed.lat,lon:st.confirmed.lon,title:`${S.party(state,o.customerId)} · ${st.tempKey} · ${fmt.qty(st.planned.qty,st.planned.unit)} · ${S.statusLabel('stack',st.progress)}`,className:`pin c${ci} p-${st.progress.toLowerCase()} ${due} ${c.route.query.stack===st.key||(ui.selection||[]).includes(st.key)?'selected':''} ${st.publication.scope!=='none'?'published':''}`,label:st.refs.polter||st.refs.ladenummer||'',html:`<span class="tm-pin"><b>${esc(st.refs.polter||st.refs.ladenummer||'')}</b></span>`,onClick:()=>setQuery({stack:st.key})});}
   const dests=new Set(Object.values(state.orders).map(o=>o.destinationId).filter(Boolean));for(const id of dests){const p=state.parties.find(x=>x.id===id);if(p&&p.lat!=null)ms.push({id:'dest-'+id,lat:p.lat,lon:p.lon,title:`${t('Zielwerk')}: ${p.name}`,className:'pin dest',html:`<span class="tm-pin dest" title="${esc(p.name)}">⌂</span>`,noCluster:true,button:false});}
   const base=state.parties.find(p=>p.id===state.carrierId);if(base)ms.push({id:'base',lat:base.lat,lon:base.lon,title:base.name,className:'pin base',html:'<span class="tm-pin base">▲</span>',noCluster:true,button:false});
   return ms;
@@ -46,7 +53,8 @@ function markersFor(c){
 function mountDispatchMap(c,container){
   if(!mapEl){mapEl=document.createElement('div');mapEl.className='map-inner';}
   container.appendChild(mapEl);
-  if(!map){map=TC.tilemap.create(mapEl,{tiles:ui.tiles,lat:48.3,lon:9.7,zoom:8,clusterBelow:11});}
+  if(!map){map=createMap(mapEl,{lat:48.3,lon:9.7,zoom:8,clusterBelow:11,onBoxSelect:(keys,o)=>{const set=new Set(o&&o.additive?ui.selection:[]);for(const k of keys)set.add(k);ui.selection=[...set];for(const k of keys){const st=store.state.stacks[k];if(st)ui.expanded[st.orderId]=true;}render();if(keys.length)toast(`${keys.length} ${t('Polter auf der Karte ausgewählt')}`);}});}
+  if(map.setBoxMode)map.setBoxMode(ui.boxMode);
   const ms=markersFor(c);map.setMarkers(ms);
   const pts=ms.filter(m=>!m.id.startsWith('dest-')&&m.id!=='base').map(m=>[m.lat,m.lon]);
   if(!ui.mapFitted&&pts.length){map.fitBounds(pts,13);ui.mapFitted=true;}
@@ -76,7 +84,7 @@ function renderDialog(){const d=$('#tpDialog');if(!dialogFn)return;d.innerHTML=d
 function closeDialog(){const d=$('#tpDialog');dialogFn=null;if(d.open)d.close();d.innerHTML='';}
 let toastTimer=null;function toast(msg,kind='ok'){const el=$('#tpToast');el.textContent=msg;el.className='tp-toast show '+kind;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{el.className='tp-toast';},4500);}
 function mountPlaceMap(container){if(!placeEl){placeEl=document.createElement('div');placeEl.className='map-inner';}container.appendChild(placeEl);
-  if(!placeMap){placeMap=TC.tilemap.create(placeEl,{tiles:ui.tiles,zoom:13,cluster:false,onPlace:p=>{ui.place.lat=Math.round(p.lat*1e5)/1e5;ui.place.lon=Math.round(p.lon*1e5)/1e5;renderDialog();}});}
+  if(!placeMap){placeMap=createMap(placeEl,{zoom:13,cluster:false,onPlace:p=>{ui.place.lat=Math.round(p.lat*1e5)/1e5;ui.place.lon=Math.round(p.lon*1e5)/1e5;renderDialog();}});}
   placeMap.setPlaceMode(true);const p=ui.place||{};const c=ctx();const st=p.stackKey?c.state.stacks[p.stackKey]:null;
   let center=null;if(p.lat!=null)center=[p.lat,p.lon];else if(st&&st.confirmed)center=[st.confirmed.lat,st.confirmed.lon];else{const prof=c.state.profiles.find(x=>x.id===(st?c.state.orders[st.orderId].profileId:(c.state.documents[p.docId]||{}).profileId));if(prof&&prof.region)center=[prof.region.lat,prof.region.lon];}
   if(center&&!p.centered){placeMap.setView(center[0],center[1],p.lat!=null?15:12);p.centered=true;}
@@ -84,7 +92,7 @@ function mountPlaceMap(container){if(!placeEl){placeEl=document.createElement('d
   for(const s of Object.values(c.state.stacks))if(s.confirmed&&(!st||s.key!==st.key))ms.push({id:s.key,lat:s.confirmed.lat,lon:s.confirmed.lon,className:'pin faint',html:`<span class="tm-pin faint"><b>${esc(s.refs.polter||'')}</b></span>`,noCluster:true,button:false,title:s.tempKey});
   placeMap.setMarkers(ms);
 }
-function mountDriverMap(container){if(!driverEl){driverEl=document.createElement('div');driverEl.className='map-inner';}container.appendChild(driverEl);const st=ui.driverMapStack?store.state.stacks[ui.driverMapStack]:null;if(!driverMap)driverMap=TC.tilemap.create(driverEl,{tiles:ui.tiles,zoom:14,cluster:false});if(st&&st.confirmed){driverMap.setView(st.confirmed.lat,st.confirmed.lon,14);driverMap.setMarkers([{id:st.key,lat:st.confirmed.lat,lon:st.confirmed.lon,className:'pin c0',html:`<span class="tm-pin"><b>${esc(st.refs.polter||st.refs.ladenummer||'')}</b></span>`,noCluster:true,button:false}]);driverMap.setPopup({key:st.key,lat:st.confirmed.lat,lon:st.confirmed.lon,html:TV.dispatch.pinCard(ctx(),st,{driver:store.state.ui.persona})});}}
+function mountDriverMap(container){if(!driverEl){driverEl=document.createElement('div');driverEl.className='map-inner';}container.appendChild(driverEl);const st=ui.driverMapStack?store.state.stacks[ui.driverMapStack]:null;if(!driverMap)driverMap=createMap(driverEl,{zoom:14,cluster:false});if(st&&st.confirmed){driverMap.setView(st.confirmed.lat,st.confirmed.lon,14);driverMap.setMarkers([{id:st.key,lat:st.confirmed.lat,lon:st.confirmed.lon,className:'pin c0',html:`<span class="tm-pin"><b>${esc(st.refs.polter||st.refs.ladenummer||'')}</b></span>`,noCluster:true,button:false}]);driverMap.setPopup({key:st.key,lat:st.confirmed.lat,lon:st.confirmed.lon,html:TV.dispatch.pinCard(ctx(),st,{driver:store.state.ui.persona})});}}
 function openPlace(){ui.place.centered=false;dialog(c=>TV.dispatch.placeDialog(c,ui.place.stackKey||null,ui.place.docId?{docId:ui.place.docId,tempKey:ui.place.tempKey}:null));}
 /* ---------- helpers ---------- */
 function draftToDecisions(d){const out={fields:{},lines:d.lines,destinationId:d.destinationId||undefined,note:d.note||undefined};for(const [k,v] of Object.entries(d.fields||{}))if(v!==''&&v!=null)out.fields[k]=v;return out;}
@@ -137,7 +145,12 @@ const actions={
   'conflict-resolve':withRender(d=>{store.apply('resolveConflict',d.conflict,d.resolution);}),
   'map-zoom':d=>{if(map)map.zoomBy(Number(d.dir));},
   'map-fit':()=>fitMap(),
-  'map-source':(d,el)=>{ui.tiles=el.value;for(const m of [map,placeMap,driverMap])if(m)m.setSource(ui.tiles);},
+  'map-source':(d,el)=>{if(mapboxActive())ui.mapStyle=el.value;else ui.tiles=el.value;for(const m of [map,placeMap,driverMap])if(m)m.setSource(el.value);},
+  'drawer-toggle':withRender(d=>{ui.drawer=ui.drawer===d.key?null:d.key;}),
+  'map-tall':withRender(()=>{ui.mapTall=!ui.mapTall;}),
+  'map-box':withRender(()=>{ui.boxMode=!ui.boxMode;if(map&&map.setBoxMode)map.setBoxMode(ui.boxMode);}),
+  'order-toggle':withRender(d=>{ui.expanded[d.order]=!TV.dispatch.isOpen(ctx(),store.state.orders[d.order]);}),
+  'orders-expand':withRender(d=>{const on=d.on==='1';ui.expanded={};for(const id of Object.keys(store.state.orders))ui.expanded[id]=on;}),
   'persona-switch':withRender((d,el)=>{if(el.value)store.apply('setPersona',el.value);}),
   'lang-switch':withRender((d,el)=>{if(I)I.setLang(el.value);}),
   'driver-online':withRender(()=>{const on=store.state.ui.online===false;store.setOnline(on);toast(on?t('Online — Warteschlange übertragen'):t('Offline — Aktionen werden lokal gespeichert'));}),
@@ -201,7 +214,7 @@ const forms={
   user:f=>{const roles=[...f.querySelectorAll('[name=role]:checked')].map(x=>x.value);if(!roles.length)throw new Error(t('Mindestens eine Rolle'));const id=F(f,'id').value||('U-'+(store.state.users.length+1));store.apply('upsertUser',{id,name:F(f,'name').value.trim(),title:F(f,'title').value.trim(),roles,truckId:F(f,'truck').value||null,groupId:F(f,'group').value||null});ui.editUser=null;toast(t('Gespeichert'));},
   truck:f=>{store.apply('upsertTruck',{id:'T-'+(store.state.trucks.length+1),reg:F(f,'reg').value.trim(),kind:F(f,'kind').value.trim(),capacity:{value:num(F(f,'cap').value),unit:F(f,'unit').value}});toast(t('Gespeichert'));},
   synonym:f=>{store.apply('addProfileSynonym',F(f,'profile').value,F(f,'key').value,F(f,'syn').value.trim());toast(t('Synonym gelernt'));},
-  settings:f=>{store.apply('setSetting','tolerancePct',num(F(f,'tolerancePct').value));store.apply('setSetting','retentionMonths',num(F(f,'retentionMonths').value));store.apply('setSetting','localExpiryDays',num(F(f,'localExpiryDays').value));store.apply('setSetting','driverSeesRates',F(f,'driverSeesRates').checked);toast(t('Gespeichert'));}
+  settings:f=>{store.apply('setSetting','tolerancePct',num(F(f,'tolerancePct').value));store.apply('setSetting','retentionMonths',num(F(f,'retentionMonths').value));store.apply('setSetting','localExpiryDays',num(F(f,'localExpiryDays').value));store.apply('setSetting','driverSeesRates',F(f,'driverSeesRates').checked);const tokEl=F(f,'mapboxToken');if(tokEl){const before=store.state.settings.mapboxToken||'';const tok=tokEl.value.trim();if(tok!==before){store.apply('setSetting','mapboxToken',tok);mapboxFailed=false;resetMaps();loadMapbox();}}toast(t('Gespeichert'));}
 };
 /* pdf.js text layer → lines with tab-separated cells (progressive enhancement). Glyph runs closer than 1.5 pt form one
    word; words further apart than 14 pt become separate cells. A row whose words are column labels of the stack table
@@ -238,7 +251,7 @@ function boot(){document.addEventListener('click',onClick);document.addEventList
   $('#tpLang').addEventListener('change',ev=>{if(I)I.setLang(ev.target.value);render();});
   if(globalThis.pdfjsLib&&globalThis.pdfjsLib.GlobalWorkerOptions)globalThis.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   if(!store.restored&&!Object.keys(store.state.documents||{}).length){TC.tour.run(store);ui.mapFitted=false;toast(t('Demo-Durchlauf beim ersten Aufruf geladen – zurücksetzen unter Verwaltung'));}
-  store.subscribe(()=>{});render();}
+  loadMapbox();store.subscribe(()=>{});render();}
 globalThis.TransportApp={store,render,ui,api,actions,forms,ctx,get drafts(){return drafts;},dialog,closeDialog,toast,route};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
 })();
