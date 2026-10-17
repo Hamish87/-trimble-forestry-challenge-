@@ -74,6 +74,7 @@ const unconfirmed=mengen.stackKeys.filter(k=>st.stacks[k].location.status!=='con
 assert.throws(()=>M.publish(st,{stackKeys:[unconfirmed[0]],scope:'fleet',by:'U-DISPO'}),/Standort nicht bestätigt/);
 assert.throws(()=>M.confirmLocation(st,unconfirmed[0],{method:'address',lat:48,lon:9,by:'U-DISPO'}),/E-ADDR/,'an address is never a roadside pickup point');
 const dc=st.conflicts.find(c=>c.kind==='doubleClaim');assert(dc,'two whole allocations accepted on the BaySF stack → conflict');assert.equal(M.activeAllocations(st?st:null,baysf.stackKeys[0]).length,1,'only one accepted allocation remains active');
+{const [first,second]=dc.refs.allocations.map(id=>st.allocations[id]);const loser=first.state==='Accepted'?first:second,winner=loser===first?second:first;M.resolveConflict(st,dc.id,'U-DISPO','keep:'+winner.id);assert(dc.resolved);assert.equal(loser.state,'Withdrawn','deciding a double claim withdraws the other allocation');assert.equal(winner.state,'Accepted','the kept claim is accepted');assert.equal(M.activeAllocations(st,baysf.stackKeys[0]).length,1);}
 assert(run.log.some(l=>/Zweite Reservierung abgewiesen/.test(l)),'second reservation of shared work refused');
 assert.throws(()=>{st.ui.online=false;M.reserve(st,{stackKey:ttw9.key,driverId:'U-D2',by:'U-D2'});},/Verbindung nötig/);st.ui.online=true;
 /* ---------- A4: partial pickup leaves the stack open; clearance closes only its scope; pickup ≠ delivered ---------- */
