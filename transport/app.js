@@ -4,7 +4,11 @@
 (function(){
 const TC=globalThis.TransportCore,TV=globalThis.TransportViews;const S=TV.shared;const {esc,t,fmt}=S;
 const store=TC.store.create();const I=TC.i18n;
-const ui={inboxFilter:'all',dispatch:{},selection:[],driverTab:'work',tiles:'osm',mapStyle:(globalThis.TransportConfig&&globalThis.TransportConfig.mapboxStyle)||'outdoors',place:null,ledgerBasis:'',auditQ:'',editUser:null,mapFitted:false,focusSeen:null,reviewOriginal:false,driverJob:null,drawer:null,mapTall:false,boxMode:false,expanded:{},dash:{days:'0',driver:''}};
+const ui={inboxFilter:'all',dispatch:{},selection:[],driverTab:'work',tiles:'osm',mapStyle:(globalThis.TransportConfig&&globalThis.TransportConfig.mapboxStyle)||'outdoors',place:null,ledgerBasis:'',auditQ:'',editUser:null,mapFitted:false,focusSeen:null,reviewOriginal:false,driverJob:null,drawer:null,mapTall:false,boxMode:false,expanded:{},dash:{days:'0',driver:''},split:null};
+/* the split view (map left, Polter right) is on by default on wide screens; the toggle is remembered per browser */
+const PREF_KEY='transport-demo-ui';try{const pref=JSON.parse((typeof localStorage!=='undefined'&&localStorage.getItem(PREF_KEY))||'{}');if(typeof pref.split==='boolean')ui.split=pref.split;}catch(e){}
+function splitOn(){return ui.split==null?(typeof window!=='undefined'&&window.innerWidth>=1100):!!ui.split;}
+function savePref(){try{localStorage.setItem(PREF_KEY,JSON.stringify({split:ui.split}));}catch(e){}}
 const ORIG=TC.originals,PH=TC.photos;
 let drafts={};let dialogFn=null;let map=null,mapEl=null,placeMap=null,placeEl=null,driverMap=null,driverEl=null;
 /* map engine: Mapbox GL JS when a public token is configured and the library loaded, else the built-in tile map (PLAN D13) */
@@ -19,7 +23,7 @@ const api={navigate:h=>{if(location.hash!==h)location.hash=h;render();},print:()
 function route(){const h=location.hash.replace(/^#\/?/,'');const [path,qs]=h.split('?');const parts=path.split('/').filter(Boolean);const query={};new URLSearchParams(qs||'').forEach((v,k)=>{query[k]=v;});return {name:parts[0]||'inbox',parts,query,hash:h};}
 function setQuery(patch){const r=route();const q=Object.assign({},r.query,patch);for(const k of Object.keys(q))if(q[k]===undefined||q[k]==='')delete q[k];const qs=new URLSearchParams(q).toString();api.navigate('#/'+r.parts.join('/')+(qs?'?'+qs:''));}
 const newDraft=()=>({page:null,highlight:null,fields:{},lines:{},destinationId:'',note:''});
-function ctx(){const state=store.state;const user=state.users.find(u=>u.id===state.ui.persona)||state.users[0];return {state,store,route:route(),ui,draft:id=>(drafts[id]=drafts[id]||newDraft()),persona:state.ui.persona,user,now:store.clock(),canSeeRates:TC.model.can(user,'seeRates')||state.settings.driverSeesRates,t,mapboxActive:mapboxActive()};}
+function ctx(){const state=store.state;const user=state.users.find(u=>u.id===state.ui.persona)||state.users[0];return {state,store,route:route(),ui,draft:id=>(drafts[id]=drafts[id]||newDraft()),persona:state.ui.persona,user,now:store.clock(),canSeeRates:TC.model.can(user,'seeRates')||state.settings.driverSeesRates,t,mapboxActive:mapboxActive(),split:splitOn()};}
 /* ---------- header ---------- */
 function header(c){
   const {state}=c;const needs=Object.values(state.documents).filter(d=>d.status==='NeedsReview').length;const loc=Object.values(state.stacks).filter(s=>s.location.status!=='confirmed'&&s.progress!=='Blocked').length+state.conflicts.filter(x=>!x.resolved).length;const match=Object.values(state.receipts).filter(r=>r.matchState!=='Matched').length;
@@ -41,7 +45,7 @@ function afterRender(c){
   const dmAll=$('#driverMap[data-all]');if(dmAll&&!dmAll.closest('dialog'))mountDriverMap(dmAll);
   const oc=$('#originalCanvas');if(oc)renderOriginal(oc.closest('.orig-view'));
   const hl=$('.fx-line.hl');if(hl&&hl.scrollIntoView)hl.scrollIntoView({block:'center'});
-  const focusRow=$('.stack-row.focus');if(focusRow&&c.route.query.stack!==ui.focusSeen){ui.focusSeen=c.route.query.stack;if(focusRow.scrollIntoView)focusRow.scrollIntoView({block:'center'});}
+  const focusRow=$('.stack-row.focus');if(focusRow&&c.route.query.stack!==ui.focusSeen){ui.focusSeen=c.route.query.stack;if(!c.split&&focusRow.scrollIntoView)focusRow.scrollIntoView({block:'center'});} /* the split view shows the card beside the map, so the page stays where it is */
 }
 function markersFor(c){
   const {state}=c;const customers=[...new Set(Object.values(state.orders).map(o=>o.customerId))];const filtered=TV.dispatch.applyFilters(c,Object.values(state.stacks));const ms=[];
@@ -60,7 +64,7 @@ function mountDispatchMap(c,container){
   const pts=ms.filter(m=>!m.id.startsWith('dest-')&&m.id!=='base').map(m=>[m.lat,m.lon]);
   if(!ui.mapFitted&&pts.length){map.fitBounds(pts,13);ui.mapFitted=true;}
   const focus=c.route.query.stack&&c.state.stacks[c.route.query.stack];if(focus&&focus.confirmed&&ui.lastFocus!==focus.key){ui.lastFocus=focus.key;map.setView(focus.confirmed.lat,focus.confirmed.lon,Math.max(map.state.zoom,14));}
-  if(focus&&focus.confirmed)map.setPopup({key:focus.key,lat:focus.confirmed.lat,lon:focus.confirmed.lon,html:TV.dispatch.pinCard(c,focus)});else map.setPopup(null);
+  if(focus&&focus.confirmed&&!c.split)map.setPopup({key:focus.key,lat:focus.confirmed.lat,lon:focus.confirmed.lon,html:TV.dispatch.pinCard(c,focus)});else map.setPopup(null); /* in the split view the pane beside the map carries the card */
 }
 /* original documents: render a stored PDF page (or image) into the review canvas / the original dialog */
 async function renderOriginal(view){
@@ -164,6 +168,7 @@ const actions={
   'drawer-toggle':withRender(d=>{ui.drawer=ui.drawer===d.key?null:d.key;}),
   'dash-filter':(d,el)=>{ui.dash=ui.dash||{};ui.dash[el.name]=el.value;render();},
   'map-tall':withRender(()=>{ui.mapTall=!ui.mapTall;}),
+  'map-split':d=>{ui.split=d.on==='1'?true:d.on==='0'?false:!splitOn();savePref();if(d.stack&&route().query.stack!==d.stack)setQuery({stack:d.stack});else render();},
   'map-box':withRender(()=>{ui.boxMode=!ui.boxMode;if(map&&map.setBoxMode)map.setBoxMode(ui.boxMode);}),
   'order-toggle':withRender(d=>{ui.expanded[d.order]=!TV.dispatch.isOpen(ctx(),store.state.orders[d.order]);}),
   'orders-expand':withRender(d=>{const on=d.on==='1';ui.expanded={};for(const id of Object.keys(store.state.orders))ui.expanded[id]=on;}),

@@ -279,12 +279,30 @@ function collectionReport(state,orderId){
 }
 function markReportSent(state,orderId,by,channel){const o=state.orders[orderId];const before=o.reportSentAt;o.reportSentAt=now(state);o.reportChannel=channel||'manuell';audit(state,by,'report.markedSent',orderId,before,o.reportSentAt);}
 function exportOrder(state,orderId){const o=state.orders[orderId];return {schema:'transport-demo-export-1',exportedAt:now(state),order:o,stacks:o.stackKeys.map(k=>state.stacks[k]),allocations:Object.values(state.allocations).filter(a=>a.orderId===orderId),loads:Object.values(state.loads).filter(l=>l.orderId===orderId),deliveryNotes:Object.values(state.notes).filter(n=>n.orderId===orderId),receipts:Object.values(state.receipts).filter(r=>state.loads[r.loadId]?.orderId===orderId),ledger:ledgerFor(state,{orderId}),events:state.events.filter(e=>o.stackKeys.includes(e.stackKey)),sources:o.documentIds.map(id=>{const d=state.documents[id];return {docId:id,subject:d.subject,receivedAt:d.receivedAt,contentHash:d.contentHash,pages:d.pages};}),report:collectionReport(state,orderId),disclaimer:'Demo-Export · nicht automatisch versendet'};}
-/* Driver-safe excerpt: restricted lines (rates, terms, conditions) replaced, map and form pages kept, other orders dropped. */
+/* Driver-safe excerpt: restricted lines (rates, terms, conditions) replaced, map and form pages kept, other orders dropped.
+   `summary` is the structured, phone-readable part: the released order's data (dispatcher corrections, confirmed
+   locations) or, before release, the extraction proposal — never the restricted fields or restricted instructions;
+   money in free text is redacted the same way as on the page facsimiles. */
+const MONEY=/\b(\d{1,3}(?:[.,]\d{2})?)\s*(EUR|€)(\s*(pro|\/)\s*\S+)?/gi;const redactMoney=s=>String(s==null?'':s).replace(MONEY,'█ redigiert');
+function excerptSummary(state,d){
+  const party=id=>state.parties.find(p=>p.id===id)||{};const totals=sts=>{const by={};for(const s of sts){const u=(s.planned&&s.planned.unit)||'?';by[u]=(by[u]||0)+((s.planned&&s.planned.qty)||0);}return Object.entries(by).map(([unit,qty])=>({unit:unit==='?'?null:unit,qty}));};
+  const orders=(d.orderIds||[]).map(id=>state.orders[id]).filter(Boolean);
+  if(orders.length)return orders.map(o=>{const dest=o.destinationId?party(o.destinationId):null;const sts=o.stackKeys.map(k=>state.stacks[k]).filter(Boolean);
+    return {id:o.id,released:true,documentType:o.documentType||null,documentNumber:o.documentNumber||null,customer:party(o.customerId).name||o.issuer||null,
+      destination:dest&&dest.name?{name:dest.name,address:dest.address||null,confirmed:true}:{name:o.destination||null,address:null,confirmed:false},window:{from:o.window.from||null,to:o.window.to||null},
+      contacts:(o.contacts||[]).map(c=>({role:c.role,value:redactMoney(c.value)})),instructions:(o.instructions||[]).filter(i=>!i.restricted).map(i=>redactMoney(i.text)),remarks:(o.remarks||[]).filter(r=>r.value).map(r=>({label:r.label,value:redactMoney(r.value)})),
+      stacks:sts.map(s=>({key:s.key,tempKey:s.tempKey,kind:s.kind,refs:s.refs,timber:s.timber,planned:{qty:s.planned.qty,unit:s.planned.unit,raw:s.planned.raw},pieces:{value:s.pieces?s.pieces.value:null},progress:s.progress,blocked:!!s.blocked,confirmed:s.confirmed?{lat:s.confirmed.lat,lon:s.confirmed.lon}:null,address:(s.location&&s.location.address)||null})),totals:totals(sts)};});
+  const prop=d.extraction&&d.extraction.orders[0];if(!prop)return [];
+  const v=f=>f&&f.value!=null&&f.value!==''?f.value:null;
+  const sts=prop.stacks.map(s=>({key:null,tempKey:s.tempKey,kind:s.kind,refs:s.refs,timber:{species:v(s.timber.species),assortment:v(s.timber.assortment),lengthM:v(s.timber.lengthM),grade:v(s.timber.grade)},planned:{qty:s.planned?s.planned.value:null,unit:s.planned?s.planned.unit:null,raw:s.planned?s.planned.raw:null},pieces:{value:s.pieces?s.pieces.value:null},progress:'Available',blocked:false,confirmed:null,address:null}));
+  return [{id:null,released:false,documentType:v(prop.documentType),documentNumber:v(prop.documentNumber),customer:v(prop.issuer),destination:{name:v(prop.destination),address:null,confirmed:false},window:{from:prop.window.from||null,to:prop.window.to||null},
+    contacts:prop.contacts.map(c=>({role:c.label,value:redactMoney(c.value)})),instructions:prop.instructions.filter(i=>!i.restricted).map(i=>redactMoney(i.value)),remarks:prop.remarks.filter(r=>r.value).map(r=>({label:r.label,value:redactMoney(r.value)})),stacks:sts,totals:totals(sts)}];
+}
 function driverExcerpt(state,docId){
   const d=state.documents[docId];if(!d)return null;const prop=d.extraction.orders[0];const restrictedLines=new Set();
   if(prop){for(const f of [prop.restricted.freightRate,prop.restricted.paymentTerms])if(f)restrictedLines.add(f.page+':'+f.line);for(const i of prop.instructions)if(i.restricted)restrictedLines.add(i.page+':'+i.line);}
-  const pages=d.attachments.flatMap(a=>a.pages).map(p=>({n:p.n,kind:p.kind,title:p.title||null,pins:p.pins||null,lines:p.lines.map((l,li)=>restrictedLines.has(p.n+':'+li)?'█ redigiert (kommerzielle Angabe)':l.replace(/\b(\d{1,3}(?:[.,]\d{2})?)\s*(EUR|€)(\s*(pro|\/)\s*\S+)?/gi,'█ redigiert'))}));
-  return {docId,subject:d.subject,pages,redactedLines:restrictedLines.size,generatedAt:now(state),note:'Fahrerauszug — geprüft, kommerzielle Angaben geschwärzt'};
+  const pages=d.attachments.flatMap(a=>a.pages).map(p=>({n:p.n,kind:p.kind,title:p.title||null,pins:p.pins||null,lines:p.lines.map((l,li)=>restrictedLines.has(p.n+':'+li)?'█ redigiert (kommerzielle Angabe)':redactMoney(l))}));
+  return {docId,subject:d.subject,pages,summary:excerptSummary(state,d),redactedLines:restrictedLines.size,generatedAt:now(state),note:'Fahrerauszug — geprüft, kommerzielle Angaben geschwärzt'};
 }
 function setDocumentOriginal(state,docId,meta,by){const d=state.documents[docId];if(!d)throw new Error('document');const before=d.original;d.original=meta?{name:meta.name,size:meta.size,type:meta.type,pages:meta.pages||null,storedAt:meta.storedAt||now(state)}:null;audit(state,by,'document.original',docId,before,d.original);return d;}
 function setDriverOriginal(state,docId,allowed,by){const d=state.documents[docId];if(!d)throw new Error('document');const before=d.driverOriginal;d.driverOriginal=!!allowed;audit(state,by,'document.driverOriginal',docId,before,d.driverOriginal);return d;}

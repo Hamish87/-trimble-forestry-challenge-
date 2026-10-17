@@ -72,14 +72,20 @@ const stateOf=p=>p.js('TransportApp.store.state');
   await click(p,qa(p,'.panel [data-action="location-place"]')[0]);assert(dlg(p).open);await input(p,'#tpDialog [name="lat"]','47.838');await input(p,'#tpDialog [name="lon"]','8.835');await click(p,'#tpDialog [data-action="place-save"]');
   st=stateOf(p);assert(Object.values(st.stacks).every(s=>s.location.status==='confirmed'));assert.equal(qa(p,'.tm-marker.pin').filter(m=>/c\d/.test(m.className)).length,2);
   // focus a pin → card
-  await click(p,qa(p,'.tm-marker.pin').find(m=>/c\d/.test(m.className)));await ticks(2);assert(q(p,'.focus-card'),'focus card after pin click');
+  await click(p,qa(p,'.tm-marker.pin').find(m=>/c\d/.test(m.className)));await ticks(2);assert(q(p,'#dispatchMap .tm-popup .pin-card'),'popup card after pin click (full-width map in a narrow jsdom window)');assert(!q(p,'.map-block.split'),'split view off below 1100 px');
+  // split view: map left, Polter right — the pane shows the focused card, the back arrow returns to the list of visible stacks, a list item focuses again
+  await click(p,'.map-tools [data-action="map-split"]');assert(q(p,'.map-block.split')&&q(p,'.side-col .pin-card.side'),'split view with the focused stack beside the map');assert(!q(p,'#dispatchMap .tm-popup .pin-card'),'no popup inside the map in the split view');
+  assert(text(q(p,'.side-col .pin-card')).includes('Quelle')&&q(p,'.side-col .pin-card [data-action="excerpt-open"]'),'the side card carries the full record and the dispatcher actions');
+  await click(p,'.side-col .pin-card header [data-action="dispatch-focus"]');assert(!p.w.location.hash.includes('stack='),'back arrow clears the focus');assert.equal(qa(p,'.side-col .so-item').length,2,'the pane lists the visible stacks');assert(text(q(p,'.side-col .so-head')).includes('Fuhrauftrag'),'grouped by order');
+  await click(p,qa(p,'.side-col .so-item')[0]);assert(q(p,'.side-col .pin-card.side'),'list item focuses the stack');assert.equal(JSON.parse(p.w.localStorage.getItem('transport-demo-ui')).split,true,'preference remembered');
+  await click(p,'.map-tools [data-action="map-split"]');assert(!q(p,'.map-block.split')&&q(p,'#dispatchMap .tm-popup .pin-card'),'toggle back: full-width map with the popup');await click(p,'.pin-card [data-action="map-popup-close"]');
   // select both stacks and publish to the fleet
   await change(p,'[data-action="dispatch-select-all"]',true);assert(text(q(p,'.selbar')).includes('2 ausgewählt'));
   await click(p,'.selbar [data-action="publish-open"]');assert(dlg(p).open&&q(p,'#tpDialog form[data-form="publish"]'));await submit(p,q(p,'#tpDialog form[data-form="publish"]'));
   st=stateOf(p);assert(Object.values(st.stacks).every(s=>s.publication.scope==='fleet'));assert(text(q(p,'.dispatch-table')).includes('Flotte'));
   // allocate stack 9 to driver U-D1
   const key9=Object.values(st.stacks).find(s=>s.tempKey==='124_501/9').key;
-  await click(p,`.stack-row[data-stack="${key9}"] [data-action="dispatch-focus"]`);await click(p,'.focus-card [data-action="allocate-open"]');const af=q(p,'#tpDialog form[data-form="allocate"]');assert(af);fld(af,'driver').value='U-D1';await submit(p,af);
+  await click(p,`.stack-row[data-stack="${key9}"] [data-action="dispatch-focus"]`);await click(p,'#dispatchMap .pin-card [data-action="allocate-open"]');const af=q(p,'#tpDialog form[data-form="allocate"]');assert(af);fld(af,'driver').value='U-D1';await submit(p,af);
   st=stateOf(p);const alloc=Object.values(st.allocations)[0];assert.equal(alloc.driverId,'U-D1');assert.equal(alloc.state,'Proposed');assert(text(q(p,'.dispatch-table')).includes('Vorgeschlagen'));
   /* ---------- driver ---------- */
   await p.go('#/driver');assert(text(q(p,'.driver')).includes('Fahrer-Persona wählen'));await change(p,'.drv-pick select[name="persona"]','U-D1');
@@ -104,6 +110,7 @@ const stateOf=p=>p.js('TransportApp.store.state');
   await click(p,'.phone-tabs [data-tab="docs"]');assert(text(q(p,'.phone-body')).includes('LS-2026-00001'));
   /* ---------- pin popup, photos, originals ---------- */
   await p.go('#/dispatch?stack='+key9);assert(q(p,'#dispatchMap .tm-popup .pin-card'),'pin popup card for the focused stack');assert(text(q(p,'.pin-card')).includes('Polter 9')&&q(p,'.pin-card a.nav'),'popup shows the stack and a navigation link');
+  await click(p,'.pin-card [data-action="map-split"]');assert(q(p,'.side-col .pin-card.side')&&text(q(p,'.side-col .pin-card')).includes('Polter 9'),'„Details“ in the popup opens the split view on that stack');await click(p,'.map-tools [data-action="map-split"]');assert(q(p,'#dispatchMap .tm-popup .pin-card'),'back to the popup');
   await click(p,'.pin-card [data-action="map-popup-close"]');assert(!p.w.location.hash.includes('stack='),'popup close clears the focus');
   await p.go('#/driver');await change(p,'.drv-pick select[name="persona"]','U-D1');await click(p,'.phone-tabs [data-tab="work"]');assert(q(p,'.job.hero'),'driver hero card');assert(q(p,'.job.row-card'),'other tasks listed as rows');await click(p,'.job.row-card [data-action="driver-job"]');assert(q(p,'.job.hero.done'),'tapping a row makes it the hero');await click(p,'.job.row-card [data-action="driver-job"]');
   // a pickup with a photo: the stack gets the photo, thumbnails appear, the lightbox opens
@@ -139,7 +146,11 @@ const stateOf=p=>p.js('TransportApp.store.state');
   await p.go('#/inbox');await click(p,'[data-action="import-open"]');const imf=q(p,'#tpDialog form[data-form="import"]');assert(imf);fld(imf,'sender').value='x@neu.demo';fld(imf,'subject').value='Transportauftrag 77';fld(imf,'text').value='Transportauftrag Nr. 77\nAuftraggeber:\tNeuer Kunde GmbH\nAbfuhrbeginn:\t20.10.2026\tAbfuhrende:\t30.10.2026\nHieb\tLos\tPolter\tHolzart\tMenge\tStück\tGPS - Koordinaten\n4711\t3\t1\tFI\t20,00 fm\t12\t48,12 9,55\n';await submit(p,imf);
   st=stateOf(p);const imp=Object.values(st.documents).find(d=>d.subject==='Transportauftrag 77');assert(imp&&imp.status==='NeedsReview'&&imp.extraction.orders[0].stacks.length===1);assert(imp.extraction.orders[0].stacks[0].coords.parsed.ok,'decimal coordinate pair in one cell parsed');
   /* ---------- excerpt dialog ---------- */
-  await p.go('#/inbox/DOC-TTW-1');await click(p,'[data-action="excerpt-open"]');assert(text(dlg(p)).includes('Fahrerauszug')&&text(dlg(p)).includes('redigiert'));await click(p,'#tpDialog [data-action="dialog-close"]');
+  await p.go('#/inbox/DOC-TTW-1');await click(p,'[data-action="excerpt-open"]');assert(text(dlg(p)).includes('Fahrerauszug')&&text(dlg(p)).includes('redigiert'));
+  {const sheet=q(p,'#tpDialog .xc');assert(sheet,'order sheet in the excerpt');const tx=text(sheet);assert(tx.includes('Fuhrauftrag 3311')&&tx.includes('Stadt Aach')&&tx.includes('Abfuhrzeitraum'),'reference, destination and window on the sheet');
+   assert.equal(qa(p,'#tpDialog .xc-stack').length,stateOf(p).orders[ttw.id].stackKeys.length,'one card per stack');assert(qa(p,'#tpDialog .xc-contacts a').some(a=>/^tel:/.test(a.getAttribute('href')||'')),'contacts are call links');assert(qa(p,'#tpDialog .xc-stack a.nav').length>0,'navigation link on a located stack');
+   assert(!tx.includes('Skonto')&&!tx.includes('Zahlungsziel'),'restricted instruction not on the sheet');assert(tx.includes('Hinweise für den Fahrer'),'driver notes on the sheet');assert(q(p,'#tpDialog details.xc-pages')&&text(q(p,'#tpDialog details.xc-pages')).includes('redigiert'),'redacted originals folded below');}
+  await click(p,'#tpDialog [data-action="dialog-close"]');
   /* ---------- language ---------- */
   await change(p,'#tpLang','en');assert(text(q(p,'#tpNav')).includes('Inbox')&&text(q(p,'#tpNav')).includes('Dispatch'));assert(text(q(p,'.inbox')).includes('Deliver demo e-mails'));
   await change(p,'#tpLang','fr');assert(text(q(p,'#tpNav')).includes('Boîte de réception'));await change(p,'#tpLang','de');

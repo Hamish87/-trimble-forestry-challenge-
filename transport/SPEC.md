@@ -181,7 +181,10 @@ driver persona); language DE/EN/FR; "Demo" tag. Footer: demo disclaimer and data
 PDF is imported or attached with „Original hinterlegen"; nothing is uploaded and the sample originals are not in the
 repository (they contain personal data). The review toggles between the facsimile and the original rendered page by
 page with pdf.js; „Original für Fahrer freigegeben" (default off when commercial fields were detected) decides whether
-drivers open the original or the redacted excerpt. [DEMO]
+drivers open the original or the redacted excerpt. The excerpt leads with a structured order sheet built from the
+released order (never from the restricted fields): reference, customer, collection window, destination, contacts as call
+links, one card per stack with quantity, status and navigation link, non-restricted instructions; map pages follow, the
+redacted text pages are folded below. [DEMO]
 
 Left: document list (sender, subject, received, pages, class chips, status, exceptions count), filters (status,
 customer), "Demo-E-Mails zustellen" (delivers the five fixtures as five e-mails, plus the resend and the amendment
@@ -191,8 +194,11 @@ line), exceptions panel, version diff for amendments (added / changed / removed 
 "Freigeben", "Als Duplikat ablegen", "Manuell erfassen". Documents of a new customer show the "Vollprüfung" banner.
 
 ### 7.3 Disposition — Karte & Liste [WF §3–4]
-Split view: map (pins per confirmed stack with customer colour, deadline ring, progress arc; clusters at low zoom;
-destination markers; "Standort erforderlich" list in a side panel) and list (order → stacks; columns: customer,
+Split view (default on wide screens, toggle remembered per browser): map left (pins per confirmed stack with customer
+colour, deadline ring, progress arc; clusters at low zoom; destination markers), Polter right (the visible stacks grouped
+by order; a pin or an entry opens the stack's full card in the pane — record, confirmation, loads, source, actions). The
+full-width alternative shows the card as a map popup that never grows taller than the map. "Standort erforderlich" and
+the other queues live in the "Zu erledigen" chips and drawer above the map. Below both: the list (order → stacks; columns: customer,
 reference, Hieb/Los/Polter, species/assortment, planned qty/unit, pieces, deadline, location status, publication,
 allocation, progress). Filters: customer, due date, driver, availability. Actions on selection: Veröffentlichen
 (Flotte / Gruppe / Fahrer), Zuteilen (driver, truck, share: whole / n loads / qty), Zurückziehen, Neu zuteilen,
