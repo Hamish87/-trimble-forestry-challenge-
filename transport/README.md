@@ -29,6 +29,14 @@ other branches get preview deployments. The game site keeps its own project; it 
 A first visit without a saved workspace plays the Demo-Durchlauf automatically (with a toast), so the link opens on a
 populated inbox and map; „Verwaltung → Daten zurücksetzen“ empties it and the empty workspace then stays empty.
 
+## Site photos
+
+Every confirmed stack carries a site photo so the pin card shows what the driver will find: freely licensed
+photographs of roadside log piles from Wikimedia Commons (CC0, CC BY, CC BY-SA), hotlinked at the fixed widths
+Commons serves (500 px in strips, 1280 px in the viewer) with author, licence and a link to the file page
+(`transport/data/photos.js`). Nothing is copied into the repository. Driver event photos in the demo run remain
+illustrations; photos a driver attaches in the browser are stored in the workspace as before.
+
 ## Map engine (Mapbox optional)
 
 The maps run on the built-in tile map (OpenStreetMap, basemap.de, OpenTopoMap) with no account. A Mapbox **public**

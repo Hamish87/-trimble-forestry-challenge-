@@ -61,6 +61,7 @@ function create(opts={}){
     markReportSent(orderId,channel){return M.markReportSent(state,orderId,by(),channel);},
     markLoadReconciled(loadId,note){const l=state.loads[loadId];l.reconciledBy=by();l.reconciledNote=note||null;if(l.state==='Measured')l.state='Reconciled';M.audit(state,by(),'load.reconciled',loadId,null,note);M.deriveOrderStatus(state,l.orderId);return l;},
     setPersona(userId){state.ui.persona=userId;state.ui.online=!(state.ui.offlineDrivers||[]).includes(userId);},
+    stackPhoto(key,photo){return M.addStackPhoto(state,key,photo,by());},
     setSetting(k,v){const before=state.settings[k];state.settings[k]=v;M.audit(state,by(),'settings.changed',k,before,v);},
     upsertUser(u){const i=state.users.findIndex(x=>x.id===u.id);if(i>=0)state.users[i]=Object.assign(state.users[i],u);else state.users.push(u);M.audit(state,by(),'user.upserted',u.id,null,u);},
     removeUser(id){const before=state.users.find(x=>x.id===id);state.users=state.users.filter(x=>x.id!==id);M.audit(state,by(),'user.removed',id,before,null);},

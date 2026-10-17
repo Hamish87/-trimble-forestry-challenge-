@@ -200,7 +200,7 @@ const actions={
   'original-attach':async(d,el)=>{const f=el.files&&el.files[0];if(!f)return;try{const rec=await ORIG.store(d.doc,f);let pages=null;try{const doc=await ORIG.pdf(d.doc);pages=doc?doc.numPages:null;}catch(e){}store.apply('setDocumentOriginal',d.doc,{name:rec.name,size:rec.size,type:rec.type,pages});ui.reviewOriginal=true;toast(t('Original im Browser hinterlegt'));}catch(e){fail(e);}render();},
   'driver-original-toggle':withRender((d,el)=>{store.apply('setDriverOriginal',d.doc,el.checked);}),
   'original-open':d=>dialog(c=>TV.driver.originalDialog(c,d.doc)),
-  'photo-open':d=>dialog(()=>TV.driver.photoDialog(ctx(),d.src,d.caption)),
+  'photo-open':d=>dialog(()=>TV.driver.photoDialog(ctx(),d.src,d.caption,d.credit,d.page)),
   'map-popup-close':()=>{if(ui.driverMapStack&&route().name==='driver'){ui.driverMapStack=null;render();return;}setQuery({stack:undefined});},
   'driver-job':withRender(d=>{ui.driverJob=d.stack;}),
   'driver-pick':withRender(d=>{const st=store.state.stacks[d.stack];if(!st)return;const me=store.state.ui.persona;const a=Object.values(store.state.allocations).find(x=>x.stackKey===st.key&&x.driverId===me&&['Proposed','Accepted','Reserved'].includes(x.state));

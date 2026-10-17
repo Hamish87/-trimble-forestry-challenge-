@@ -6,7 +6,9 @@
 'use strict';
 (function(){
 const req=(ns,name,path)=>(globalThis[ns]&&globalThis[ns][name])||(typeof require!=='undefined'?require(path):null);
-const SAMPLES=req('TransportData','samples','../data/samples.js');const PH=req('TransportCore','photos','./photos.js');
+const SAMPLES=req('TransportData','samples','../data/samples.js');const PH=req('TransportCore','photos','./photos.js');const STOCK=(()=>{req('TransportData','photos','../data/photos.js');return (globalThis.TransportData&&globalThis.TransportData.photos)||null;})();
+/* a real site photo (Wikimedia Commons, attributed) for every stack with a confirmed location */
+function sitePhotos(s,at,keys){if(!STOCK)return;const st=s.state;const byOrder={};for(const k of keys||Object.keys(st.stacks)){const x=st.stacks[k];if(!x||!x.confirmed||(x.photos||[]).some(p=>p.kind==='site'))continue;const o=st.orders[x.orderId];const i=(byOrder[o.id]=(byOrder[o.id]||0))+0;byOrder[o.id]++;const idx=o.stackKeys.indexOf(k);s.store.apply('stackPhoto',k,STOCK.asPhoto(STOCK.forStack(o,x,idx>=0?idx:i),{at,caption:`${x.tempKey} · ${'Revierfoto'}`}));}}
 const photo=(key,kind,label)=>PH?[PH.illustration(key,kind,label)]:[];
 const T=(d,t)=>`2026-10-${String(d).padStart(2,'0')}T${t}:00+02:00`;
 const STEPS=[
@@ -19,6 +21,7 @@ const STEPS=[
  {id:'review-ttw',title:'Fuhrauftrag 3311 freigeben (Standorte aus Kartenseite, Zielwerk Stadt Aach)',run(s){s.setClock(T(13,'14:30'));const lines={};for(const [k,[lat,lon]] of Object.entries(SAMPLES.DEMO_PLACEMENTS['DOC-TTW-1']))lines[k]={location:{method:'manual-from-map',lat,lon,fromPage:3,note:'aus Kartenseite 3 platziert'}};s.store.apply('review','DOC-TTW-1',{lines,destinationId:'P-STADT-AACH',note:'Zielwerk Stadt Aach laut Seite 1 und 5; Revier nicht gedruckt, Standorte aus Kartenseite 3; Meldeintervall wöchentlich vereinbart'});}},
  {id:'resend',title:'Erneut gesendeter Fuhrauftrag → Duplikat',run(s){s.setClock(T(14,'09:05'));s.store.apply('deliverScenario','resend');}},
  {id:'publish',title:'Veröffentlichen (Flotte, Gruppe, Fahrer)',run(s){s.setClock(T(14,'10:00'));const o=s.orders();s.store.apply('publish',o.htl.stackKeys,'named',['U-D1']);s.store.apply('publish',o.ttw.stackKeys,'fleet');s.store.apply('publish',o.pellet.stackKeys,'group',['G-SUED']);s.store.apply('publish',o.mengen.stackKeys.filter(k=>s.state.stacks[k].location.status==='confirmed'),'group',['G-SUED']);s.store.apply('publish',o.baysf.stackKeys,'named',['U-D3']);}},
+ {id:'site-photos',title:'Revierfotos der Polter hinterlegen',run(s){s.setClock(T(14,'10:10'));s.as('U-DISPO');sitePhotos(s,T(14,'10:10'));}},
  {id:'allocate',title:'Zuteilen',run(s){s.setClock(T(14,'10:20'));const o=s.orders();for(const k of o.htl.stackKeys)s.store.apply('allocate',k,'U-D1','T-2',{kind:'whole'});
    s.store.apply('allocate',o.pellet.stackKeys[0],'U-D2','T-3',{kind:'whole'});s.store.apply('allocate',o.pellet.stackKeys[1],'U-D2','T-3',{kind:'whole'});
    const ttw9=o.ttw.stackKeys.find(k=>s.state.stacks[k].tempKey==='124_501/9');s.store.apply('allocate',ttw9,'U-D1','T-2',{kind:'loads',value:3});s.store.apply('allocate',ttw9,'U-D3','T-4',{kind:'loads',value:3});
@@ -50,7 +53,7 @@ const STEPS=[
    s.as('U-DISPO');const a=Object.values(s.state.allocations).find(x=>x.stackKey===m35&&x.driverId==='U-D2');s.store.apply('withdraw',a.id,{driverId:'U-D3',truckId:'T-4'});
    s.as('U-D2');s.store.driverEvent({kind:'pickup',stackKey:m35,truckId:'T-3',qty:14,unit:'fm',pieces:3,eventTime:T(23,'07:10')});s.setClock(T(23,'08:30'));s.store.setOnline(true);s.as('U-DISPO');}},
  {id:'tickets',title:'Werksscheine zustellen und zuordnen',run(s){s.setClock(T(22,'17:35'));s.store.apply('deliverTickets');}},
- {id:'amendment',title:'Geänderter Fuhrauftrag → Versionsvergleich, Abholungen bleiben',run(s){s.setClock(T(23,'16:20'));s.store.apply('deliverScenario','amendment');s.setClock(T(23,'16:45'));const lines={};const [lat,lon]=[47.834,8.851];lines['124_501/11']={location:{method:'manual-from-map',lat,lon,fromPage:3,note:'neuer Polter aus Kartenseite platziert'}};s.store.apply('review','DOC-TTW-AMEND',{lines,destinationId:'P-ACHENTAL'});}},
+ {id:'amendment',title:'Geänderter Fuhrauftrag → Versionsvergleich, Abholungen bleiben',run(s){s.setClock(T(23,'16:20'));s.store.apply('deliverScenario','amendment');s.setClock(T(23,'16:45'));const lines={};const [lat,lon]=[47.834,8.851];lines['124_501/11']={location:{method:'manual-from-map',lat,lon,fromPage:3,note:'neuer Polter aus Kartenseite platziert'}};s.store.apply('review','DOC-TTW-AMEND',{lines,destinationId:'P-ACHENTAL'});sitePhotos(s,T(23,'16:50'));}},
  {id:'report',title:'Abfuhrmeldung erzeugen und als gesendet markieren',run(s){s.setClock(T(23,'17:00'));const o=s.orders();s.store.apply('markReportSent',o.htl.id,'E-Mail an Kunden (manuell)');}}
 ];
 function run(store,opts={}){
