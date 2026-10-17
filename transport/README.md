@@ -70,6 +70,11 @@ which is why MapLibre is not used here.
    „Als gesendet markieren" as a deliberate action.
 6. **Verwaltung**: users and roles, vehicles, groups, customer profiles (label synonyms, units, formats — data, not
    code), parties, versioned conversion factors, settings, audit trail, reset and the guided **Demo-Durchlauf**.
+7. **Dashboard**: fleet overview for the dispatcher — loads, collected / declared / received quantities per unit with a
+   labelled fm equivalent, net weight, stacks cleared, open items; per driver (allocated stacks and quantity, loads,
+   collected, declared, cleared, problems), per destination mill (loads, declared vs. mill measure, deviation over
+   paired loads), per customer (ordered → collected → declared → received with completion), timber assortments and
+   species share, loads and collected volume per day; period and driver filters. Kilometres are not recorded yet.
 
 ## Files
 

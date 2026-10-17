@@ -248,6 +248,17 @@ Kunden-Partie-Nr, Forstbetrieb/Revier, Anlieferdatum, KFZ-Kennzeichen, Fahrer, S
 Sorte, Länge, "Transport abgeschlossen", Annahme (date, time, signature of recipient). Field set follows the BaySF
 form and the ELDAT delivery-note header/position fields [RESEARCH §1].
 
+
+### 7.8 Dashboard [DM][WF §6]
+Fleet overview for the dispatcher, computed by `core/stats.js` from the same records as the reports: loads and
+their states, collected (pickup events, driver estimate), declared (delivery notes), received (matched mill tickets,
+Werksmaß) and net weight, each summed **per unit**; an **fm equivalent** is shown as a derived figure with the
+versioned factors it used and lists the units it had to leave out (LDG). Breakdowns: per driver (live allocations and
+their quantity, loads, collected, declared, cleared, problems, last activity), per destination mill (loads, declared vs.
+received, deviation only over loads with both a note and a matched ticket), per customer (ordered → collected →
+declared → received, completion in the fm equivalent or the single common unit), per timber assortment and species,
+and per day. Filters: period (all / 7 / 14 / 30 days) and driver. Distances are out of scope until positions exist.
+
 ## 8. Offline operation, sync and conflicts [WF Reliability]
 - Events carry a client-generated id, `eventTime` and, once acknowledged, `receivedTime`. Replays are idempotent.
 - The driver device holds downloaded work; new shared-work reservations need connectivity.

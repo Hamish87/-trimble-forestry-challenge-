@@ -154,6 +154,11 @@ const stateOf=p=>p.js('TransportApp.store.state');
    const sel=p.js('TransportApp.ui.selection');assert(sel.length>=10,'box selection picked the stacks: '+sel.length);assert(text(q(p,'.selbar')).includes('ausgewählt'));assert(qa(p,'.dispatch-table tr.stack-row').length>0,'selected orders expanded');assert(qa(p,'.tm-marker.pin.selected').length>0,'selected pins highlighted');await click(p,'[data-action="dispatch-clear"]');}
   // map engine: no token → built-in map; the Mapbox adapter is present but idle
   assert.equal(p.js('TransportCore.mapbox.token(TransportApp.store.state.settings)'),'');assert.equal(p.js('TransportCore.mapbox.sources().length'),4);assert.equal(p.js('TransportCore.mapbox.VERSION'),'3.33.0');assert(!p.js('globalThis.mapboxgl'),'mapbox-gl not loaded without a token');assert.equal(p.js('TransportConfig.mapboxToken'),'');
+  /* ---------- dashboard ---------- */
+  await p.go('#/dashboard');assert(qa(p,'.dash .kpi').length>=8,'KPI cards');assert(text(q(p,'.dash')).includes('Fuhren')&&text(q(p,'.dash')).includes('Werksmaß')&&text(q(p,'.dash')).includes('Murat Kaya'));
+  assert(qa(p,'.dash .widget').length>=10,'widgets');assert(qa(p,'.dash-table').length>=3,'driver, mill and assortment tables');assert(q(p,'.donut svg')&&qa(p,'.cols svg').length===2,'donut and two column charts');assert(qa(p,'.cust').length===5,'one row per customer');
+  await change(p,'select[name="driver"]','U-D2');assert(text(q(p,'.dash')).includes('Jana Vogel')&&qa(p,'.widget .dash-table tbody tr').length>0);assert.equal(qa(p,'.dash-table')[0].querySelectorAll('tbody tr').length,1,'driver filter narrows the driver table');
+  await change(p,'select[name="days"]','7');assert(text(q(p,'.dash-filters')).includes('ab '),'period shown');await change(p,'select[name="days"]','0');await change(p,'select[name="driver"]','');
   /* ---------- driver map: every load the driver may take; a pin picks the next task ---------- */
   await p.go('#/driver');await change(p,'.drv-pick select[name="persona"]','U-D3');await click(p,'.phone-tabs [data-tab="map"]');await ticks(2);
   assert(q(p,'#driverMap[data-all] .tm'),'driver map mounted in the phone');assert(qa(p,'#driverMap .tm-marker,#driverMap .tm-cluster').length>0,'loads on the driver map');assert(text(q(p,'.drv-map-head')).includes('mir zugeteilt'));

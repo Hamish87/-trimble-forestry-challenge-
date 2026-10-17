@@ -4,7 +4,7 @@
 // acceptance list of SPEC.md §10 (A1–A7). No DOM.
 const assert=require('node:assert/strict');
 const P='../transport/';
-for(const f of ['core/i18n','core/i18n-long','core/units','core/coords','data/customers','data/fleet','data/samples','core/extract','core/model','core/store','core/tour'])require(P+f+'.js');
+for(const f of ['core/i18n','core/i18n-long','core/units','core/coords','data/customers','data/fleet','data/samples','core/extract','core/model','core/store','core/tour','core/stats'])require(P+f+'.js');
 const TC=globalThis.TransportCore,TD=globalThis.TransportData;const U=TC.units,C=TC.coords,X=TC.extract,M=TC.model,S=TD.samples;
 const close=(a,b,tol=1e-6,msg='')=>assert(Math.abs(a-b)<=tol,`${msg} ${a} != ${b}`);
 const mem=()=>({d:{},getItem(k){return this.d[k]??null;},setItem(k,v){this.d[k]=v;},removeItem(k){delete this.d[k];}});
@@ -112,4 +112,13 @@ assert(st.audit.some(a=>a.action==='document.released'&&a.ref==='DOC-MENGEN-1'))
 assert(st.profiles.find(p=>p.id==='stadt-mengen').reviewedDocuments===1,'profile learned a reviewed document');
 /* ---------- i18n coverage ---------- */
 const I=TC.i18n;I.setLang('en');assert.equal(I.t('Posteingang'),'Inbox');assert.equal(I.t('Standort erforderlich'),'Location needed');I.setLang('fr');assert.equal(I.t('Belege & Abgleich'),'Justificatifs & rapprochement');I.setLang('de');assert.equal(I.t('Posteingang'),'Posteingang');
+/* ---------- dashboard figures (core/stats) ---------- */
+{const DS=TC.stats.compute(st,{now:store.clock()});assert.equal(DS.fleet.loads,Object.keys(st.loads).length);assert.equal(DS.fleet.pickups,st.events.filter(e=>e.kind==='pickup').length);
+ assert.equal(DS.fleet.collected.fm,st.events.filter(e=>e.kind==='pickup'&&e.unit==='fm').reduce((a,e)=>a+e.qty,0),'collected fm = sum of fm pickups');assert.equal(DS.fleet.netT,23.42,'weighbridge net in t');
+ assert(DS.fleet.collectedFm&&DS.fleet.collectedFm.excluded.includes('ldg'),'LDG stays out of the fm equivalent');assert(Math.abs(DS.fleet.collectedFm.value-(DS.fleet.collected.fm+DS.fleet.collected.rm*0.7))<1e-6,'rm → fm with the versioned factor');
+ const murat=DS.drivers.find(d=>d.id==='U-D1');assert(murat.loads===3&&murat.collected.fm===29.5&&murat.cleared===2,'driver figures come from loads and events: '+JSON.stringify([murat.loads,murat.collected,murat.cleared]));
+ const pols=DS.mills.find(m=>m.id==='P-SAEGEWERK-POLSINGEN');assert(pols&&pols.received.fm===23.1&&pols.pairedLoads===1&&Math.abs(pols.deviationPct-7.4)<0.11,'mill deviation only over loads with note and ticket: '+JSON.stringify(pols));
+ const wk=DS.customers.find(c=>c.id==='P-WALDKONTOR');assert.equal(wk.completionPct,20,'completion in the single common unit (LDG)');assert(DS.grades.length>=3&&DS.species[0].name==='Fichte','grades and species');assert.equal(DS.daily.length,14);
+ const d7=TC.stats.compute(st,{now:store.clock(),days:7,driverId:'U-D2'});assert.equal(d7.drivers.length,1);assert(d7.fleet.loads<=DS.fleet.loads&&d7.drivers[0].id==='U-D2');
+ assert.equal(TC.stats.ratioPct({fm:35},{fm:70}),50);assert.equal(TC.stats.ratioPct({ldg:1},{ldg:4}),25);assert.equal(TC.stats.ratioPct({fm:1},{ldg:4}),null,'no ratio across units without a factor');}
 console.log(JSON.stringify({passed:true,samples:5,orders:Object.keys(st.orders).length,stacks:Object.keys(st.stacks).length,loads:Object.keys(st.loads).length,receipts:Object.keys(st.receipts).length,conflicts:st.conflicts.length,events:st.events.length,phrases:Object.keys(I.CATALOGUE).length+Object.keys(I.LONG).length}));
