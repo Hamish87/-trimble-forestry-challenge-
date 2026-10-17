@@ -107,7 +107,8 @@ assert.deepEqual(M.stackPhotos(st,s1.key).filter(p=>p.kind!=='site').map(p=>p.ki
 assert.equal(st.documents['DOC-TTW-1'].driverOriginal,false,'commercial fields → original not released to drivers by default');assert.equal(st.documents['DOC-HTL-1'].driverOriginal,true);
 M.setDocumentOriginal(st,'DOC-HTL-1',{name:'HTL.pdf',size:1234,type:'application/pdf',pages:3},'U-DISPO');assert.equal(st.documents['DOC-HTL-1'].original.pages,3);M.setDriverOriginal(st,'DOC-TTW-1',true,'U-DISPO');assert.equal(st.documents['DOC-TTW-1'].driverOriginal,true);assert(st.audit.some(a=>a.action==='document.driverOriginal'));
 /* ---------- persistence and audit ---------- */
-const storage=mem();const s2=TC.store.create({storage});TC.tour.run(s2);const s3=TC.store.create({storage});assert.equal(Object.keys(s3.state.orders).length,5);assert.equal(s3.state.events.length,s2.state.events.length);
+const storage=mem();const s2=TC.store.create({storage});TC.tour.run(s2);const s3=TC.store.create({storage});assert.equal(Object.keys(s3.state.orders).length,5);
+{const saved=JSON.parse(storage.getItem(s2.KEY));for(const x of Object.values(saved.stacks))x.photos=(x.photos||[]).filter(p=>p.kind!=='site');const st2=mem();st2.setItem(s2.KEY,JSON.stringify(saved));const s4=TC.store.create({storage:st2});const conf=Object.values(s4.state.stacks).filter(x=>x.confirmed);assert(conf.length&&conf.every(x=>x.photos.some(p=>p.kind==='site'&&p.credit)),'migration adds site photos to demo stacks of older workspaces');}assert.equal(s3.state.events.length,s2.state.events.length);
 assert(st.audit.some(a=>a.action==='document.released'&&a.ref==='DOC-MENGEN-1'));assert(st.audit.some(a=>a.action==='stack.locationConfirmed'));assert(st.audit.some(a=>a.action==='report.markedSent'));
 assert(st.profiles.find(p=>p.id==='stadt-mengen').reviewedDocuments===1,'profile learned a reviewed document');
 /* ---------- i18n coverage ---------- */
