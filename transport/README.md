@@ -33,8 +33,11 @@ populated inbox and map; „Verwaltung → Daten zurücksetzen“ empties it and
 
 The maps run on the built-in tile map (OpenStreetMap, basemap.de, OpenTopoMap) with no account. A Mapbox **public**
 token (`pk.…`) switches every map in the demo to **Mapbox GL JS 3.33.0** (vector styles Outdoors · Satellite ·
-Streets · Light, clustering, smooth zoom): put it in `transport/config.js` (shipped to browsers by design, so restrict
-it to `holztransport-demo.vercel.app` and `localhost` in the Mapbox account), or paste it under Verwaltung →
+Streets · Light, clustering, smooth zoom). On Vercel set the project environment variable **`MAPBOX_TOKEN`**
+(optional `MAPBOX_STYLE`: outdoors · satellite · streets · light) and redeploy: the build step
+`transport/scripts/vercel-build.sh` copies the app to `dist/` and writes `config.js` from it, so no token is committed
+(it is still shipped to browsers by design — restrict it to `holztransport-demo.vercel.app` and `localhost` in the
+Mapbox account). Locally, edit `transport/config.js` (do not commit the token) or paste it under Verwaltung →
 Einstellungen for the current browser only. The library is loaded on demand; a rejected token falls back to the tile
 map with a notice. Both engines support **Shift + drag** (or the rectangle tool) to select stacks on the map and then
 publish, allocate or block them from the selection bar. Mapbox tiles may only be used with Mapbox GL JS (Mapbox terms),

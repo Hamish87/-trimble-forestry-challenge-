@@ -57,6 +57,8 @@ const kv=rows=>`<dl class="kv">${rows.filter(r=>r).map(([k,v])=>`<dt>${esc(k)}</
 const table=(heads,rows,cls='')=>`<table class="tbl ${cls}"><thead><tr>${heads.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.length?rows.join(''):`<tr><td colspan="${heads.length}" class="muted">${esc(t('Keine Einträge'))}</td></tr>`}</tbody></table>`;
 const party=(state,id)=>(state.parties.find(p=>p.id===id)||{}).name||null;const userName=(state,id)=>(state.users.find(u=>u.id===id)||{}).name||id||'–';const truckReg=(state,id)=>(state.trucks.find(x=>x.id===id)||{}).reg||'–';
 function stackRef(st){const r=st.refs||{};if(st.kind==='industrial')return `${t('Ladenummer')} ${esc(r.ladenummer||'–')}${r.weekday?' · '+esc(t(r.weekday)):''}`;const parts=[];if(r.hieb)parts.push(`${t('Hieb')} ${esc(r.hieb)}`);if(r.los)parts.push(`${t('Los')} ${esc(r.los)}`);if(r.orderLos&&!r.hieb)parts.push(esc(r.orderLos));if(r.polter)parts.push(`${t('Polter')} ${esc(r.polter)}`);if(r.pos&&!r.polter)parts.push(`Pos. ${esc(r.pos)}`);return parts.join(' · ')||esc(st.tempKey);}
+/* short label for a map pin: Polter number, else the last three digits of a Ladenummer, else the position */
+function shortRef(st){const r=st.refs||{};if(r.polter)return String(r.polter);if(r.ladenummer)return String(r.ladenummer).slice(-3);if(r.pos)return String(r.pos);return '';}
 function timber(st){const tb=st.timber||{};return [tb.species,tb.assortment,tb.lengthM!=null?fmt.num(tb.lengthM)+' m':null,tb.grade].filter(Boolean).map(esc).join(' · ')||`<span class="muted">${esc(t('nicht gedruckt'))}</span>`;}
 function orderRef(o){return `${esc(o.documentType||t('Auftrag'))}${o.documentNumber?' '+esc(o.documentNumber):''}`;}
 function deadline(o){return o&&o.window&&o.window.to?fmt.date(o.window.to):'–';}
@@ -89,7 +91,7 @@ function telLink(value){const m=String(value||'').match(/(\+?[\d][\d\s()\/-]{6,}
 function progressBar(collected,planned,unit){const pct=planned&&collected!=null?Math.max(0,Math.min(100,Math.round(collected/planned*100))):0;return `<div class="prog" title="${esc(t('abgeholt'))} ${fmt.qty(collected,unit)} / ${fmt.qty(planned,unit)}"><div class="prog-bar"><i style="width:${pct}%"></i></div><span class="prog-txt">${collected!=null?fmt.qty(collected,unit):'0'} / ${fmt.qty(planned,unit)}</span></div>`;}
 const METHODS={printed:'gedruckte Koordinate bestätigt',suggestion:'Lesart bestätigt',manual:'manuell gesetzt',address:'Werksadresse','manual-from-map':'aus Kartenbild platziert'};
 const methodLabel=m=>t(METHODS[m]||m||'–');
-const api={esc,t,lang,fmt,LABELS,pill,alert,icon,iconBtn,iconLink,statusPill,statusLabel,confBadge,srcBadge,button,select,empty,kv,table,party,userName,truckReg,stackRef,timber,orderRef,deadline,dueClass,facsimile,mapPage,exceptions,fieldCell,locationText,methodLabel,photoStrip,photoInput,navLinks,telLink,progressBar};
+const api={esc,t,lang,fmt,LABELS,pill,alert,icon,iconBtn,iconLink,statusPill,statusLabel,confBadge,srcBadge,button,select,empty,kv,table,party,userName,truckReg,stackRef,shortRef,timber,orderRef,deadline,dueClass,facsimile,mapPage,exceptions,fieldCell,locationText,methodLabel,photoStrip,photoInput,navLinks,telLink,progressBar};
 (globalThis.TransportViews=globalThis.TransportViews||{}).shared=api;
 if(typeof module!=='undefined')module.exports=api;
 })();
