@@ -56,7 +56,8 @@ function create(el,opts={}){
   function applyPopup(){const p=state.popup;if(!p){if(popup){popup.remove();popup=null;}return;}
     if(!popup)popup=new mapboxgl.Popup({closeButton:false,closeOnClick:false,maxWidth:'380px',offset:14,className:'tm-popup-gl',anchor:'bottom'}); /* the card always opens above the pin … */
     const fresh=popup._key!==p.key;popup.setLngLat([p.lon,p.lat]);if(fresh||popup._html!==p.html){popup.setHTML(p.html);popup._key=p.key;popup._html=p.html;}if(!popup.isOpen())popup.addTo(m);
-    if(fresh){const h=el.clientHeight||500;m.easeTo({center:[p.lon,p.lat],offset:[0,Math.round(h/2)-56],duration:250});}} /* … and a newly focused pin is eased low in the map so the card has the room (the CSS caps the card below that) */
+    if(fresh){const h=el.clientHeight||500;const pe=popup.getElement();const ph=(pe&&pe.offsetHeight)||300;const y=Math.min(h-36,ph+26); /* pin just under the card: card top ≥ 12 px, pin never below the map's lower edge */
+      m.easeTo({center:[p.lon,p.lat],offset:[0,Math.round(y-h/2)],duration:250});}} /* … and a newly focused pin is eased down so the measured card has the room above it (the CSS caps the card height) */
   m.on('style.load',()=>{styleReady=true;applyMarkers();applyPopup();});
   m.on('error',e=>{const err=e&&e.error;const status=err&&(err.status||err.statusCode);if(!authFailed&&(status===401||status===403||/access ?token|unauthori[sz]ed|not authorized/i.test((err&&err.message)||''))){authFailed=true;if(opts.onAuthError)opts.onAuthError(err);}});
   m.on('moveend',()=>{if(opts.onMove)opts.onMove({lat:state.lat,lon:state.lon,zoom:state.zoom});});
