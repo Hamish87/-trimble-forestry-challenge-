@@ -29,6 +29,17 @@ other branches get preview deployments. The game site keeps its own project; it 
 A first visit without a saved workspace plays the Demo-Durchlauf automatically (with a toast), so the link opens on a
 populated inbox and map; „Verwaltung → Daten zurücksetzen“ empties it and the empty workspace then stays empty.
 
+## Map engine (Mapbox optional)
+
+The maps run on the built-in tile map (OpenStreetMap, basemap.de, OpenTopoMap) with no account. A Mapbox **public**
+token (`pk.…`) switches every map in the demo to **Mapbox GL JS 3.33.0** (vector styles Outdoors · Satellite ·
+Streets · Light, clustering, smooth zoom): put it in `transport/config.js` (shipped to browsers by design, so restrict
+it to `holztransport-demo.vercel.app` and `localhost` in the Mapbox account), or paste it under Verwaltung →
+Einstellungen for the current browser only. The library is loaded on demand; a rejected token falls back to the tile
+map with a notice. Both engines support **Shift + drag** (or the rectangle tool) to select stacks on the map and then
+publish, allocate or block them from the selection bar. Mapbox tiles may only be used with Mapbox GL JS (Mapbox terms),
+which is why MapLibre is not used here.
+
 ## Tour (what a visitor does)
 
 1. **Posteingang**: „Demo-E-Mails zustellen" delivers the five anonymised sample orders. Open one: the page facsimile

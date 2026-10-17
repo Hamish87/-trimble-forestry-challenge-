@@ -22,7 +22,7 @@ function boundsCenterZoom(points,w,h,pad=40,maxZoom=16){
   return {lat:(minLat+maxLat)/2,lon:(minLon+maxLon)/2,zoom};
 }
 function create(el,opts={}){
-  const doc=el.ownerDocument;const state={lat:opts.lat??48.6,lon:opts.lon??9.6,zoom:opts.zoom??8,source:SOURCES[opts.tiles||'osm']||SOURCES.osm,markers:[],placeMode:false,width:opts.width||0,height:opts.height||0,tilesFailed:0,tilesOk:0,popup:null};
+  const doc=el.ownerDocument;const state={lat:opts.lat??48.6,lon:opts.lon??9.6,zoom:opts.zoom??8,source:SOURCES[opts.tiles||'osm']||SOURCES.osm,markers:[],placeMode:false,boxMode:false,width:opts.width||0,height:opts.height||0,tilesFailed:0,tilesOk:0,popup:null};
   el.classList.add('tm');el.innerHTML='<div class="tm-tiles"></div><div class="tm-markers"></div><div class="tm-popup" hidden></div><div class="tm-scale"></div><div class="tm-attribution"></div><div class="tm-place-hint" hidden>Klicken, um den Polter zu platzieren</div>';
   const tilesEl=el.querySelector('.tm-tiles'),markersEl=el.querySelector('.tm-markers'),popupEl=el.querySelector('.tm-popup'),scaleEl=el.querySelector('.tm-scale'),attrEl=el.querySelector('.tm-attribution'),hintEl=el.querySelector('.tm-place-hint');
   attrEl.textContent=state.source.attribution;popupEl.addEventListener('pointerdown',ev=>ev.stopPropagation());popupEl.addEventListener('wheel',ev=>ev.stopPropagation());popupEl.addEventListener('dblclick',ev=>ev.stopPropagation());
@@ -46,7 +46,7 @@ function create(el,opts={}){
     const clusterOn=opts.cluster!==false&&z<(opts.clusterBelow||12);const groups=new Map();
     for(const m of placed){if(!clusterOn||m.noCluster){groups.set(m.id,[m]);continue;}const gk=Math.floor(m.px/56)+':'+Math.floor(m.py/56);if(!groups.has(gk))groups.set(gk,[]);groups.get(gk).push(m);}
     for(const [gk,ms] of groups){
-      if(ms.length>1){const cx=ms.reduce((a,m)=>a+m.px,0)/ms.length,cy=ms.reduce((a,m)=>a+m.py,0)/ms.length;const d=doc.createElement('button');d.type='button';d.className='tm-cluster';d.textContent=String(ms.length);d.style.transform=`translate(${Math.round(cx)}px,${Math.round(cy)}px)`;d.title=ms.map(m=>m.title||m.id).join(', ');d.dataset.count=ms.length;d.addEventListener('click',ev=>{ev.stopPropagation();api.setView(ms[0].lat,ms[0].lon,Math.min(state.zoom+3,state.source.maxZoom));});markersEl.appendChild(d);continue;}
+      if(ms.length>1){const cx=ms.reduce((a,m)=>a+m.px,0)/ms.length,cy=ms.reduce((a,m)=>a+m.py,0)/ms.length;const d=doc.createElement('button');d.type='button';d.className='tm-cluster'+(ms.some(m=>/ selected( |$)/.test(' '+(m.className||'')))?' has-selected':'');d.textContent=String(ms.length);d.style.transform=`translate(${Math.round(cx)}px,${Math.round(cy)}px)`;d.title=ms.map(m=>m.title||m.id).join(', ');d.dataset.count=ms.length;d.addEventListener('click',ev=>{ev.stopPropagation();api.setView(ms[0].lat,ms[0].lon,Math.min(state.zoom+3,state.source.maxZoom));});markersEl.appendChild(d);continue;}
       const m=ms[0];const d=doc.createElement(m.button===false?'div':'button');if(m.button!==false)d.type='button';d.className='tm-marker '+(m.className||'');d.style.transform=`translate(${Math.round(m.px)}px,${Math.round(m.py)}px)`;d.dataset.id=m.id;if(m.title)d.title=m.title;d.innerHTML=m.html||'<span class="tm-pin"></span>';
       if(m.onClick)d.addEventListener('click',ev=>{ev.stopPropagation();m.onClick(m,ev);});markersEl.appendChild(d);
     }
@@ -60,15 +60,21 @@ function create(el,opts={}){
     popupEl.style.transform=`translate(${px}px,${py}px)`;popupEl.classList.toggle('below',below);
   }
   // interaction
-  let drag=null;
-  el.addEventListener('pointerdown',ev=>{if(ev.button!==0)return;drag={x:ev.clientX,y:ev.clientY,lat:state.lat,lon:state.lon,moved:false};el.setPointerCapture&&el.setPointerCapture(ev.pointerId);});
-  el.addEventListener('pointermove',ev=>{if(!drag)return;const dx=ev.clientX-drag.x,dy=ev.clientY-drag.y;if(Math.abs(dx)+Math.abs(dy)>3)drag.moved=true;const c=project(drag.lat,drag.lon,state.zoom);const p=unproject(c.x-dx,c.y-dy,state.zoom);state.lat=p.lat;state.lon=p.lon;render();});
-  const endDrag=ev=>{if(!drag)return;const moved=drag.moved;drag=null;if(!moved&&state.placeMode&&opts.onPlace&&ev.type==='pointerup'){const r=el.getBoundingClientRect();const {w,h}=size();const c=project(state.lat,state.lon,state.zoom);const p=unproject(c.x-w/2+(ev.clientX-r.left),c.y-h/2+(ev.clientY-r.top),state.zoom);opts.onPlace(p);}};
+  let drag=null,box=null,boxEl=null;
+  const relPt=ev=>{const r=el.getBoundingClientRect();return {x:ev.clientX-r.left,y:ev.clientY-r.top};};
+  el.addEventListener('pointerdown',ev=>{if(ev.button!==0)return;el.setPointerCapture&&el.setPointerCapture(ev.pointerId);
+    if(opts.onBoxSelect&&(ev.shiftKey||state.boxMode)){const p=relPt(ev);box={x0:p.x,y0:p.y,x1:p.x,y1:p.y,shift:!!ev.shiftKey};boxEl=doc.createElement('div');boxEl.className='tm-boxselect';el.appendChild(boxEl);ev.preventDefault();return;}
+    drag={x:ev.clientX,y:ev.clientY,lat:state.lat,lon:state.lon,moved:false};});
+  el.addEventListener('pointermove',ev=>{if(box){const p=relPt(ev);box.x1=p.x;box.y1=p.y;const x=Math.min(box.x0,box.x1),y=Math.min(box.y0,box.y1);boxEl.style.transform=`translate(${x}px,${y}px)`;boxEl.style.width=Math.abs(box.x1-box.x0)+'px';boxEl.style.height=Math.abs(box.y1-box.y0)+'px';return;}if(!drag)return;const dx=ev.clientX-drag.x,dy=ev.clientY-drag.y;if(Math.abs(dx)+Math.abs(dy)>3)drag.moved=true;const c=project(drag.lat,drag.lon,state.zoom);const p=unproject(c.x-dx,c.y-dy,state.zoom);state.lat=p.lat;state.lon=p.lon;render();});
+  const endDrag=ev=>{
+    if(box){const b=box;box=null;if(boxEl){boxEl.remove();boxEl=null;}if(ev.type!=='pointerup')return;const x0=Math.min(b.x0,b.x1),x1=Math.max(b.x0,b.x1),y0=Math.min(b.y0,b.y1),y1=Math.max(b.y0,b.y1);if(x1-x0<4&&y1-y0<4)return;
+      const ids=state.markers.filter(m=>!m.noCluster).filter(m=>{const q=api.project(m.lat,m.lon);return q.x>=x0&&q.x<=x1&&q.y>=y0&&q.y<=y1;}).map(m=>m.id);opts.onBoxSelect(ids,{additive:b.shift});return;}
+    if(!drag)return;const moved=drag.moved;drag=null;if(!moved&&state.placeMode&&opts.onPlace&&ev.type==='pointerup'){const r=el.getBoundingClientRect();const {w,h}=size();const c=project(state.lat,state.lon,state.zoom);const p=unproject(c.x-w/2+(ev.clientX-r.left),c.y-h/2+(ev.clientY-r.top),state.zoom);opts.onPlace(p);}};
   el.addEventListener('pointerup',endDrag);el.addEventListener('pointercancel',endDrag);
   el.addEventListener('wheel',ev=>{ev.preventDefault();api.zoomBy(ev.deltaY<0?1:-1);},{passive:false});
   el.addEventListener('dblclick',ev=>{ev.preventDefault();api.zoomBy(1);});
   const api={
-    state,render,project:(lat,lon)=>{const {w,h}=size();const c=project(state.lat,state.lon,state.zoom),p=project(lat,lon,state.zoom);return {x:p.x-c.x+w/2,y:p.y-c.y+h/2};},
+    state,kind:'tiles',render,project:(lat,lon)=>{const {w,h}=size();const c=project(state.lat,state.lon,state.zoom),p=project(lat,lon,state.zoom);return {x:p.x-c.x+w/2,y:p.y-c.y+h/2};},
     setView(lat,lon,zoom){state.lat=lat;state.lon=lon;if(zoom!=null)state.zoom=Math.max(2,Math.min(state.source.maxZoom,zoom));render();},
     zoomBy(d){state.zoom=Math.max(2,Math.min(state.source.maxZoom,state.zoom+d));render();},
     fitBounds(points,maxZoom){const {w,h}=size();const v=boundsCenterZoom(points,w,h,40,maxZoom||15);api.setView(v.lat,v.lon,v.zoom);},
@@ -76,6 +82,7 @@ function create(el,opts={}){
     setPopup(p){state.popup=p?Object.assign({key:String(p.key||p.lat+','+p.lon)},p):null;if(!p){popupEl.hidden=true;popupEl.innerHTML='';popupEl.dataset.key='';}render();},
     panTo(lat,lon){state.lat=lat;state.lon=lon;render();},
     setPlaceMode(on){state.placeMode=!!on;el.classList.toggle('tm-placing',!!on);hintEl.hidden=!on;},
+    setBoxMode(on){state.boxMode=!!on;el.classList.toggle('tm-boxmode',!!on);},
     setSource(name){state.source=SOURCES[name]||SOURCES.osm;attrEl.textContent=state.source.attribution;for(const img of tileCache.values())img.remove();tileCache.clear();render();},
     destroy(){el.innerHTML='';}
   };
