@@ -24,7 +24,7 @@ function load(tok){
   return loading;
 }
 /* markers arrive in the tile map's shape (className/html); the adapter reads the structured bits it needs */
-const parseClass=cls=>{const c=' '+(cls||'')+' ';const ci=(c.match(/ c(\d) /)||[])[1];return {ci:ci!=null?Number(ci):0,cleared:/ p-cleared /.test(c),selected:/ selected /.test(c),published:/ published /.test(c),due:/ due-over /.test(c)?'over':/ due-soon /.test(c)?'soon':''};};
+const parseClass=cls=>{const c=' '+(cls||'')+' ';const ci=(c.match(/ c(\d) /)||[])[1];return {ci:ci!=null?Number(ci):0,shared:/ shared /.test(c),cleared:/ p-cleared /.test(c),selected:/ selected /.test(c),published:/ published /.test(c),due:/ due-over /.test(c)?'over':/ due-soon /.test(c)?'soon':''};};
 function create(el,opts={}){
   const mapboxgl=globalThis.mapboxgl;if(!mapboxgl)throw new Error('mapbox-gl not loaded');
   const styleKey=STYLES[opts.style]?opts.style:'outdoors';const COL=colors();
@@ -33,12 +33,12 @@ function create(el,opts={}){
   const state={markers:[],popup:null,placeMode:false,boxMode:false,get zoom(){return m.getZoom();},get lat(){return m.getCenter().lat;},get lon(){return m.getCenter().lng;}};
   const byId=new Map();const html=new Map();let popup=null,authFailed=false,styleReady=false;let boxing=false,start=null,boxEl=null;
   const CLUSTER=opts.cluster!==false;const clusterMaxZoom=Math.max(2,(opts.clusterBelow||12)-1);
-  const feature=x=>{const p=parseClass(x.className);return {type:'Feature',geometry:{type:'Point',coordinates:[x.lon,x.lat]},properties:{id:x.id,label:x.label!=null?String(x.label):'',title:x.title||'',ci:x.ci!=null?x.ci:p.ci,cleared:x.cleared!=null?!!x.cleared:p.cleared,selected:x.selected!=null?!!x.selected:p.selected,published:p.published,due:p.due}};};
+  const feature=x=>{const p=parseClass(x.className);return {type:'Feature',geometry:{type:'Point',coordinates:[x.lon,x.lat]},properties:{id:x.id,label:x.label!=null?String(x.label):'',title:x.title||'',ci:x.ci!=null?x.ci:p.ci,cleared:x.cleared!=null?!!x.cleared:p.cleared,shared:p.shared,selected:x.selected!=null?!!x.selected:p.selected,published:p.published,due:p.due}};};
   const data=()=>({type:'FeatureCollection',features:state.markers.filter(x=>!x.noCluster).map(feature)});
   function addLayers(){
     if(m.getSource('stacks'))return;
     m.addSource('stacks',{type:'geojson',data:data(),cluster:CLUSTER,clusterRadius:42,clusterMaxZoom});
-    const colorExpr=['case',['get','cleared'],'#9aa5b1',['match',['get','ci'],0,COL[0],1,COL[1],2,COL[2],3,COL[3],4,COL[4],5,COL[5],COL[0]]];
+    const colorExpr=['case',['get','cleared'],'#9aa5b1',['get','shared'],'#5b7083',['match',['get','ci'],0,COL[0],1,COL[1],2,COL[2],3,COL[3],4,COL[4],5,COL[5],COL[0]]];
     m.addLayer({id:'clusters',type:'circle',source:'stacks',filter:['has','point_count'],paint:{'circle-color':COL[0],'circle-radius':['step',['get','point_count'],15,10,19,30,24],'circle-stroke-width':2,'circle-stroke-color':'#ffffff'}});
     m.addLayer({id:'cluster-count',type:'symbol',source:'stacks',filter:['has','point_count'],layout:{'text-field':['get','point_count_abbreviated'],'text-size':12,'text-font':['DIN Pro Bold','Arial Unicode MS Bold'],'text-allow-overlap':true},paint:{'text-color':'#ffffff'}});
     m.addLayer({id:'stack-points',type:'circle',source:'stacks',filter:['!',['has','point_count']],paint:{'circle-color':colorExpr,'circle-radius':['case',['get','selected'],12,10],'circle-stroke-width':['case',['get','selected'],3,['==',['get','due'],'over'],3,1.5],'circle-stroke-color':['case',['get','selected'],'#ffb400',['==',['get','due'],'over'],'#c0392b','#ffffff'],'circle-opacity':['case',['get','published'],1,0.78]}});

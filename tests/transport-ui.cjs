@@ -154,6 +154,13 @@ const stateOf=p=>p.js('TransportApp.store.state');
    const sel=p.js('TransportApp.ui.selection');assert(sel.length>=10,'box selection picked the stacks: '+sel.length);assert(text(q(p,'.selbar')).includes('ausgewählt'));assert(qa(p,'.dispatch-table tr.stack-row').length>0,'selected orders expanded');assert(qa(p,'.tm-marker.pin.selected').length>0,'selected pins highlighted');await click(p,'[data-action="dispatch-clear"]');}
   // map engine: no token → built-in map; the Mapbox adapter is present but idle
   assert.equal(p.js('TransportCore.mapbox.token(TransportApp.store.state.settings)'),'');assert.equal(p.js('TransportCore.mapbox.sources().length'),4);assert.equal(p.js('TransportCore.mapbox.VERSION'),'3.33.0');assert(!p.js('globalThis.mapboxgl'),'mapbox-gl not loaded without a token');assert.equal(p.js('TransportConfig.mapboxToken'),'');
+  /* ---------- driver map: every load the driver may take; a pin picks the next task ---------- */
+  await p.go('#/driver');await change(p,'.drv-pick select[name="persona"]','U-D3');await click(p,'.phone-tabs [data-tab="map"]');await ticks(2);
+  assert(q(p,'#driverMap[data-all] .tm'),'driver map mounted in the phone');assert(qa(p,'#driverMap .tm-marker,#driverMap .tm-cluster').length>0,'loads on the driver map');assert(text(q(p,'.drv-map-head')).includes('mir zugeteilt'));
+  const k10=Object.keys(st.stacks).find(k=>k.endsWith('124_501/10'));p.js(`const s=TransportApp.store.state.stacks[${JSON.stringify(k10)}];TransportApp.maps.driver.setView(s.confirmed.lat,s.confirmed.lon,14)`);await tick();
+  const p10=qa(p,'#driverMap .tm-marker.pin').find(m=>m.dataset.id===k10);assert(p10&&/\bmine\b/.test(p10.className),'Polter 10 is a pin of the driver\'s own work');await click(p,p10);await ticks(2);
+  assert(q(p,'.drv-pin-card .pin-card'),'pin card below the driver map');assert(text(q(p,'.drv-pin-card')).includes('Zuteilung')&&text(q(p,'.drv-pin-card')).includes('Ziel'));assert(!q(p,'#driverMap .tm-popup .pin-card'),'no popup inside the small phone map');
+  await click(p,'.drv-pin-card [data-action="driver-pick"]');await ticks(2);assert.equal(p.js('TransportApp.ui.driverTab'),'work');assert(q(p,'.job.hero')&&q(p,'.job.hero').dataset.stack===k10,'picked stack is the hero');
   /* ---------- persistence: a fresh page reloads the workspace ---------- */
   const raw=p.w.localStorage.getItem('transport-demo-v1');assert(raw&&raw.length>50000);
   const p2=await page('https://forestry.test/transport/#/reports');p2.w.localStorage.setItem('transport-demo-v1',raw);p2.js('TransportApp.store.load();TransportApp.render()');await tick();assert(qa(p2,'.reports tbody tr').length===5,'reloaded workspace');p2.close();

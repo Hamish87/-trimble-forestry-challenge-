@@ -38,6 +38,7 @@ function render(){
 }
 function afterRender(c){
   const el=$('#dispatchMap');if(el)mountDispatchMap(c,el);
+  const dmAll=$('#driverMap[data-all]');if(dmAll&&!dmAll.closest('dialog'))mountDriverMap(dmAll);
   const oc=$('#originalCanvas');if(oc)renderOriginal(oc.closest('.orig-view'));
   const hl=$('.fx-line.hl');if(hl&&hl.scrollIntoView)hl.scrollIntoView({block:'center'});
   const focusRow=$('.stack-row.focus');if(focusRow&&c.route.query.stack!==ui.focusSeen){ui.focusSeen=c.route.query.stack;if(focusRow.scrollIntoView)focusRow.scrollIntoView({block:'center'});}
@@ -92,7 +93,21 @@ function mountPlaceMap(container){if(!placeEl){placeEl=document.createElement('d
   for(const s of Object.values(c.state.stacks))if(s.confirmed&&(!st||s.key!==st.key))ms.push({id:s.key,lat:s.confirmed.lat,lon:s.confirmed.lon,className:'pin faint',label:S.shortRef(s),html:`<span class="tm-pin faint"><b>${esc(S.shortRef(s))}</b></span>`,noCluster:true,button:false,title:s.tempKey});
   placeMap.setMarkers(ms);
 }
-function mountDriverMap(container){if(!driverEl){driverEl=document.createElement('div');driverEl.className='map-inner';}container.appendChild(driverEl);const st=ui.driverMapStack?store.state.stacks[ui.driverMapStack]:null;if(!driverMap)driverMap=createMap(driverEl,{zoom:14,cluster:false});if(st&&st.confirmed){driverMap.setView(st.confirmed.lat,st.confirmed.lon,14);driverMap.setMarkers([{id:st.key,lat:st.confirmed.lat,lon:st.confirmed.lon,className:'pin c0',label:S.shortRef(st),html:`<span class="tm-pin"><b>${esc(S.shortRef(st))}</b></span>`,noCluster:true,button:false}]);driverMap.setPopup({key:st.key,lat:st.confirmed.lat,lon:st.confirmed.lon,html:TV.dispatch.pinCard(ctx(),st,{driver:store.state.ui.persona})});}}
+function mountDriverMap(container){if(!driverEl){driverEl=document.createElement('div');driverEl.className='map-inner';}container.appendChild(driverEl);
+  if(!driverMap)driverMap=createMap(driverEl,{zoom:9,clusterBelow:10});
+  const c=ctx();const me=store.state.ui.persona;
+  if(container.dataset.all==='1'){ /* the phone's map tab: every load the driver may take */
+    const drv=store.state.users.find(u=>u.id===me);if(!drv)return;if(ui.driverMapPersona!==me){ui.driverMapPersona=me;ui.driverMapFitted=false;ui.driverMapStack=null;}
+    const dl=store.state.ui.downloaded[me];let work=store.visibleWork(me).filter(w=>w.stack.confirmed&&w.stack.progress!=='Cleared');if(store.state.ui.online===false&&dl)work=work.filter(w=>dl.stackKeys.includes(w.stack.key)||w.allocation);
+    const ms=work.map(w=>{const st=w.stack,o=c.state.orders[st.orderId];const mine=!!w.allocation;return {id:st.key,lat:st.confirmed.lat,lon:st.confirmed.lon,title:`${S.party(c.state,o.customerId)} · ${st.tempKey} · ${fmt.qty(st.planned.qty,st.planned.unit)}`,className:`pin ${mine?'mine':'shared'} p-${st.progress.toLowerCase()} ${S.dueClass(o,c.now)} ${ui.driverMapStack===st.key?'selected':''} published`,label:S.shortRef(st),ci:mine?0:5,html:`<span class="tm-pin"><b>${esc(S.shortRef(st))}</b></span>`,onClick:()=>{ui.driverMapStack=st.key;render();}};});
+    const dests=new Set(work.map(w=>w.order.destinationId).filter(Boolean));for(const id of dests){const p=c.state.parties.find(x=>x.id===id);if(p&&p.lat!=null)ms.push({id:'dest-'+id,lat:p.lat,lon:p.lon,title:`${t('Zielwerk')}: ${p.name}`,className:'pin dest',html:`<span class="tm-pin dest" title="${esc(p.name)}">⌂</span>`,noCluster:true,button:false});}
+    const base=c.state.parties.find(x=>x.id===c.state.carrierId);if(base)ms.push({id:'base',lat:base.lat,lon:base.lon,title:base.name,className:'pin base',html:'<span class="tm-pin base">▲</span>',noCluster:true,button:false});
+    driverMap.setMarkers(ms);if(driverMap.setBoxMode)driverMap.setBoxMode(false);
+    const pts=work.map(w=>[w.stack.confirmed.lat,w.stack.confirmed.lon]);if(!ui.driverMapFitted&&pts.length){driverMap.fitBounds(pts,12);ui.driverMapFitted=true;}
+    driverMap.setPopup(null); /* the phone shows the selected stack's card below the map, not as a popup */
+    return;}
+  const st=ui.driverMapStack?store.state.stacks[ui.driverMapStack]:null;ui.driverMapFitted=false;
+  if(st&&st.confirmed){driverMap.setView(st.confirmed.lat,st.confirmed.lon,14);driverMap.setMarkers([{id:st.key,lat:st.confirmed.lat,lon:st.confirmed.lon,className:'pin c0',label:S.shortRef(st),html:`<span class="tm-pin"><b>${esc(S.shortRef(st))}</b></span>`,noCluster:true,button:false}]);driverMap.setPopup({key:st.key,lat:st.confirmed.lat,lon:st.confirmed.lon,html:TV.dispatch.pinCard(c,st,{driver:me})});}}
 function openPlace(){ui.place.centered=false;dialog(c=>TV.dispatch.placeDialog(c,ui.place.stackKey||null,ui.place.docId?{docId:ui.place.docId,tempKey:ui.place.tempKey}:null));}
 /* ---------- helpers ---------- */
 function draftToDecisions(d){const out={fields:{},lines:d.lines,destinationId:d.destinationId||undefined,note:d.note||undefined};for(const [k,v] of Object.entries(d.fields||{}))if(v!==''&&v!=null)out.fields[k]=v;return out;}
@@ -185,8 +200,11 @@ const actions={
   'driver-original-toggle':withRender((d,el)=>{store.apply('setDriverOriginal',d.doc,el.checked);}),
   'original-open':d=>dialog(c=>TV.driver.originalDialog(c,d.doc)),
   'photo-open':d=>dialog(()=>TV.driver.photoDialog(ctx(),d.src,d.caption)),
-  'map-popup-close':()=>setQuery({stack:undefined}),
+  'map-popup-close':()=>{if(ui.driverMapStack&&route().name==='driver'){ui.driverMapStack=null;render();return;}setQuery({stack:undefined});},
   'driver-job':withRender(d=>{ui.driverJob=d.stack;}),
+  'driver-pick':withRender(d=>{const st=store.state.stacks[d.stack];if(!st)return;const me=store.state.ui.persona;const a=Object.values(store.state.allocations).find(x=>x.stackKey===st.key&&x.driverId===me&&['Proposed','Accepted','Reserved'].includes(x.state));
+    try{if(a&&a.state==='Proposed'){const r=store.apply('accept',a.id);if(!r.ok){toast(r.conflict.message,'error');return;}}else if(!a){store.apply('reserve',st.key);}
+      ui.driverJob=st.key;ui.driverTab='work';toast(t('Als nächste Aufgabe gewählt'));}catch(e){toast(e.message||String(e),'error');}}),
   'dialog-close':()=>closeDialog(),
   'noop':()=>{}
 };
@@ -252,6 +270,6 @@ function boot(){document.addEventListener('click',onClick);document.addEventList
   if(globalThis.pdfjsLib&&globalThis.pdfjsLib.GlobalWorkerOptions)globalThis.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   if(!store.restored&&!Object.keys(store.state.documents||{}).length){TC.tour.run(store);ui.mapFitted=false;toast(t('Demo-Durchlauf beim ersten Aufruf geladen – zurücksetzen unter Verwaltung'));}
   loadMapbox();store.subscribe(()=>{});render();}
-globalThis.TransportApp={store,render,ui,api,actions,forms,ctx,get drafts(){return drafts;},dialog,closeDialog,toast,route};
+globalThis.TransportApp={store,render,ui,api,actions,forms,ctx,get drafts(){return drafts;},get maps(){return {dispatch:map,place:placeMap,driver:driverMap};},dialog,closeDialog,toast,route};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
 })();
