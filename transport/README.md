@@ -63,12 +63,16 @@ which is why MapLibre is not used here.
    dropped file stays in the browser as the document's original (also „Original hinterlegen" on any document) and can be
    viewed page by page beside the extracted fields and released to drivers.
 2. **Disposition**: confirmed stacks on the map (clusters, customer colours, deadline rings; click a pin for the card with
-   progress, contacts, photos and a navigation link), the order/stack list,
+   progress, contacts, photos and a navigation link). On wide screens the **split view** puts the Polter list beside the
+   map (map left, Polter right): a pin or a list entry opens the stack's full card in that pane; the toggle in the map
+   tools switches to a full-width map with popup cards and is remembered per browser. Below: the order/stack list,
    filters, publication (Flotte / Gruppe / Fahrer), allocation (ganzer Polter / Fuhren / Menge), withdraw and
    reassign, block, the „Standort erforderlich" queue, conflicts, problem and clearance reports, driver-safe excerpts.
 3. **Mobil**: choose a driver persona; the hero card shows the task at hand with navigation, call and big action
    buttons; download work, go offline, record pickups with photos (unknown quantity stays unknown), report „Polter
-   geräumt", report problems, open the original order (when released) or the excerpt, issue the delivery note, report
+   geräumt", report problems, open the original order (when released) or the excerpt (an order sheet for the phone:
+   reference, window, destination, call links, one card per Polter with navigation, driver notes; the redacted original
+   pages folded below), issue the delivery note, report
    arrival and unloading, photograph the mill ticket, reconnect: the queue is transmitted once; conflicts (double claim, pickup after withdrawal) surface
    for dispatch instead of „last update wins".
 4. **Belege & Abgleich**: delivery notes (A4 print), mill tickets („Demo-Werksscheine zustellen": one matches by note

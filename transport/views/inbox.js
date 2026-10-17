@@ -151,10 +151,29 @@ function importDialog(ctx){
     <label>${t('Text')} <textarea name="text" rows="12" placeholder="Fuhrauftrag Nr. 4711&#10;Auftraggeber:&#9;…"></textarea></label>
     <div class="dlg-actions">${button(t('Abbrechen'),'dialog-close',{},'')}<button type="submit" class="primary">${t('Importieren')}</button></div></form>`;
 }
+/* Fahrerauszug, part 1: the order sheet a driver reads on the phone — reference, customer, window, destination, contacts
+   with call links, one card per stack with quantity and navigation, notes. Built from the excerpt summary, which never
+   carries restricted fields. */
+function excerptSheet(ctx,o){
+  const total=o.totals.map(x=>fmt.qty(x.qty,x.unit)).join(' · ');const notes=o.instructions;const remarks=o.remarks.filter(r=>!notes.some(n=>n.includes(r.value)));
+  return `<section class="xc" data-order="${esc(o.id||'')}"><header class="xc-head"><div class="xc-title"><div class="xc-kicker">${esc(o.documentType||t('Auftrag'))}${o.documentNumber?' '+esc(o.documentNumber):''}${o.id?` <span class="muted">${esc(o.id)}</span>`:''}</div><h3>${esc(o.customer||'–')}</h3></div><div class="xc-window"><span class="lbl">${t('Abfuhrzeitraum')}</span><b>${fmt.date(o.window.from)} – ${fmt.date(o.window.to)}</b></div></header>
+    <div class="xc-grid"><div class="xc-box"><span class="lbl">${t('Ziel')}</span><b>${o.destination.name?esc(o.destination.name):`<span class="warn-text">${esc(t('unbestätigt'))}</span>`}</b>${o.destination.address?`<span class="muted small">${esc(o.destination.address)}</span>`:''}</div>
+      <div class="xc-box"><span class="lbl">${t('Kontakte')}</span>${o.contacts.length?`<ul class="xc-contacts">${o.contacts.map(c=>{const m=String(c.value||'').match(/(\+?[\d][\d\s()\/-]{6,}\d)/);const name=m?String(c.value).slice(0,m.index).replace(/[\s·,;:–-]+$/,''):c.value;
+        return `<li><span class="xc-role">${esc(c.role)}</span>${name?`<span class="xc-name">${esc(name)}</span>`:''}${m?`<span class="xc-val">${S.telLink(m[1])}</span>`:''}</li>`;}).join('')}</ul>`:`<span class="muted small">–</span>`}</div></div>
+    <h4 class="xc-h">${t('Polter')} <span class="muted">(${o.stacks.length})</span>${total?` · ${total}`:''}</h4>
+    <ul class="xc-stacks">${o.stacks.map(s=>`<li class="xc-stack${s.progress==='Cleared'?' done':''}${s.blocked?' blocked':''}" data-stack="${esc(s.key||s.tempKey)}"><div class="xs-main"><b>${S.stackRef(s)}</b><span class="muted small">${S.timber(s)}</span></div><div class="xs-qty"><b>${fmt.qty(s.planned.qty,s.planned.unit)}</b>${s.pieces.value?`<span class="muted small">${s.pieces.value} ${t('Stück')}</span>`:''}</div>
+      <div class="xs-loc small">${statusPill('stack',s.progress,'small')}${s.confirmed?`<span>${fmt.num(s.confirmed.lat,5)}, ${fmt.num(s.confirmed.lon,5)}</span>${S.navLinks(s.confirmed.lat,s.confirmed.lon)}`:`<span class="muted">${esc(s.address||t('Standort noch nicht bestätigt — Disposition'))}</span>`}</div></li>`).join('')}</ul>
+    ${notes.length?`<h4 class="xc-h">${t('Hinweise für den Fahrer')}</h4><ul class="xc-notes">${notes.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}
+    ${remarks.length?`<h4 class="xc-h">${t('Bemerkungen')}</h4><ul class="xc-notes">${remarks.map(r=>`<li>${esc(r.value)}</li>`).join('')}</ul>`:''}
+    <p class="muted small xc-foot">${esc(o.released?t('Freigegebene Auftragsdaten für den Fahrer; Frachtsätze und Zahlungsbedingungen sind nicht enthalten.'):t('Noch nicht freigegeben — Angaben aus der Extraktion, Standorte folgen nach der Prüfung.'))}</p></section>`;
+}
+/* part 2: the document's map pages, then the redacted text pages folded away (still printable from the sheet) */
 function excerptDialog(ctx,docId){
-  const ex=ctx.store.excerpt(docId);if(!ex)return '';
-  return `<div class="dlg wide"><h2>${t('Fahrerauszug')} <small class="muted">${esc(ex.subject)}</small></h2><p class="muted">${esc(ex.note)} · ${ex.redactedLines} ${t('Zeilen geschwärzt')}. ${esc(t('Hinweis: Felder auszublenden reicht nicht — der Auszug wird aus den Seitenzeilen neu erzeugt.'))}</p>
-    <div class="excerpt">${ex.pages.map(p=>facsimile({n:p.n,kind:p.kind,lines:p.lines,title:p.title,pins:p.pins},{})).join('')}</div>
+  const ex=ctx.store.excerpt(docId);if(!ex)return '';const fx=p=>facsimile({n:p.n,kind:p.kind,lines:p.lines,title:p.title,pins:p.pins},{});const maps=ex.pages.filter(p=>p.kind==='map'),rest=ex.pages.filter(p=>p.kind!=='map');
+  return `<div class="dlg wide excerpt-dlg"><h2>${t('Fahrerauszug')} <small class="muted">${esc(ex.subject)}</small></h2><p class="muted small">${esc(ex.note)} · ${ex.redactedLines} ${t('Zeilen geschwärzt')}. ${esc(t('Hinweis: Felder auszublenden reicht nicht — der Auszug wird aus den Seitenzeilen neu erzeugt.'))}</p>
+    ${(ex.summary||[]).map(o=>excerptSheet(ctx,o)).join('')||empty(t('Kein Auftrag in diesem Dokument.'))}
+    ${maps.length?`<h3 class="xc-h">${t('Kartenseiten')}</h3><div class="excerpt">${maps.map(fx).join('')}</div>`:''}
+    ${rest.length?`<details class="xc-pages"><summary>${t('Originalseiten (geschwärzt)')} · ${rest.length} ${t('Seiten')}</summary><div class="excerpt">${rest.map(fx).join('')}</div></details>`:''}
     <div class="dlg-actions">${button(t('Drucken'),'print',{},'')}${button(t('Schließen'),'dialog-close',{},'primary')}</div></div>`;
 }
 const api={render,review,importDialog,excerptDialog,docCounts};

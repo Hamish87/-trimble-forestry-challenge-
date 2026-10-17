@@ -56,7 +56,8 @@ function create(el,opts={}){
     const pt=project(p.lat,p.lon,state.zoom);const x=pt.x-left,y=pt.y-top;
     if(popupEl.dataset.key!==p.key){popupEl.innerHTML=p.html;popupEl.dataset.key=p.key;}
     popupEl.hidden=false;const pw=popupEl.offsetWidth||300,ph=popupEl.offsetHeight||160;
-    let px=Math.round(x-pw/2),py=Math.round(y-ph-34);let below=false;if(py<4){py=Math.round(y+14);below=true;}px=Math.max(4,Math.min(Math.max(4,w-pw-4),px));
+    let px=Math.round(x-pw/2),py=Math.round(y-ph-34);let below=false;if(py<4){py=Math.round(y+14);below=true;}if(py+ph>h-4)py=Math.max(4,h-ph-4); /* a card taller than the room below is pulled up over the pin rather than cut off */
+    px=Math.max(4,Math.min(Math.max(4,w-pw-4),px));
     popupEl.style.transform=`translate(${px}px,${py}px)`;popupEl.classList.toggle('below',below);
   }
   // interaction
