@@ -4,7 +4,7 @@
 // acceptance list of SPEC.md §10 (A1–A7). No DOM.
 const assert=require('node:assert/strict');
 const P='../transport/';
-for(const f of ['core/i18n','core/i18n-long','core/units','core/coords','data/customers','data/fleet','data/samples','core/extract','core/model','core/store','core/tour','core/stats'])require(P+f+'.js');
+for(const f of ['core/i18n','core/i18n-long','core/units','core/coords','data/customers','data/fleet','data/samples','data/photos','core/extract','core/model','core/store','core/tour','core/stats'])require(P+f+'.js');
 const TC=globalThis.TransportCore,TD=globalThis.TransportData;const U=TC.units,C=TC.coords,X=TC.extract,M=TC.model,S=TD.samples;
 const close=(a,b,tol=1e-6,msg='')=>assert(Math.abs(a-b)<=tol,`${msg} ${a} != ${b}`);
 const mem=()=>({d:{},getItem(k){return this.d[k]??null;},setItem(k,v){this.d[k]=v;},removeItem(k){delete this.d[k];}});
@@ -102,8 +102,8 @@ const exTtw=M.driverExcerpt(st,'DOC-TTW-1');assert.equal(exTtw.redactedLines,2);
 const exBay=M.driverExcerpt(st,'DOC-BAYSF-1');assert(!exBay.pages[0].lines.some(l=>/8,80/.test(l)),'freight rate redacted');assert(exBay.pages[0].lines.some(l=>/redigiert/.test(l)));
 /* ---------- photos on events, originals on documents ---------- */
 const PH=TC.photos;assert(PH.illustration('a','stack','x').startsWith('data:image/svg+xml'));
-const photoStacks=Object.values(st.stacks).filter(s=>s.photos.length);assert.equal(photoStacks.length,4,'demo run attaches photos to four stacks');assert(photoStacks.some(s=>s.photos.some(p=>p.kind==='problem')),'problem report photo');
-assert.deepEqual(M.stackPhotos(st,s1.key).map(p=>p.kind),['cleared','pickup'],'newest photo first');
+const photoStacks=Object.values(st.stacks).filter(s=>s.photos.length);assert.equal(Object.values(st.stacks).filter(x=>(x.photos||[]).some(p=>p.kind!=='site')).length,4,'demo run attaches event photos to four stacks');{const conf=Object.values(st.stacks).filter(x=>x.confirmed);assert(conf.length>=20&&conf.every(x=>(x.photos||[]).some(p=>p.kind==='site'&&/^https:\/\/upload\.wikimedia\.org\//.test(p.url)&&p.thumb&&p.credit&&p.credit.license&&p.credit.page)),'every confirmed stack carries an attributed Commons site photo');const groups=new Set(conf.map(x=>x.photos.find(p=>p.kind==='site').url));assert(groups.size>=10,'photos rotate: '+groups.size);const td=globalThis.TransportData.photos;assert.equal(td.PHOTOS.length,26);assert(td.PHOTOS.every(p=>/^(CC0|CC BY|Public domain)/.test(p.license)&&p.author&&p.page),'catalogue has licence, author and page');assert.equal(td.forStack({id:'TA-2026-0002',profileId:'waldkontor'},{planned:{unit:'ldg'},timber:{assortment:'Kappholz'}},0).group,'ends');assert.equal(td.forStack({id:'TA-2026-0005',profileId:'waldpflege-oberschwaben'},{planned:{unit:'rm'},timber:{}},0).group,'stacked');}assert(photoStacks.some(s=>s.photos.some(p=>p.kind==='problem')),'problem report photo');
+assert.deepEqual(M.stackPhotos(st,s1.key).filter(p=>p.kind!=='site').map(p=>p.kind),['cleared','pickup'],'newest photo first');
 assert.equal(st.documents['DOC-TTW-1'].driverOriginal,false,'commercial fields → original not released to drivers by default');assert.equal(st.documents['DOC-HTL-1'].driverOriginal,true);
 M.setDocumentOriginal(st,'DOC-HTL-1',{name:'HTL.pdf',size:1234,type:'application/pdf',pages:3},'U-DISPO');assert.equal(st.documents['DOC-HTL-1'].original.pages,3);M.setDriverOriginal(st,'DOC-TTW-1',true,'U-DISPO');assert.equal(st.documents['DOC-TTW-1'].driverOriginal,true);assert(st.audit.some(a=>a.action==='document.driverOriginal'));
 /* ---------- persistence and audit ---------- */
